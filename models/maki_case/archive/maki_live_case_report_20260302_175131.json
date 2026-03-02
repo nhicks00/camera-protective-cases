@@ -21,8 +21,8 @@
     "front_bezel_extra_mm": 1.0,
     "front_bezel_height_mm": 1.1,
     "lens_hood_enabled": true,
-    "lens_hood_depth_mm": 16.0,
-    "lens_hood_drop_mm": 9.0,
+    "lens_hood_depth_mm": 8.0,
+    "lens_hood_drop_mm": 7.0,
     "lens_hood_span_ratio": 0.84,
     "tripod_center_from_front_mm": 48.0,
     "tripod_open_w_mm": 20.0,
@@ -519,8 +519,8 @@
       "front_integrated": true,
       "lens_hood": {
         "enabled": true,
-        "depth_mm": 16.0,
-        "drop_mm": 9.0,
+        "depth_mm": 8.0,
+        "drop_mm": 7.0,
         "span_ratio": 0.84
       },
       "cavity_front_z_mm": 3.0,
@@ -566,7 +566,7 @@
         "outer": 22.087156857946702
       },
       "machined_finish_mm": {
-        "sleeve_axis_y_fillet": 0.45
+        "sleeve_axis_y_fillet": 0.0
       },
       "outer_bounds_xy_mm": {
         "min_x": -33.795,

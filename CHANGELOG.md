@@ -2,6 +2,29 @@
 
 ## 2026-03-02
 
+### MAKI Vent/Tripod/Duck-Bill/Rear-Cap TPU Coverage Update
+- Updated MAKI `24`-bank vent cuts in both ASA and TPU generators to true rounded-slot geometry:
+  - `scripts/generate_maki_live_case.py`
+  - `scripts/generate_maki_live_tpu_liner.py`
+- Side trio and main bank now share slot-style vent shape language across both materials.
+- Fixed MAKI tripod cutout alignment in dual-material body:
+  - TPU generator now uses the same tripod extraction strategy as ASA (cylindrical-face-first with circle-edge fallback).
+  - Dual overlap verification now reports tripod alignment at `dx=0.0`, `dz=0.0`.
+- Replaced prior MAKI front sun-visor bar with a longer integrated curved duck-bill hood:
+  - hood depth increased to `16 mm`,
+  - top-band profile follows front opening curvature.
+- Reworked MAKI dual rear-cap TPU body from recessed ring to full-contact cushioning:
+  - full face TPU pad at plug tip plane,
+  - perimeter TPU edge-wrap collar for corner/edge protection,
+  - cutouts carried through TPU coverage volume.
+- Regenerated:
+  - `models/maki_case/maki_live_case_sleeve.step`
+  - `models/maki_case/maki_live_tpu_sleeve.step`
+  - `models/maki_case/maki_live_body_dual_material.step`
+  - `models/maki_case/maki_live_rear_cap_dual_material.step`
+  - `models/maki_case/maki_live_rear_cap.step`
+  - updated MAKI reports under `models/maki_case/reports/`.
+
 ### Mevo Lens Opening + Manual Back-Cap Cutouts Update
 - Updated Mevo front lens opening in dual-material generator:
   - diameter reduced from `32.0` to `29.5 mm` (2.5 mm smaller)

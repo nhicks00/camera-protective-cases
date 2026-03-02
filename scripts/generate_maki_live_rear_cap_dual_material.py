@@ -45,8 +45,9 @@ class MakiRearCapDualParams:
     # TPU gasket on the cap inner side (device-contact side).
     include_tpu_gasket: bool = True
     tpu_gasket_thickness_mm: float = 1.2
-    tpu_gasket_outer_inset_mm: float = 0.25
-    tpu_gasket_ring_width_mm: float = 1.6
+    tpu_gasket_outer_inset_mm: float = 0.0
+    tpu_edge_wrap_depth_mm: float = 1.8
+    tpu_edge_wrap_width_mm: float = 1.8
 
 
 def _archive_existing(paths: list[Path], out_dir: Path) -> list[tuple[str, str]]:
@@ -91,29 +92,40 @@ def _build_tpu_gasket(
     gasket_outer_w = max(plug_w - 2.0 * p.tpu_gasket_outer_inset_mm, 2.0)
     gasket_outer_h = max(plug_h - 2.0 * p.tpu_gasket_outer_inset_mm, 2.0)
     gasket_outer_r = max(plug_r - p.tpu_gasket_outer_inset_mm, 0.6)
-
-    gasket_inner_w = max(gasket_outer_w - 2.0 * p.tpu_gasket_ring_width_mm, 1.0)
-    gasket_inner_h = max(gasket_outer_h - 2.0 * p.tpu_gasket_ring_width_mm, 1.0)
-    gasket_inner_r = max(gasket_outer_r - p.tpu_gasket_ring_width_mm, 0.4)
+    lip_depth = max(min(p.tpu_edge_wrap_depth_mm, plug_depth), 0.0)
+    lip_w = max(p.tpu_edge_wrap_width_mm, 0.0)
+    gasket_inner_w = max(gasket_outer_w - 2.0 * lip_w, 1.0)
+    gasket_inner_h = max(gasket_outer_h - 2.0 * lip_w, 1.0)
+    gasket_inner_r = max(gasket_outer_r - lip_w, 0.4)
+    z_tip = cap_thickness + plug_depth
 
     with BuildPart() as gasket_bp:
+        # Edge-wrap collar near the plug tip to protect camera back-edge corners.
+        if lip_depth > 0.0 and lip_w > 0.0:
+            with BuildSketch(Plane.XY.offset(z_tip - lip_depth)):
+                _add_rounded_rectangle(gasket_outer_w, gasket_outer_h, gasket_outer_r)
+            extrude(amount=lip_depth)
+
+            with BuildSketch(Plane.XY.offset(z_tip - lip_depth - 0.1)):
+                _add_rounded_rectangle(gasket_inner_w, gasket_inner_h, gasket_inner_r)
+            extrude(amount=lip_depth + 0.2, mode=Mode.SUBTRACT)
+
+        # Full face pad so camera back never touches ASA.
         with BuildSketch(Plane.XY.offset(z0)):
             _add_rounded_rectangle(gasket_outer_w, gasket_outer_h, gasket_outer_r)
         extrude(amount=p.tpu_gasket_thickness_mm)
 
-        with BuildSketch(Plane.XY.offset(z0 - 0.1)):
-            _add_rounded_rectangle(gasket_inner_w, gasket_inner_h, gasket_inner_r)
-        extrude(amount=p.tpu_gasket_thickness_mm + 0.2, mode=Mode.SUBTRACT)
-
         if cutouts:
-            with BuildSketch(Plane.XY.offset(z0 - 0.1)):
+            cut_z0 = z_tip - max(lip_depth, p.tpu_gasket_thickness_mm) - 0.1
+            cut_h = max(lip_depth, p.tpu_gasket_thickness_mm) + 0.2
+            with BuildSketch(Plane.XY.offset(cut_z0)):
                 for c in cutouts:
                     with Locations((c["x"], c["y"])):
                         if c["shape"] == "circle":
                             Circle(c["d"] * 0.5)
                         else:
                             Rectangle(c["w"], c["h"])
-            extrude(amount=p.tpu_gasket_thickness_mm + 0.2, mode=Mode.SUBTRACT)
+            extrude(amount=cut_h, mode=Mode.SUBTRACT)
 
     gasket = _largest_solid(gasket_bp.part)
     try:
@@ -164,7 +176,8 @@ def build_rear_cap_dual(p: MakiRearCapDualParams):
             "enabled": bool(gasket is not None),
             "thickness": float(p.tpu_gasket_thickness_mm),
             "outer_inset": float(p.tpu_gasket_outer_inset_mm),
-            "ring_width": float(p.tpu_gasket_ring_width_mm),
+            "edge_wrap_depth": float(p.tpu_edge_wrap_depth_mm),
+            "edge_wrap_width": float(p.tpu_edge_wrap_width_mm),
             "contact_plane_z": float(caps_p.cap_thickness_mm + caps_p.plug_depth_mm),
         },
     }
@@ -187,7 +200,8 @@ def main():
     parser.add_argument("--disable-tpu-gasket", action="store_true", help="Disable TPU gasket body on rear cap")
     parser.add_argument("--tpu-gasket-thickness", type=float, default=None, help="TPU gasket thickness on cap interior (mm)")
     parser.add_argument("--tpu-gasket-inset", type=float, default=None, help="TPU gasket outer inset from cap OD (mm)")
-    parser.add_argument("--tpu-gasket-ring-width", type=float, default=None, help="TPU gasket radial ring width (mm)")
+    parser.add_argument("--tpu-gasket-edge-wrap-depth", type=float, default=None, help="TPU corner edge-wrap depth from tip plane (mm)")
+    parser.add_argument("--tpu-gasket-edge-wrap-width", type=float, default=None, help="TPU edge-wrap width around perimeter (mm)")
     args = parser.parse_args()
 
     p = MakiRearCapDualParams(step_path=args.step)
@@ -205,8 +219,10 @@ def main():
         p.tpu_gasket_thickness_mm = max(float(args.tpu_gasket_thickness), 0.0)
     if args.tpu_gasket_inset is not None:
         p.tpu_gasket_outer_inset_mm = max(float(args.tpu_gasket_inset), 0.0)
-    if args.tpu_gasket_ring_width is not None:
-        p.tpu_gasket_ring_width_mm = max(float(args.tpu_gasket_ring_width), 0.1)
+    if args.tpu_gasket_edge_wrap_depth is not None:
+        p.tpu_edge_wrap_depth_mm = max(float(args.tpu_gasket_edge_wrap_depth), 0.0)
+    if args.tpu_gasket_edge_wrap_width is not None:
+        p.tpu_edge_wrap_width_mm = max(float(args.tpu_gasket_edge_wrap_width), 0.1)
 
     args.out.mkdir(parents=True, exist_ok=True)
     reports_dir = args.out / "reports"

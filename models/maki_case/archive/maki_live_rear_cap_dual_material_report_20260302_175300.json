@@ -7,9 +7,8 @@
     "plug_clearance_mm": 0.28,
     "include_tpu_gasket": true,
     "tpu_gasket_thickness_mm": 1.2,
-    "tpu_gasket_outer_inset_mm": 0.0,
-    "tpu_edge_wrap_depth_mm": 1.8,
-    "tpu_edge_wrap_width_mm": 1.8
+    "tpu_gasket_outer_inset_mm": 0.25,
+    "tpu_gasket_ring_width_mm": 1.6
   },
   "report": {
     "named_bodies": [
@@ -218,9 +217,8 @@
     "tpu_gasket_mm": {
       "enabled": true,
       "thickness": 1.2,
-      "outer_inset": 0.0,
-      "edge_wrap_depth": 1.8,
-      "edge_wrap_width": 1.8,
+      "outer_inset": 0.25,
+      "ring_width": 1.6,
       "contact_plane_z": 4.8
     }
   }

@@ -85,13 +85,15 @@ Active hard-shell and TPU workflows:
   - The 24-vent bank is constrained to bottom-connected panels (not direct side walls).
   - Side 3+3 vent group is placed on the opposite end from the tripod-side vent bank.
   - Side 3+3 vent dimensions are matched to the main tripanel vent style size.
+  - Main `24` vent bank and side `3+3` vents use rounded-slot cuts on both ASA and TPU (not box/square cuts).
   - Front camera aperture in integrated front wall is trimmed by `2.0 mm` vs prior extraction.
   - Through-cut depth increased so vents fully penetrate.
   - Vent row clustering now locks to the STEP-derived rear vent bank (8 rows) and ignores front outlier slots.
   - Tripod side includes local armor boss thickening around the mount opening.
   - Tripod hole cut orientation is corrected and validated as a true through-cut.
+  - Dual-body tripod overlap is now numerically aligned (`dx=0.0`, `dz=0.0` in current reports).
   - Side `3 + 3` vents are rounded-slot cuts (not hard rectangular box cuts).
-  - Integrated top-front lens hood/shade is enabled by default (`lens_hood_*` params in case script).
+  - Integrated top-front lens hood/shade uses an extended curved duck-bill profile (`lens_hood_*` params in case script).
   - Vent pass-through validated (`30/30` total) and vent coordinates emitted in report under `step_side_features.vents_applied_entries`.
 - ASA caps:
   - Active outputs:
@@ -99,7 +101,10 @@ Active hard-shell and TPU workflows:
     - `models/maki_case/maki_live_rear_cap.step` (ASA-only compatibility export)
   - Generator: `scripts/generate_maki_live_rear_cap_dual_material.py`
   - Dual rear cap contains: `ASA_Back_Cap` + `TPU_Back_Gasket`.
-  - TPU gasket is placed on the plug-tip contact plane so it engages the camera-side back perimeter/corners when installed.
+  - TPU rear-cap body now includes:
+    - full-face pad at plug-tip contact plane,
+    - perimeter edge-wrap collar for back-edge/corner shock isolation,
+    so the camera back contacts TPU instead of bare ASA.
   - Legacy rear-cap-only generator remains available (`scripts/generate_maki_live_caps.py --profile asa`).
   - Rear cutouts are extracted from all STEP solids with tiny-hole filtering to preserve port access cutouts over corner fastener holes.
   - Rear cap port cutouts include default oversize clearance (`cutout_extra_mm=1.5`) for cable boot/plastic strain-relief fit.

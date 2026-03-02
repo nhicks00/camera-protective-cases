@@ -35,13 +35,6 @@
     "side_trio_match_tripanel_size": true,
     "tripod_center_from_front_mm": 48.0,
     "tripod_hole_diameter_mm": 10.2,
-    "tripod_thread_radius_mm": 3.175,
-    "tripod_radius_tolerance_mm": 1.0,
-    "tripod_face_normal_min_abs_z": 0.92,
-    "tripod_centerline_x_max_mm": 6.0,
-    "tripod_z_min_mm": -110.0,
-    "tripod_z_max_mm": -20.0,
-    "tripod_expected_side": "neg",
     "section_z_ratio": 0.5,
     "profile_simplify_tol_mm": 0.08,
     "offset_resolution": 64
@@ -469,14 +462,11 @@
         }
       ],
       "tripod_detected": true,
-      "tripod_source": "cylindrical_face",
-      "tripod_cyl_candidate_count": 1,
-      "tripod_edge_candidate_count": 0,
       "tripod_applied": {
         "side": "neg",
-        "x": 9.600208465045147e-16,
-        "z": 44.430878397843735,
-        "diameter": 8.189165114161232
+        "x": 0.34221829986430846,
+        "z": 52.90126909246757,
+        "diameter": 9.751206546731504
       }
     },
     "derived": {

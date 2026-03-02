@@ -77,8 +77,8 @@ class MakiCaseParams:
     front_bezel_extra_mm: float = 1.0
     front_bezel_height_mm: float = 1.1
     lens_hood_enabled: bool = True
-    lens_hood_depth_mm: float = 8.0
-    lens_hood_drop_mm: float = 7.0
+    lens_hood_depth_mm: float = 16.0
+    lens_hood_drop_mm: float = 9.0
     lens_hood_span_ratio: float = 0.84
 
     # Side tripod opening (derived from STEP feature location)
@@ -744,16 +744,14 @@ def build_case(p: MakiCaseParams):
             extrude(amount=p.front_wall_mm + 0.6, mode=Mode.SUBTRACT)
             front_cutouts_applied = list(front_cutouts_detected)
 
-        # Top-front shade extension to reduce lens glare.
+        # Curved duck-bill shade extension integrated to front perimeter.
         if p.front_integrated and p.lens_hood_enabled and p.lens_hood_depth_mm > 0.0 and p.lens_hood_drop_mm > 0.0:
-            hood_span = max(min(outer_w * p.lens_hood_span_ratio, outer_w), 8.0)
-            with Locations((0.0, max_y, -p.lens_hood_depth_mm)):
-                Box(
-                    hood_span,
-                    p.lens_hood_drop_mm,
-                    p.lens_hood_depth_mm,
-                    align=(Align.CENTER, Align.MAX, Align.MIN),
-                )
+            hood_span = max(min(outer_w * p.lens_hood_span_ratio, outer_w + 0.2), 8.0)
+            with BuildSketch(Plane.XY):
+                _add_rounded_rectangle(outer_w, outer_h, outer_corner_r)
+                with Locations((0.0, max_y - 0.5 * p.lens_hood_drop_mm)):
+                    Rectangle(hood_span, p.lens_hood_drop_mm, mode=Mode.INTERSECT)
+            extrude(amount=-p.lens_hood_depth_mm)
 
         if p.use_step_side_features:
             if p.enforce_tripanel_vent_layout:
@@ -763,15 +761,11 @@ def build_case(p: MakiCaseParams):
                     for z_c in vent_pattern["z_centers"]:
                         if panel["axis"] == "y":
                             y_face = min_y - 0.2
-                            # Center panel: cut from -Y side inward.
-                            with Locations((panel["x"], y_face, z_c)):
-                                Box(
-                                    vent_pattern["slot_t"],
-                                    cut_depth,
-                                    vent_pattern["slot_z"],
-                                    align=(Align.CENTER, Align.MIN, Align.CENTER),
-                                    mode=Mode.SUBTRACT,
-                                )
+                            # Oval/slot vent cuts to match device vent style.
+                            with BuildSketch(Plane.XZ.offset(y_face)):
+                                with Locations((panel["x"], z_c)):
+                                    SlotOverall(vent_pattern["slot_t"], vent_pattern["slot_z"])
+                            extrude(amount=cut_depth, mode=Mode.SUBTRACT)
                             vents_used.append(
                                 {
                                     "axis": "y",
@@ -788,16 +782,12 @@ def build_case(p: MakiCaseParams):
                                 }
                             )
                         else:
-                            # Adjacent side panels: center cuts on extracted side-panel location.
                             on_neg = panel["side"] == "neg"
-                            with Locations((panel["x"], panel["y"], z_c)):
-                                Box(
-                                    cut_depth,
-                                    vent_pattern["slot_t"],
-                                    vent_pattern["slot_z"],
-                                    align=(Align.CENTER, Align.CENTER, Align.CENTER),
-                                    mode=Mode.SUBTRACT,
-                                )
+                            x_face = panel["x"] - 0.2 if on_neg else panel["x"] + 0.2
+                            with BuildSketch(Plane.YZ.offset(x_face)):
+                                with Locations((panel["y"], z_c)):
+                                    SlotOverall(vent_pattern["slot_t"], vent_pattern["slot_z"])
+                            extrude(amount=cut_depth if on_neg else -cut_depth, mode=Mode.SUBTRACT)
                             vents_used.append(
                                 {
                                     "axis": "x",

@@ -91,6 +91,13 @@ class MakiTpuLinerParams:
     side_trio_match_tripanel_size: bool = True
     tripod_center_from_front_mm: float = 48.0
     tripod_hole_diameter_mm: float = 10.2
+    tripod_thread_radius_mm: float = 3.175
+    tripod_radius_tolerance_mm: float = 1.0
+    tripod_face_normal_min_abs_z: float = 0.92
+    tripod_centerline_x_max_mm: float = 6.0
+    tripod_z_min_mm: float = -110.0
+    tripod_z_max_mm: float = -20.0
+    tripod_expected_side: str = "neg"
 
     # Processing
     section_z_ratio: float = 0.50
@@ -172,10 +179,10 @@ def _archive_existing(paths: list[Path], out_dir: Path) -> list[tuple[str, str]]
     return moved
 
 
-def _load_step_as_mesh(step_path: Path, tmp_stl: Path):
+def _load_step_as_mesh(step_path: Path, tmp_stl: Path, p: MakiTpuLinerParams):
     shape = import_step(str(step_path))
     housing = max(shape.solids(), key=lambda s: s.volume)
-    step_features = _extract_step_side_features(housing)
+    step_features = _extract_step_side_features(housing, p)
 
     tmp_stl.parent.mkdir(parents=True, exist_ok=True)
     export_stl(shape, str(tmp_stl))
@@ -187,7 +194,74 @@ def _load_step_as_mesh(step_path: Path, tmp_stl: Path):
     return mesh, step_features
 
 
-def _extract_step_side_features(housing):
+def _extract_tripod_from_cylindrical_faces(housing, p: MakiTpuLinerParams):
+    candidates = []
+    for f in housing.faces():
+        if f.geom_type != GeomType.CYLINDER:
+            continue
+        r = getattr(f, "radius", None)
+        if r is None:
+            continue
+        if abs(r - p.tripod_thread_radius_mm) > p.tripod_radius_tolerance_mm:
+            continue
+        try:
+            c = f.center()
+            n = f.normal_at()
+        except Exception:
+            continue
+        if abs(float(c.X)) > p.tripod_centerline_x_max_mm:
+            continue
+        if not (p.tripod_z_min_mm <= float(c.Z) <= p.tripod_z_max_mm):
+            continue
+        if abs(float(n.Z)) < p.tripod_face_normal_min_abs_z or float(n.Z) >= 0.0:
+            continue
+        bb = f.bounding_box()
+        major_span = max(float(bb.size.X), float(bb.size.Y), float(bb.size.Z))
+        if major_span < 4.0:
+            continue
+        side = "neg" if c.Y < 0 else "pos"
+        score = (
+            0.0 if side == p.tripod_expected_side else 1.0,
+            abs(float(r) - p.tripod_thread_radius_mm),
+            abs(float(n.Z) + 1.0),
+            abs(float(c.X)),
+            abs(float(c.Z) + 45.0),
+        )
+        candidates.append({"side": side, "x": float(c.X), "y": float(c.Y), "z": float(c.Z), "r": float(r), "score": score})
+    if not candidates:
+        return None, 0
+    best = min(candidates, key=lambda c: c["score"])
+    best.pop("score", None)
+    return best, len(candidates)
+
+
+def _extract_tripod_from_circular_edges(housing):
+    tripod_candidates = []
+    for e in housing.edges():
+        if e.geom_type != GeomType.CIRCLE:
+            continue
+        c = e.center()
+        r = e.radius
+        bb = e.bounding_box()
+        if not (2.5 <= r <= 8.0):
+            continue
+        if not (-90.0 <= c.Z <= -20.0):
+            continue
+        if abs(c.X) > 2.0:
+            continue
+        side = "neg" if c.Y < 0 else "pos"
+        circular_in_xz = abs(bb.size.X - bb.size.Z) < 0.25 and bb.size.Y < 0.25
+        if not circular_in_xz:
+            continue
+        tripod_candidates.append({"side": side, "x": float(c.X), "z": float(c.Z), "r": float(r), "y": float(c.Y)})
+    if not tripod_candidates:
+        return None, 0
+    neg = [c for c in tripod_candidates if c["side"] == "neg"]
+    pool = neg if neg else tripod_candidates
+    return max(pool, key=lambda c: c["r"]), len(tripod_candidates)
+
+
+def _extract_step_side_features(housing, p: MakiTpuLinerParams):
     vents = []
     seen = set()
 
@@ -255,32 +329,20 @@ def _extract_step_side_features(housing):
                 }
             )
 
-    tripod_candidates = []
-    for e in housing.edges():
-        if e.geom_type != GeomType.CIRCLE:
-            continue
-        c = e.center()
-        r = e.radius
-        bb = e.bounding_box()
-        if not (2.5 <= r <= 8.0):
-            continue
-        if not (-90.0 <= c.Z <= -20.0):
-            continue
-        if abs(c.X) > 2.0:
-            continue
-        side = "neg" if c.Y < 0 else "pos"
-        circular_in_xz = abs(bb.size.X - bb.size.Z) < 0.25 and bb.size.Y < 0.25
-        if not circular_in_xz:
-            continue
-        tripod_candidates.append({"side": side, "x": c.X, "z": c.Z, "r": r})
+    tripod, cyl_count = _extract_tripod_from_cylindrical_faces(housing, p)
+    tripod_source = "cylindrical_face"
+    edge_count = 0
+    if tripod is None:
+        tripod, edge_count = _extract_tripod_from_circular_edges(housing)
+        tripod_source = "circle_edge" if tripod is not None else "fallback_param"
 
-    tripod = None
-    if tripod_candidates:
-        neg = [c for c in tripod_candidates if c["side"] == "neg"]
-        pool = neg if neg else tripod_candidates
-        tripod = max(pool, key=lambda c: c["r"])
-
-    return {"vents": vents, "tripod": tripod}
+    return {
+        "vents": vents,
+        "tripod": tripod,
+        "tripod_source": tripod_source,
+        "tripod_cyl_candidate_count": int(cyl_count),
+        "tripod_edge_candidate_count": int(edge_count),
+    }
 
 
 def _collapse_close(values: list[float], tol: float) -> list[float]:
@@ -439,7 +501,7 @@ def _extract_profile_xy(mesh: trimesh.Trimesh, z_mm: float) -> Polygon:
 
 def build_liner(p: MakiTpuLinerParams):
     tmp_stl = Path("tmp/maki_device_from_step_tpu_ref.stl")
-    mesh, step_features = _load_step_as_mesh(p.step_path, tmp_stl)
+    mesh, step_features = _load_step_as_mesh(p.step_path, tmp_stl, p)
 
     zmin, zmax = mesh.bounds[:, 2]
     z_section = zmin + (zmax - zmin) * p.section_z_ratio
@@ -532,14 +594,10 @@ def build_liner(p: MakiTpuLinerParams):
                     for z_c in vent_pattern["z_centers"]:
                         if panel["axis"] == "y":
                             y_face = min_y - 0.2
-                            with Locations((panel["x"], y_face, z_c)):
-                                Box(
-                                    vent_pattern["slot_t"],
-                                    cut_depth,
-                                    vent_pattern["slot_z"],
-                                    align=(Align.CENTER, Align.MIN, Align.CENTER),
-                                    mode=Mode.SUBTRACT,
-                                )
+                            with BuildSketch(Plane.XZ.offset(y_face)):
+                                with Locations((panel["x"], z_c)):
+                                    SlotOverall(vent_pattern["slot_t"], vent_pattern["slot_z"])
+                            extrude(amount=cut_depth, mode=Mode.SUBTRACT)
                             vents_used.append(
                                 {
                                     "axis": "y",
@@ -556,14 +614,12 @@ def build_liner(p: MakiTpuLinerParams):
                                 }
                             )
                         else:
-                            with Locations((panel["x"], panel["y"], z_c)):
-                                Box(
-                                    cut_depth,
-                                    vent_pattern["slot_t"],
-                                    vent_pattern["slot_z"],
-                                    align=(Align.CENTER, Align.CENTER, Align.CENTER),
-                                    mode=Mode.SUBTRACT,
-                                )
+                            on_neg = panel["side"] == "neg"
+                            x_face = panel["x"] - 0.2 if on_neg else panel["x"] + 0.2
+                            with BuildSketch(Plane.YZ.offset(x_face)):
+                                with Locations((panel["y"], z_c)):
+                                    SlotOverall(vent_pattern["slot_t"], vent_pattern["slot_z"])
+                            extrude(amount=cut_depth if on_neg else -cut_depth, mode=Mode.SUBTRACT)
                             vents_used.append(
                                 {
                                     "axis": "x",
@@ -729,6 +785,9 @@ def build_liner(p: MakiTpuLinerParams):
             "vents_applied": len(vents_used),
             "vents_applied_entries": vents_used,
             "tripod_detected": step_features["tripod"] is not None,
+            "tripod_source": step_features.get("tripod_source", "unknown"),
+            "tripod_cyl_candidate_count": step_features.get("tripod_cyl_candidate_count", 0),
+            "tripod_edge_candidate_count": step_features.get("tripod_edge_candidate_count", 0),
             "tripod_applied": tripod_used,
         },
         "derived": {

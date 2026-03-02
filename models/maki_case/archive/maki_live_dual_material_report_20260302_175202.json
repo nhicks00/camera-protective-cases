@@ -494,8 +494,8 @@
           "front_integrated": true,
           "lens_hood": {
             "enabled": true,
-            "depth_mm": 16.0,
-            "drop_mm": 9.0,
+            "depth_mm": 8.0,
+            "drop_mm": 7.0,
             "span_ratio": 0.84
           },
           "cavity_front_z_mm": 3.0,
@@ -541,7 +541,7 @@
             "outer": 22.087156857946702
           },
           "machined_finish_mm": {
-            "sleeve_axis_y_fillet": 0.45
+            "sleeve_axis_y_fillet": 0.0
           },
           "outer_bounds_xy_mm": {
             "min_x": -33.795,
@@ -974,14 +974,11 @@
             }
           ],
           "tripod_detected": true,
-          "tripod_source": "cylindrical_face",
-          "tripod_cyl_candidate_count": 1,
-          "tripod_edge_candidate_count": 0,
           "tripod_applied": {
             "side": "neg",
-            "x": 9.600208465045147e-16,
-            "z": 44.430878397843735,
-            "diameter": 8.189165114161232
+            "x": 0.34221829986430846,
+            "z": 52.90126909246757,
+            "diameter": 9.751206546731504
           }
         },
         "derived": {
