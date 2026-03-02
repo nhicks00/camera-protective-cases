@@ -2,6 +2,25 @@
 
 ## 2026-03-02
 
+### MAKI Vent Pattern Correction (`24 + 6`)
+- Corrected MAKI vent layout implementation to match requested pattern:
+  - `24` vents above tripod area across the 3-panel bank (`8 x 3`).
+  - Plus side vents: `3` on left side and `3` on right side.
+- Fixed vent-slot orientation on side/corner panels (previously swapped tangential vs vertical dimensions, which visually collapsed rows into long slits).
+- Applied in both generators:
+  - `scripts/generate_maki_live_case.py`
+  - `scripts/generate_maki_live_tpu_liner.py`
+- Regenerated:
+  - `models/maki_case/maki_live_case_sleeve.step`
+  - `models/maki_case/maki_live_tpu_sleeve.step`
+  - `models/maki_case/reports/maki_live_case_report.json`
+  - `models/maki_case/reports/maki_live_tpu_sleeve_report.json`
+  - `models/maki_case/reports/maki_validation_summary.json`
+- Validation result after regeneration:
+  - ASA sleeve vents open: `30/30`
+  - TPU sleeve vents open: `30/30`
+  - Tripod cutout remains open through both ASA and TPU sleeves.
+
 ### MAKI Through-Cut Validation + Regeneration (STEP-Driven)
 - Fixed MAKI tripod opening generation in both sleeve generators:
   - `scripts/generate_maki_live_case.py`

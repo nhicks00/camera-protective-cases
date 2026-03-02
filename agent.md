@@ -80,11 +80,13 @@ Active hard-shell and TPU workflows:
     - 8 vent slots on center panel
     - 8 on each adjacent panel
     - 24 total on that side
+    - plus side vents: 3 on left side + 3 on right side
+    - total applied vents on sleeve: 30
   - Through-cut depth increased so vents fully penetrate.
   - Vent row clustering now locks to the STEP-derived rear vent bank (8 rows) and ignores front outlier slots.
   - Tripod side includes local armor boss thickening around the mount opening.
   - Tripod hole cut orientation is corrected and validated as a true through-cut.
-  - Vent pass-through validated (`24/24` total; 8 center-panel `Y` slots + 16 side-panel `X` slots) and vent coordinates emitted in report under `step_side_features.vents_applied_entries`.
+  - Vent pass-through validated (`30/30` total) and vent coordinates emitted in report under `step_side_features.vents_applied_entries`.
 - ASA caps:
   - Active output: `models/maki_case/maki_live_rear_cap.step`
   - Generator: `scripts/generate_maki_live_caps.py --profile asa`
@@ -96,7 +98,7 @@ Active hard-shell and TPU workflows:
   - Generator: `scripts/generate_maki_live_tpu_liner.py`
   - Single connected TPU sleeve with thin front/rear edge wraps.
   - Does not use full TPU face caps.
-  - Vent pass-through validated (`24/24` through by ray-check), with tripod through-cut also validated.
+  - Vent pass-through validated (`30/30` through by ray-check), with tripod through-cut also validated.
   - Vent rows are aligned to the ASA sleeve vent coordinates in device frame.
   - Legacy separate TPU liner/caps and unibody files are archived automatically.
 

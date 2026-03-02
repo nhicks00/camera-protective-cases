@@ -103,6 +103,9 @@ class MakiCaseParams:
     enforce_tripanel_vent_layout: bool = True
     tripanel_fallback_x_offset_mm: float = 16.0
     vent_cut_depth_mm: float = 12.0
+    include_side_trio_vents: bool = True
+    side_trio_per_side: int = 3
+    side_trio_z_threshold_mm: float = -20.0
 
     # Shape processing
     section_z_ratio: float = 0.50
@@ -497,21 +500,22 @@ def _derive_tripanel_vents(step_vents, map_x, map_y, map_z, sx: float, sz: float
             for i in range(p.vent_rows_per_panel)
         ]
         x_off = p.tripanel_fallback_x_offset_mm
+        panels = [
+            {"axis": "x", "side": "neg", "x": -x_off, "y": 0.0},
+            {"axis": "y", "side": "neg", "x": 0.0, "y": 0.0},
+            {"axis": "x", "side": "pos", "x": x_off, "y": 0.0},
+        ]
         return {
-            "x_centers": [-x_off, 0.0, x_off],
+            "panels": panels,
             "z_centers": z_centers,
-            "slot_w": p.vent_slot_w_mm,
-            "slot_h": p.vent_slot_h_mm,
+            "slot_t": p.vent_slot_w_mm,
+            "slot_z": p.vent_slot_h_mm,
             "source": "fallback",
         }
 
     # Use median slot size for consistency across the 3 panels.
-    slot_w = float(
-        np.median([max(v["slot_t"] * sx, v["slot_z"] * sz) + p.side_feature_clearance_mm for v in neg_primary])
-    )
-    slot_h = float(
-        np.median([max(min(v["slot_t"] * sx, v["slot_z"] * sz) + p.side_feature_clearance_mm, 0.8) for v in neg_primary])
-    )
+    slot_t = float(np.median([v["slot_t"] * sx + p.side_feature_clearance_mm for v in neg_primary]))
+    slot_z = float(np.median([max(v["slot_z"] * sz + p.side_feature_clearance_mm, 0.8) for v in neg_primary]))
 
     # Build z row centers (8 vents per panel) from primary bank only.
     z_vals_raw = _collapse_close([v["z"] for v in neg_primary], tol=0.7)
@@ -569,9 +573,52 @@ def _derive_tripanel_vents(step_vents, map_x, map_y, map_z, sx: float, sz: float
     return {
         "panels": panels,
         "z_centers": [float(z) for z in z_centers],
-        "slot_w": slot_w,
-        "slot_h": slot_h,
+        "slot_t": slot_t,
+        "slot_z": slot_z,
         "source": "step_tripanel_cluster",
+    }
+
+
+def _derive_side_trio_vents(step_vents, map_y, map_z, sy: float, sz: float, p: MakiCaseParams):
+    """Derive 3-per-side vents from the front-side small vent family in STEP."""
+    family = []
+    for v in step_vents:
+        if v["axis"] != "x":
+            continue
+        if v["z"] <= p.side_trio_z_threshold_mm:
+            continue
+        if not (2.5 <= v["slot_t"] <= 6.5 and 0.6 <= v["slot_z"] <= 2.5):
+            continue
+        family.append(v)
+
+    if not family:
+        return {
+            "y_centers": [-12.0, 0.0, 12.0],
+            "z_center": p.clearance_mm + p.front_wall_mm + 12.0,
+            "slot_t": 4.2,
+            "slot_z": 1.6,
+            "source": "fallback",
+        }
+
+    z_center = float(np.median([map_z(v["z"]) for v in family]))
+    y_abs = [abs(map_y(v["y"])) for v in family if abs(v["y"]) > 0.25]
+    y_off = float(np.median(y_abs)) if y_abs else 12.0
+    slot_t = float(np.median([max(v["slot_t"] * sy + p.side_feature_clearance_mm, 1.2) for v in family]))
+    slot_z = float(np.median([max(v["slot_z"] * sz + p.side_feature_clearance_mm, 0.8) for v in family]))
+
+    if p.side_trio_per_side <= 1:
+        y_centers = [0.0]
+    elif p.side_trio_per_side == 2:
+        y_centers = [-y_off, y_off]
+    else:
+        y_centers = [-y_off, 0.0, y_off]
+
+    return {
+        "y_centers": [float(y) for y in y_centers],
+        "z_center": z_center,
+        "slot_t": slot_t,
+        "slot_z": slot_z,
+        "source": "step_side_trio",
     }
 
 
@@ -699,9 +746,9 @@ def build_case(p: MakiCaseParams):
                             # Center panel: cut from -Y side inward.
                             with Locations((panel["x"], y_face, z_c)):
                                 Box(
-                                    vent_pattern["slot_h"],
+                                    vent_pattern["slot_t"],
                                     cut_depth,
-                                    vent_pattern["slot_w"],
+                                    vent_pattern["slot_z"],
                                     align=(Align.CENTER, Align.MIN, Align.CENTER),
                                     mode=Mode.SUBTRACT,
                                 )
@@ -712,8 +759,10 @@ def build_case(p: MakiCaseParams):
                                     "x": float(panel["x"]),
                                     "y": float(y_face),
                                     "z": float(z_c),
-                                    "slot_w": float(vent_pattern["slot_w"]),
-                                    "slot_h": float(vent_pattern["slot_h"]),
+                                    "slot_t": float(vent_pattern["slot_t"]),
+                                    "slot_z": float(vent_pattern["slot_z"]),
+                                    "slot_w": float(vent_pattern["slot_t"]),
+                                    "slot_h": float(vent_pattern["slot_z"]),
                                     "panel_index": panel_idx,
                                     "pattern_source": vent_pattern["source"],
                                 }
@@ -724,8 +773,8 @@ def build_case(p: MakiCaseParams):
                             with Locations((panel["x"], panel["y"], z_c)):
                                 Box(
                                     cut_depth,
-                                    vent_pattern["slot_h"],
-                                    vent_pattern["slot_w"],
+                                    vent_pattern["slot_t"],
+                                    vent_pattern["slot_z"],
                                     align=(Align.CENTER, Align.CENTER, Align.CENTER),
                                     mode=Mode.SUBTRACT,
                                 )
@@ -736,10 +785,42 @@ def build_case(p: MakiCaseParams):
                                     "x": float(panel["x"]),
                                     "y": float(panel["y"]),
                                     "z": float(z_c),
-                                    "slot_w": float(vent_pattern["slot_w"]),
-                                    "slot_h": float(vent_pattern["slot_h"]),
+                                    "slot_t": float(vent_pattern["slot_t"]),
+                                    "slot_z": float(vent_pattern["slot_z"]),
+                                    "slot_w": float(vent_pattern["slot_t"]),
+                                    "slot_h": float(vent_pattern["slot_z"]),
                                     "panel_index": panel_idx,
                                     "pattern_source": vent_pattern["source"],
+                                }
+                            )
+                if p.include_side_trio_vents:
+                    trio = _derive_side_trio_vents(step_features["vents"], map_y, map_z, sy, sz, p)
+                    for side in ("neg", "pos"):
+                        x_face = min_x - 0.2 if side == "neg" else max_x + 0.2
+                        for y_c in trio["y_centers"]:
+                            with Locations((x_face, y_c, trio["z_center"])):
+                                Box(
+                                    cut_depth,
+                                    trio["slot_t"],
+                                    trio["slot_z"],
+                                    align=(Align.MIN, Align.CENTER, Align.CENTER)
+                                    if side == "neg"
+                                    else (Align.MAX, Align.CENTER, Align.CENTER),
+                                    mode=Mode.SUBTRACT,
+                                )
+                            vents_used.append(
+                                {
+                                    "axis": "x",
+                                    "side": side,
+                                    "x": float(x_face),
+                                    "y": float(y_c),
+                                    "z": float(trio["z_center"]),
+                                    "slot_t": float(trio["slot_t"]),
+                                    "slot_z": float(trio["slot_z"]),
+                                    "slot_w": float(trio["slot_t"]),
+                                    "slot_h": float(trio["slot_z"]),
+                                    "pattern_source": trio["source"],
+                                    "vent_family": "side_trio",
                                 }
                             )
             else:
@@ -749,16 +830,16 @@ def build_case(p: MakiCaseParams):
                         x_c = map_x(v["x"])
                         t_span = v["slot_t"] * sx
                         z_span = v["slot_z"] * sz
-                        slot_w = max(max(t_span, z_span) + p.side_feature_clearance_mm, 0.8)
-                        slot_h = max(min(t_span, z_span) + p.side_feature_clearance_mm, 0.8)
+                        slot_t = max(t_span + p.side_feature_clearance_mm, 0.8)
+                        slot_z = max(z_span + p.side_feature_clearance_mm, 0.8)
                         on_neg = v["side"] == "neg"
                         y_face = min_y - 0.2 if on_neg else max_y + 0.2
                         cut_depth = max(p.vent_cut_depth_mm, p.wall_mm + p.tripod_armor_extra_mm + 3.0)
                         with Locations((x_c, y_face, z_c)):
                             Box(
-                                slot_h,
+                                slot_t,
                                 cut_depth,
-                                slot_w,
+                                slot_z,
                                 align=(Align.CENTER, Align.MIN, Align.CENTER)
                                 if on_neg
                                 else (Align.CENTER, Align.MAX, Align.CENTER),
@@ -768,16 +849,16 @@ def build_case(p: MakiCaseParams):
                         y_c = map_y(v["y"])
                         t_span = v["slot_t"] * sy
                         z_span = v["slot_z"] * sz
-                        slot_w = max(max(t_span, z_span) + p.side_feature_clearance_mm, 0.8)
-                        slot_h = max(min(t_span, z_span) + p.side_feature_clearance_mm, 0.8)
+                        slot_t = max(t_span + p.side_feature_clearance_mm, 0.8)
+                        slot_z = max(z_span + p.side_feature_clearance_mm, 0.8)
                         on_neg = v["side"] == "neg"
                         x_face = min_x - 0.2 if on_neg else max_x + 0.2
                         cut_depth = max(p.vent_cut_depth_mm, p.wall_mm + p.tripod_armor_extra_mm + 3.0)
                         with Locations((x_face, y_c, z_c)):
                             Box(
                                 cut_depth,
-                                slot_h,
-                                slot_w,
+                                slot_t,
+                                slot_z,
                                 align=(Align.MIN, Align.CENTER, Align.CENTER)
                                 if on_neg
                                 else (Align.MAX, Align.CENTER, Align.CENTER),
@@ -790,8 +871,10 @@ def build_case(p: MakiCaseParams):
                             "x": map_x(v["x"]),
                             "y": map_y(v["y"]),
                             "z": z_c,
-                            "slot_w": slot_w,
-                            "slot_h": slot_h,
+                            "slot_t": slot_t,
+                            "slot_z": slot_z,
+                            "slot_w": slot_t,
+                            "slot_h": slot_z,
                         }
                     )
 

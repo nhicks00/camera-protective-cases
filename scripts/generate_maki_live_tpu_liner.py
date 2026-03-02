@@ -77,6 +77,9 @@ class MakiTpuLinerParams:
     enforce_tripanel_vent_layout: bool = True
     tripanel_fallback_x_offset_mm: float = 16.0
     vent_cut_depth_mm: float = 8.0
+    include_side_trio_vents: bool = True
+    side_trio_per_side: int = 3
+    side_trio_z_threshold_mm: float = -20.0
     tripod_center_from_front_mm: float = 48.0
     tripod_hole_diameter_mm: float = 10.2
 
@@ -284,73 +287,125 @@ def _collapse_close(values: list[float], tol: float) -> list[float]:
     return out
 
 
-def _derive_tripanel_vents(step_vents, map_x, map_z, sx: float, sz: float, outer_w: float, p: MakiTpuLinerParams):
-    """Derive a 3-panel x/z vent pattern (8 rows each) from STEP side vents."""
-    neg_side = []
+def _derive_tripanel_vents(step_vents, map_x, map_y, map_z, sx: float, sz: float, outer_w: float, p: MakiTpuLinerParams):
+    """Derive a 3-panel vent pattern (8 rows each) from STEP side vents."""
+    neg_primary = []
     for v in step_vents:
         if v["axis"] != "y" or v["side"] != "neg":
             continue
-        t_span = v["slot_t"] * sx
-        z_span = v["slot_z"] * sz
-        slot_w = max(t_span, z_span) + p.side_feature_clearance_mm
-        slot_h = max(min(t_span, z_span) + p.side_feature_clearance_mm, 0.8)
-        neg_side.append(
-            {
-                "x": float(map_x(v["x"])),
-                "z": float(map_z(v["z"])),
-                "slot_w": float(slot_w),
-                "slot_h": float(slot_h),
-            }
-        )
+        if v["z"] > -20.0:
+            continue
+        if v["slot_t"] < 8.0 or v["slot_z"] < 1.6:
+            continue
+        neg_primary.append(v)
 
-    if not neg_side:
+    if not neg_primary:
         z_centers = [
             p.end_clearance_mm + p.vent_start_from_front_mm + i * p.vent_pitch_mm
             for i in range(p.vent_rows_per_panel)
         ]
         x_off = p.tripanel_fallback_x_offset_mm
+        panels = [
+            {"axis": "x", "side": "neg", "x": -x_off, "y": 0.0},
+            {"axis": "y", "side": "neg", "x": 0.0, "y": 0.0},
+            {"axis": "x", "side": "pos", "x": x_off, "y": 0.0},
+        ]
         return {
-            "x_centers": [-x_off, 0.0, x_off],
+            "panels": panels,
             "z_centers": z_centers,
-            "slot_w": p.vent_slot_w_mm,
-            "slot_h": p.vent_slot_h_mm,
+            "slot_t": p.vent_slot_w_mm,
+            "slot_z": p.vent_slot_h_mm,
             "source": "fallback",
         }
 
-    slot_w = float(np.median([v["slot_w"] for v in neg_side]))
-    slot_h = float(np.median([v["slot_h"] for v in neg_side]))
+    slot_t = float(np.median([v["slot_t"] * sx + p.side_feature_clearance_mm for v in neg_primary]))
+    slot_z = float(np.median([max(v["slot_z"] * sz + p.side_feature_clearance_mm, 0.8) for v in neg_primary]))
 
-    z_vals = _collapse_close([v["z"] for v in neg_side], tol=0.9)
+    z_vals = sorted(_collapse_close([v["z"] for v in neg_primary], tol=0.7))
     if len(z_vals) >= p.vent_rows_per_panel:
-        z_centers = z_vals[: p.vent_rows_per_panel]
+        best = None
+        for i in range(0, len(z_vals) - p.vent_rows_per_panel + 1):
+            chunk = z_vals[i : i + p.vent_rows_per_panel]
+            diffs = np.diff(chunk)
+            pitch = float(np.median(diffs))
+            spread = float(np.max(np.abs(diffs - pitch))) if len(diffs) else 0.0
+            score = (spread, abs(pitch - p.vent_pitch_mm), -chunk[0])
+            if best is None or score < best[0]:
+                best = (score, chunk)
+        z_centers = [float(map_z(z)) for z in best[1]]
     else:
-        if len(z_vals) >= 2:
-            pitch = float(np.median(np.diff(sorted(z_vals))))
-        else:
-            pitch = p.vent_pitch_mm
+        pitch = float(np.median(np.diff(sorted(z_vals)))) if len(z_vals) >= 2 else p.vent_pitch_mm
         z0 = z_vals[0] if z_vals else (p.end_clearance_mm + p.vent_start_from_front_mm)
-        z_centers = [z0 + i * pitch for i in range(p.vent_rows_per_panel)]
+        z_centers = [float(map_z(z0 + i * pitch)) for i in range(p.vent_rows_per_panel)]
 
-    x_vals = _collapse_close([v["x"] for v in neg_side], tol=2.0)
-    if len(x_vals) >= 3:
-        mid = min(x_vals, key=lambda x: abs(x))
-        left = min([x for x in x_vals if x < mid], default=mid - p.tripanel_fallback_x_offset_mm)
-        right = max([x for x in x_vals if x > mid], default=mid + p.tripanel_fallback_x_offset_mm)
-        x_centers = [left, mid, right]
-    elif len(x_vals) == 2:
-        mid = 0.5 * (x_vals[0] + x_vals[1])
-        x_off = max(abs(x_vals[0] - mid), p.tripanel_fallback_x_offset_mm * 0.7)
-        x_centers = [mid - x_off, mid, mid + x_off]
+    center_x = float(np.median([map_x(v["x"]) for v in neg_primary]))
+    x_neg_candidates = [
+        v for v in step_vents
+        if v["axis"] == "x" and v["side"] == "neg" and v["z"] < -20.0 and v["slot_t"] >= 8.0
+    ]
+    x_pos_candidates = [
+        v for v in step_vents
+        if v["axis"] == "x" and v["side"] == "pos" and v["z"] < -20.0 and v["slot_t"] >= 8.0
+    ]
+    if x_neg_candidates and x_pos_candidates:
+        x_neg = float(np.median([map_x(v["x"]) for v in x_neg_candidates]))
+        x_pos = float(np.median([map_x(v["x"]) for v in x_pos_candidates]))
+        y_neg = float(np.median([map_y(v["y"]) for v in x_neg_candidates]))
+        y_pos = float(np.median([map_y(v["y"]) for v in x_pos_candidates]))
     else:
-        x_off = max(0.23 * outer_w, p.tripanel_fallback_x_offset_mm)
-        x_centers = [x_vals[0] - x_off, x_vals[0], x_vals[0] + x_off]
+        x_off = max(0.33 * outer_w, p.tripanel_fallback_x_offset_mm)
+        x_neg = center_x - x_off
+        x_pos = center_x + x_off
+        y_neg = 0.0
+        y_pos = 0.0
+
+    panels = [
+        {"axis": "x", "side": "neg", "x": x_neg, "y": y_neg},
+        {"axis": "y", "side": "neg", "x": center_x, "y": 0.0},
+        {"axis": "x", "side": "pos", "x": x_pos, "y": y_pos},
+    ]
+    return {
+        "panels": panels,
+        "z_centers": [float(z) for z in z_centers],
+        "slot_t": slot_t,
+        "slot_z": slot_z,
+        "source": "step_tripanel_cluster",
+    }
+
+
+def _derive_side_trio_vents(step_vents, map_y, map_z, sy: float, sz: float, p: MakiTpuLinerParams):
+    family = []
+    for v in step_vents:
+        if v["axis"] != "x":
+            continue
+        if v["z"] <= p.side_trio_z_threshold_mm:
+            continue
+        if not (2.5 <= v["slot_t"] <= 6.5 and 0.6 <= v["slot_z"] <= 2.5):
+            continue
+        family.append(v)
+
+    if not family:
+        return {
+            "y_centers": [-12.0, 0.0, 12.0],
+            "z_center": p.end_clearance_mm + 12.0,
+            "slot_t": 4.2,
+            "slot_z": 1.6,
+            "source": "fallback",
+        }
+
+    z_center = float(np.median([map_z(v["z"]) for v in family]))
+    y_abs = [abs(map_y(v["y"])) for v in family if abs(v["y"]) > 0.25]
+    y_off = float(np.median(y_abs)) if y_abs else 12.0
+    slot_t = float(np.median([max(v["slot_t"] * sy + p.side_feature_clearance_mm, 1.2) for v in family]))
+    slot_z = float(np.median([max(v["slot_z"] * sz + p.side_feature_clearance_mm, 0.8) for v in family]))
+    y_centers = [-y_off, 0.0, y_off] if p.side_trio_per_side >= 3 else ([-y_off, y_off] if p.side_trio_per_side == 2 else [0.0])
 
     return {
-        "x_centers": [float(x) for x in x_centers],
-        "z_centers": [float(z) for z in z_centers],
-        "slot_w": slot_w,
-        "slot_h": slot_h,
-        "source": "step_neg_y",
+        "y_centers": [float(y) for y in y_centers],
+        "z_center": z_center,
+        "slot_t": slot_t,
+        "slot_z": slot_z,
+        "source": "step_side_trio",
     }
 
 
@@ -413,6 +468,8 @@ def build_liner(p: MakiTpuLinerParams):
 
     min_y = -0.5 * outer_h
     max_y = 0.5 * outer_h
+    min_x = -0.5 * outer_w
+    max_x = 0.5 * outer_w
 
     def map_x(x_dev: float) -> float:
         return float(x_dev * sx)
@@ -464,32 +521,89 @@ def build_liner(p: MakiTpuLinerParams):
 
         if p.use_step_side_features:
             if p.enforce_tripanel_vent_layout:
-                vent_pattern = _derive_tripanel_vents(step_features["vents"], map_x, map_z, sx, sz, outer_w, p)
-                y_face = min_y - 0.2
+                vent_pattern = _derive_tripanel_vents(step_features["vents"], map_x, map_y, map_z, sx, sz, outer_w, p)
                 cut_depth = max(p.vent_cut_depth_mm, p.shell_thickness_mm + 3.0)
-                for panel_idx, x_c in enumerate(vent_pattern["x_centers"]):
+                for panel_idx, panel in enumerate(vent_pattern["panels"]):
                     for z_c in vent_pattern["z_centers"]:
-                        with Locations((x_c, y_face, z_c)):
-                            Box(
-                                vent_pattern["slot_h"],
-                                cut_depth,
-                                vent_pattern["slot_w"],
-                                align=(Align.CENTER, Align.MIN, Align.CENTER),
-                                mode=Mode.SUBTRACT,
+                        if panel["axis"] == "y":
+                            y_face = min_y - 0.2
+                            with Locations((panel["x"], y_face, z_c)):
+                                Box(
+                                    vent_pattern["slot_t"],
+                                    cut_depth,
+                                    vent_pattern["slot_z"],
+                                    align=(Align.CENTER, Align.MIN, Align.CENTER),
+                                    mode=Mode.SUBTRACT,
+                                )
+                            vents_used.append(
+                                {
+                                    "axis": "y",
+                                    "side": "neg",
+                                    "x": float(panel["x"]),
+                                    "y": float(y_face),
+                                    "z": float(z_c),
+                                    "slot_t": float(vent_pattern["slot_t"]),
+                                    "slot_z": float(vent_pattern["slot_z"]),
+                                    "slot_w": float(vent_pattern["slot_t"]),
+                                    "slot_h": float(vent_pattern["slot_z"]),
+                                    "panel_index": panel_idx,
+                                    "pattern_source": vent_pattern["source"],
+                                }
                             )
-                        vents_used.append(
-                            {
-                                "axis": "y",
-                                "side": "neg",
-                                "x": float(x_c),
-                                "y": float(y_face),
-                                "z": float(z_c),
-                                "slot_w": float(vent_pattern["slot_w"]),
-                                "slot_h": float(vent_pattern["slot_h"]),
-                                "panel_index": panel_idx,
-                                "pattern_source": vent_pattern["source"],
-                            }
-                        )
+                        else:
+                            with Locations((panel["x"], panel["y"], z_c)):
+                                Box(
+                                    cut_depth,
+                                    vent_pattern["slot_t"],
+                                    vent_pattern["slot_z"],
+                                    align=(Align.CENTER, Align.CENTER, Align.CENTER),
+                                    mode=Mode.SUBTRACT,
+                                )
+                            vents_used.append(
+                                {
+                                    "axis": "x",
+                                    "side": panel["side"],
+                                    "x": float(panel["x"]),
+                                    "y": float(panel["y"]),
+                                    "z": float(z_c),
+                                    "slot_t": float(vent_pattern["slot_t"]),
+                                    "slot_z": float(vent_pattern["slot_z"]),
+                                    "slot_w": float(vent_pattern["slot_t"]),
+                                    "slot_h": float(vent_pattern["slot_z"]),
+                                    "panel_index": panel_idx,
+                                    "pattern_source": vent_pattern["source"],
+                                }
+                            )
+                if p.include_side_trio_vents:
+                    trio = _derive_side_trio_vents(step_features["vents"], map_y, map_z, sy, sz, p)
+                    for side in ("neg", "pos"):
+                        x_face = min_x - 0.2 if side == "neg" else max_x + 0.2
+                        for y_c in trio["y_centers"]:
+                            with Locations((x_face, y_c, trio["z_center"])):
+                                Box(
+                                    cut_depth,
+                                    trio["slot_t"],
+                                    trio["slot_z"],
+                                    align=(Align.MIN, Align.CENTER, Align.CENTER)
+                                    if side == "neg"
+                                    else (Align.MAX, Align.CENTER, Align.CENTER),
+                                    mode=Mode.SUBTRACT,
+                                )
+                            vents_used.append(
+                                {
+                                    "axis": "x",
+                                    "side": side,
+                                    "x": float(x_face),
+                                    "y": float(y_c),
+                                    "z": float(trio["z_center"]),
+                                    "slot_t": float(trio["slot_t"]),
+                                    "slot_z": float(trio["slot_z"]),
+                                    "slot_w": float(trio["slot_t"]),
+                                    "slot_h": float(trio["slot_z"]),
+                                    "pattern_source": trio["source"],
+                                    "vent_family": "side_trio",
+                                }
+                            )
             else:
                 for v in step_features["vents"]:
                     z_c = map_z(v["z"])
@@ -497,16 +611,16 @@ def build_liner(p: MakiTpuLinerParams):
                         x_c = map_x(v["x"])
                         t_span = v["slot_t"] * sx
                         z_span = v["slot_z"] * sz
-                        slot_w = max(max(t_span, z_span) + p.side_feature_clearance_mm, 0.8)
-                        slot_h = max(min(t_span, z_span) + p.side_feature_clearance_mm, 0.8)
+                        slot_t = max(t_span + p.side_feature_clearance_mm, 0.8)
+                        slot_z = max(z_span + p.side_feature_clearance_mm, 0.8)
                         on_neg = v["side"] == "neg"
                         y_face = min_y - 0.2 if on_neg else max_y + 0.2
                         cut_depth = max(p.vent_cut_depth_mm, p.shell_thickness_mm + 3.0)
                         with Locations((x_c, y_face, z_c)):
                             Box(
-                                slot_h,
+                                slot_t,
                                 cut_depth,
-                                slot_w,
+                                slot_z,
                                 align=(Align.CENTER, Align.MIN, Align.CENTER)
                                 if on_neg
                                 else (Align.CENTER, Align.MAX, Align.CENTER),
@@ -516,16 +630,16 @@ def build_liner(p: MakiTpuLinerParams):
                         y_c = map_y(v["y"])
                         t_span = v["slot_t"] * sy
                         z_span = v["slot_z"] * sz
-                        slot_w = max(max(t_span, z_span) + p.side_feature_clearance_mm, 0.8)
-                        slot_h = max(min(t_span, z_span) + p.side_feature_clearance_mm, 0.8)
+                        slot_t = max(t_span + p.side_feature_clearance_mm, 0.8)
+                        slot_z = max(z_span + p.side_feature_clearance_mm, 0.8)
                         on_neg = v["side"] == "neg"
                         x_face = min_x - 0.2 if on_neg else max_x + 0.2
                         cut_depth = max(p.vent_cut_depth_mm, p.shell_thickness_mm + 3.0)
                         with Locations((x_face, y_c, z_c)):
                             Box(
                                 cut_depth,
-                                slot_h,
-                                slot_w,
+                                slot_t,
+                                slot_z,
                                 align=(Align.MIN, Align.CENTER, Align.CENTER)
                                 if on_neg
                                 else (Align.MAX, Align.CENTER, Align.CENTER),
@@ -538,8 +652,10 @@ def build_liner(p: MakiTpuLinerParams):
                             "x": map_x(v["x"]),
                             "y": map_y(v["y"]),
                             "z": z_c,
-                            "slot_w": slot_w,
-                            "slot_h": slot_h,
+                            "slot_t": slot_t,
+                            "slot_z": slot_z,
+                            "slot_w": slot_t,
+                            "slot_h": slot_z,
                         }
                     )
 
