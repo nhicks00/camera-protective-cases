@@ -76,6 +76,10 @@ class MakiCaseParams:
     lens_diameter_mm: float = 30.0
     front_bezel_extra_mm: float = 1.0
     front_bezel_height_mm: float = 1.1
+    lens_hood_enabled: bool = True
+    lens_hood_depth_mm: float = 8.0
+    lens_hood_drop_mm: float = 7.0
+    lens_hood_span_ratio: float = 0.84
 
     # Side tripod opening (derived from STEP feature location)
     tripod_center_from_front_mm: float = 48.0
@@ -740,6 +744,17 @@ def build_case(p: MakiCaseParams):
             extrude(amount=p.front_wall_mm + 0.6, mode=Mode.SUBTRACT)
             front_cutouts_applied = list(front_cutouts_detected)
 
+        # Top-front shade extension to reduce lens glare.
+        if p.front_integrated and p.lens_hood_enabled and p.lens_hood_depth_mm > 0.0 and p.lens_hood_drop_mm > 0.0:
+            hood_span = max(min(outer_w * p.lens_hood_span_ratio, outer_w), 8.0)
+            with Locations((0.0, max_y, -p.lens_hood_depth_mm)):
+                Box(
+                    hood_span,
+                    p.lens_hood_drop_mm,
+                    p.lens_hood_depth_mm,
+                    align=(Align.CENTER, Align.MAX, Align.MIN),
+                )
+
         if p.use_step_side_features:
             if p.enforce_tripanel_vent_layout:
                 vent_pattern = _derive_tripanel_vents(step_features["vents"], map_x, map_y, map_z, sx, sz, outer_w, p)
@@ -808,20 +823,18 @@ def build_case(p: MakiCaseParams):
                         p,
                         size_override=(vent_pattern["slot_t"], vent_pattern["slot_z"]),
                     )
-                    side_trio_z = shell_depth - trio["z_center"] if p.side_trio_flip_end else trio["z_center"]
+                    side_trio_z = (
+                        (shell_depth + cavity_front_z) - trio["z_center"]
+                        if p.side_trio_flip_end
+                        else trio["z_center"]
+                    )
                     for side in ("neg", "pos"):
                         x_face = min_x - 0.2 if side == "neg" else max_x + 0.2
                         for y_c in trio["y_centers"]:
-                            with Locations((x_face, y_c, side_trio_z)):
-                                Box(
-                                    cut_depth,
-                                    trio["slot_t"],
-                                    trio["slot_z"],
-                                    align=(Align.MIN, Align.CENTER, Align.CENTER)
-                                    if side == "neg"
-                                    else (Align.MAX, Align.CENTER, Align.CENTER),
-                                    mode=Mode.SUBTRACT,
-                                )
+                            with BuildSketch(Plane.YZ.offset(x_face)):
+                                with Locations((y_c, side_trio_z)):
+                                    SlotOverall(trio["slot_t"], trio["slot_z"])
+                            extrude(amount=cut_depth if side == "neg" else -cut_depth, mode=Mode.SUBTRACT)
                             vents_used.append(
                                 {
                                     "axis": "x",
@@ -1006,6 +1019,12 @@ def build_case(p: MakiCaseParams):
             "shell_depth_mm": float(shell_depth),
             "open_sleeve": not bool(p.front_integrated),
             "front_integrated": bool(p.front_integrated),
+            "lens_hood": {
+                "enabled": bool(p.front_integrated and p.lens_hood_enabled),
+                "depth_mm": float(max(p.lens_hood_depth_mm, 0.0)),
+                "drop_mm": float(max(p.lens_hood_drop_mm, 0.0)),
+                "span_ratio": float(p.lens_hood_span_ratio),
+            },
             "cavity_front_z_mm": float(cavity_front_z),
             "inner_w_mm": float(inner_w),
             "inner_h_mm": float(inner_h),
@@ -1056,6 +1075,9 @@ def main():
     parser.add_argument("--open-front", action="store_true", help="Legacy mode: keep front end fully open.")
     parser.add_argument("--no-front-cutouts", action="store_true", help="Disable front-wall cutouts in integrated-front mode.")
     parser.add_argument("--lens-d", type=float, default=None, help="Front lens opening diameter (mm)")
+    parser.add_argument("--no-lens-hood", action="store_true", help="Disable integrated top-front glare hood.")
+    parser.add_argument("--lens-hood-depth", type=float, default=None, help="Integrated glare hood projection depth (mm)")
+    parser.add_argument("--lens-hood-drop", type=float, default=None, help="Integrated glare hood vertical drop (mm)")
     parser.add_argument("--tripod-z", type=float, default=None, help="Fallback tripod opening center from front (mm)")
     parser.add_argument("--no-step-side-features", action="store_true", help="Disable STEP-derived side vents/tripod hole")
     args = parser.parse_args()
@@ -1071,6 +1093,12 @@ def main():
         params.include_front_cutouts = False
     if args.lens_d is not None:
         params.lens_diameter_mm = args.lens_d
+    if args.no_lens_hood:
+        params.lens_hood_enabled = False
+    if args.lens_hood_depth is not None:
+        params.lens_hood_depth_mm = max(float(args.lens_hood_depth), 0.0)
+    if args.lens_hood_drop is not None:
+        params.lens_hood_drop_mm = max(float(args.lens_hood_drop), 0.0)
     if args.tripod_z is not None:
         params.tripod_center_from_front_mm = args.tripod_z
     if args.no_step_side_features:

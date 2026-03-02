@@ -2,6 +2,26 @@
 
 ## 2026-03-02
 
+### MAKI Side-Vent Geometry + Alignment + Lens-Hood + Rear-Cap Contact Fix
+- Updated MAKI side `3 + 3` vents (both ASA + TPU generators) to rounded slot cuts instead of box cuts:
+  - `scripts/generate_maki_live_case.py`
+  - `scripts/generate_maki_live_tpu_liner.py`
+- Corrected ASA side-trio mirrored Z placement in integrated-front mode so side vents align with TPU in dual-material assembly.
+  - Verified in report math: side-trio aligned `dz = 0.0` after dual-body placement offset.
+- Added integrated top-front lens hood/shade geometry to MAKI ASA sleeve:
+  - default enabled in `scripts/generate_maki_live_case.py`
+  - report now includes `derived.lens_hood` metadata.
+- Reworked MAKI dual rear-cap TPU gasket contact placement:
+  - `scripts/generate_maki_live_rear_cap_dual_material.py`
+  - gasket now references plug profile and sits at the plug-tip contact plane (instead of recessed plate-plane ring placement).
+- Regenerated outputs:
+  - `models/maki_case/maki_live_case_sleeve.step`
+  - `models/maki_case/maki_live_tpu_sleeve.step`
+  - `models/maki_case/maki_live_body_dual_material.step`
+  - `models/maki_case/maki_live_rear_cap_dual_material.step`
+  - `models/maki_case/maki_live_rear_cap.step`
+  - updated corresponding JSON reports under `models/maki_case/reports/`.
+
 ### Rear-Insertion Fit Rule Update (MAKI + Mevo)
 - Updated TPU body behavior to keep rear insertion open by default:
   - front edge-wrap enabled,

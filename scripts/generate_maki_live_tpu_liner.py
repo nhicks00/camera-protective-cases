@@ -31,6 +31,7 @@ from build123d import (
     Mode,
     Plane,
     Rectangle,
+    SlotOverall,
     export_step,
     export_stl,
     extrude,
@@ -592,16 +593,10 @@ def build_liner(p: MakiTpuLinerParams):
                     for side in ("neg", "pos"):
                         x_face = min_x - 0.2 if side == "neg" else max_x + 0.2
                         for y_c in trio["y_centers"]:
-                            with Locations((x_face, y_c, side_trio_z)):
-                                Box(
-                                    cut_depth,
-                                    trio["slot_t"],
-                                    trio["slot_z"],
-                                    align=(Align.MIN, Align.CENTER, Align.CENTER)
-                                    if side == "neg"
-                                    else (Align.MAX, Align.CENTER, Align.CENTER),
-                                    mode=Mode.SUBTRACT,
-                                )
+                            with BuildSketch(Plane.YZ.offset(x_face)):
+                                with Locations((y_c, side_trio_z)):
+                                    SlotOverall(trio["slot_t"], trio["slot_z"])
+                            extrude(amount=cut_depth if side == "neg" else -cut_depth, mode=Mode.SUBTRACT)
                             vents_used.append(
                                 {
                                     "axis": "x",

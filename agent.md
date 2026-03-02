@@ -90,6 +90,8 @@ Active hard-shell and TPU workflows:
   - Vent row clustering now locks to the STEP-derived rear vent bank (8 rows) and ignores front outlier slots.
   - Tripod side includes local armor boss thickening around the mount opening.
   - Tripod hole cut orientation is corrected and validated as a true through-cut.
+  - Side `3 + 3` vents are rounded-slot cuts (not hard rectangular box cuts).
+  - Integrated top-front lens hood/shade is enabled by default (`lens_hood_*` params in case script).
   - Vent pass-through validated (`30/30` total) and vent coordinates emitted in report under `step_side_features.vents_applied_entries`.
 - ASA caps:
   - Active outputs:
@@ -97,6 +99,7 @@ Active hard-shell and TPU workflows:
     - `models/maki_case/maki_live_rear_cap.step` (ASA-only compatibility export)
   - Generator: `scripts/generate_maki_live_rear_cap_dual_material.py`
   - Dual rear cap contains: `ASA_Back_Cap` + `TPU_Back_Gasket`.
+  - TPU gasket is placed on the plug-tip contact plane so it engages the camera-side back perimeter/corners when installed.
   - Legacy rear-cap-only generator remains available (`scripts/generate_maki_live_caps.py --profile asa`).
   - Rear cutouts are extracted from all STEP solids with tiny-hole filtering to preserve port access cutouts over corner fastener holes.
   - Rear cap port cutouts include default oversize clearance (`cutout_extra_mm=1.5`) for cable boot/plastic strain-relief fit.
@@ -105,6 +108,7 @@ Active hard-shell and TPU workflows:
   - Generator: `scripts/generate_maki_live_tpu_liner.py`
   - Single connected TPU sleeve with front edge wrap enabled and rear edge wrap disabled by default.
   - Rear remains open for insertion; rear-side TPU contact is handled by rear cap TPU gasket.
+  - Side `3 + 3` vents are rounded-slot cuts to match ASA style.
   - Does not use full TPU face caps.
   - Vent pass-through validated (`30/30` through by ray-check), with tripod through-cut also validated.
   - Vent rows are aligned to the ASA sleeve vent coordinates in device frame.
