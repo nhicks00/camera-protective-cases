@@ -68,7 +68,8 @@ class MakiTpuLinerParams:
 
     # Keep side vent/tripod regions open through TPU
     use_step_side_features: bool = True
-    side_feature_clearance_mm: float = 0.35
+    side_feature_clearance_mm: float = 0.30
+    tripod_cutout_extra_mm: float = 1.5
 
     # Fallback openings if extraction fails
     vent_count: int = 8
@@ -727,7 +728,7 @@ def build_liner(p: MakiTpuLinerParams):
             if t is not None:
                 x_c = map_x(t["x"])
                 z_c = map_z(t["z"])
-                d = max(2.0 * t["r"] * sx + p.side_feature_clearance_mm, 2.0)
+                d = max(2.0 * t["r"] * sx + p.tripod_cutout_extra_mm, 2.0)
                 on_neg = t["side"] == "neg"
                 y_face = min_y - 0.2 if on_neg else max_y + 0.2
                 cut_depth = p.shell_thickness_mm + 2.5
