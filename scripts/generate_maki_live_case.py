@@ -24,7 +24,9 @@ from typing import Iterable
 import numpy as np
 import trimesh
 from build123d import (
+    Align,
     Axis,
+    Box,
     BuildPart,
     BuildSketch,
     Circle,
@@ -79,6 +81,10 @@ class MakiCaseParams:
     vent_slot_h_mm: float = 2.6
     vent_pitch_mm: float = 5.8
     vent_start_from_front_mm: float = 66.0
+    vent_rows_per_panel: int = 8
+    enforce_tripanel_vent_layout: bool = True
+    tripanel_fallback_x_offset_mm: float = 16.0
+    vent_cut_depth_mm: float = 12.0
 
     # Shape processing
     section_z_ratio: float = 0.50
@@ -295,6 +301,90 @@ def _extract_step_side_features(housing):
     return {"vents": vents, "tripod": tripod}
 
 
+def _collapse_close(values: list[float], tol: float) -> list[float]:
+    if not values:
+        return []
+    values = sorted(values)
+    out = [values[0]]
+    for v in values[1:]:
+        if abs(v - out[-1]) > tol:
+            out.append(v)
+        else:
+            out[-1] = 0.5 * (out[-1] + v)
+    return out
+
+
+def _derive_tripanel_vents(step_vents, map_x, map_z, sx: float, sz: float, outer_w: float, p: MakiCaseParams):
+    """Derive a 3-panel x/z vent pattern (8 rows each) from STEP side vents."""
+    neg_side = []
+    for v in step_vents:
+        if v["axis"] != "y" or v["side"] != "neg":
+            continue
+        t_span = v["slot_t"] * sx
+        z_span = v["slot_z"] * sz
+        slot_w = max(t_span, z_span) + p.side_feature_clearance_mm
+        slot_h = max(min(t_span, z_span) + p.side_feature_clearance_mm, 0.8)
+        neg_side.append(
+            {
+                "x": float(map_x(v["x"])),
+                "z": float(map_z(v["z"])),
+                "slot_w": float(slot_w),
+                "slot_h": float(slot_h),
+            }
+        )
+
+    # Fallback pattern if extraction is sparse.
+    if not neg_side:
+        z_centers = [p.vent_start_from_front_mm + i * p.vent_pitch_mm for i in range(p.vent_rows_per_panel)]
+        x_off = p.tripanel_fallback_x_offset_mm
+        return {
+            "x_centers": [-x_off, 0.0, x_off],
+            "z_centers": z_centers,
+            "slot_w": p.vent_slot_w_mm,
+            "slot_h": p.vent_slot_h_mm,
+            "source": "fallback",
+        }
+
+    # Use median slot size for consistency across the 3 panels.
+    slot_w = float(np.median([v["slot_w"] for v in neg_side]))
+    slot_h = float(np.median([v["slot_h"] for v in neg_side]))
+
+    # Build z row centers (8 vents per panel).
+    z_vals = _collapse_close([v["z"] for v in neg_side], tol=0.9)
+    if len(z_vals) >= p.vent_rows_per_panel:
+        z_centers = z_vals[: p.vent_rows_per_panel]
+    else:
+        if len(z_vals) >= 2:
+            pitch = float(np.median(np.diff(sorted(z_vals))))
+        else:
+            pitch = p.vent_pitch_mm
+        z0 = z_vals[0] if z_vals else p.vent_start_from_front_mm
+        z_centers = [z0 + i * pitch for i in range(p.vent_rows_per_panel)]
+
+    # Build 3 panel x centers: center + 2 adjacent panels.
+    x_vals = _collapse_close([v["x"] for v in neg_side], tol=2.0)
+    if len(x_vals) >= 3:
+        mid = min(x_vals, key=lambda x: abs(x))
+        left = min([x for x in x_vals if x < mid], default=mid - p.tripanel_fallback_x_offset_mm)
+        right = max([x for x in x_vals if x > mid], default=mid + p.tripanel_fallback_x_offset_mm)
+        x_centers = [left, mid, right]
+    elif len(x_vals) == 2:
+        mid = 0.5 * (x_vals[0] + x_vals[1])
+        x_off = max(abs(x_vals[0] - mid), p.tripanel_fallback_x_offset_mm * 0.7)
+        x_centers = [mid - x_off, mid, mid + x_off]
+    else:
+        x_off = max(0.23 * outer_w, p.tripanel_fallback_x_offset_mm)
+        x_centers = [x_vals[0] - x_off, x_vals[0], x_vals[0] + x_off]
+
+    return {
+        "x_centers": [float(x) for x in x_centers],
+        "z_centers": [float(z) for z in z_centers],
+        "slot_w": slot_w,
+        "slot_h": slot_h,
+        "source": "step_neg_y",
+    }
+
+
 def _extract_profile_xy(mesh: trimesh.Trimesh, z_mm: float) -> Polygon:
     sec = mesh.section(plane_origin=[0.0, 0.0, z_mm], plane_normal=[0.0, 0.0, 1.0])
     if sec is None:
@@ -381,45 +471,74 @@ def build_case(p: MakiCaseParams):
         extrude(amount=shell_depth + 0.4, mode=Mode.SUBTRACT)
 
         if p.use_step_side_features:
-            for v in step_features["vents"]:
-                z_c = map_z(v["z"])
-                if v["axis"] == "y":
-                    x_c = map_x(v["x"])
-                    t_span = v["slot_t"] * sx
-                    z_span = v["slot_z"] * sz
-                    slot_w = max(max(t_span, z_span) + p.side_feature_clearance_mm, 0.8)
-                    slot_h = max(min(t_span, z_span) + p.side_feature_clearance_mm, 0.8)
-                    on_neg = v["side"] == "neg"
-                    y_face = min_y + 0.15 if on_neg else max_y - 0.15
-                    cut_depth = p.wall_mm + 2.5
-                    with BuildSketch(Plane.XZ.offset(y_face)):
-                        with Locations((x_c, z_c)):
-                            SlotOverall(slot_w, slot_h)
-                    extrude(amount=(-cut_depth if on_neg else cut_depth), mode=Mode.SUBTRACT)
-                else:
-                    y_c = map_y(v["y"])
-                    t_span = v["slot_t"] * sy
-                    z_span = v["slot_z"] * sz
-                    slot_w = max(max(t_span, z_span) + p.side_feature_clearance_mm, 0.8)
-                    slot_h = max(min(t_span, z_span) + p.side_feature_clearance_mm, 0.8)
-                    on_neg = v["side"] == "neg"
-                    x_face = min_x + 0.15 if on_neg else max_x - 0.15
-                    cut_depth = p.wall_mm + 2.5
-                    with BuildSketch(Plane.YZ.offset(x_face)):
-                        with Locations((y_c, z_c)):
-                            SlotOverall(slot_w, slot_h)
-                    extrude(amount=(cut_depth if on_neg else -cut_depth), mode=Mode.SUBTRACT)
-                vents_used.append(
-                    {
-                        "axis": v["axis"],
-                        "side": v["side"],
-                        "x": map_x(v["x"]),
-                        "y": map_y(v["y"]),
-                        "z": z_c,
-                        "slot_w": slot_w,
-                        "slot_h": slot_h,
-                    }
-                )
+            if p.enforce_tripanel_vent_layout:
+                vent_pattern = _derive_tripanel_vents(step_features["vents"], map_x, map_z, sx, sz, outer_w, p)
+                y_face = min_y + 0.15
+                cut_depth = max(p.vent_cut_depth_mm, p.wall_mm + 3.0)
+                for panel_idx, x_c in enumerate(vent_pattern["x_centers"]):
+                    for z_c in vent_pattern["z_centers"]:
+                        # Box subtraction guarantees full through-cut on flat + adjacent curved panels.
+                        with Locations((x_c, y_face, z_c)):
+                            Box(
+                                vent_pattern["slot_w"],
+                                cut_depth,
+                                vent_pattern["slot_h"],
+                                align=(Align.CENTER, Align.CENTER, Align.CENTER),
+                                mode=Mode.SUBTRACT,
+                            )
+                        vents_used.append(
+                            {
+                                "axis": "y",
+                                "side": "neg",
+                                "x": float(x_c),
+                                "y": float(y_face),
+                                "z": float(z_c),
+                                "slot_w": float(vent_pattern["slot_w"]),
+                                "slot_h": float(vent_pattern["slot_h"]),
+                                "panel_index": panel_idx,
+                                "pattern_source": vent_pattern["source"],
+                            }
+                        )
+            else:
+                for v in step_features["vents"]:
+                    z_c = map_z(v["z"])
+                    if v["axis"] == "y":
+                        x_c = map_x(v["x"])
+                        t_span = v["slot_t"] * sx
+                        z_span = v["slot_z"] * sz
+                        slot_w = max(max(t_span, z_span) + p.side_feature_clearance_mm, 0.8)
+                        slot_h = max(min(t_span, z_span) + p.side_feature_clearance_mm, 0.8)
+                        on_neg = v["side"] == "neg"
+                        y_face = min_y + 0.15 if on_neg else max_y - 0.15
+                        cut_depth = max(p.vent_cut_depth_mm, p.wall_mm + 3.0)
+                        with BuildSketch(Plane.XZ.offset(y_face)):
+                            with Locations((x_c, z_c)):
+                                SlotOverall(slot_w, slot_h)
+                        extrude(amount=(-cut_depth if on_neg else cut_depth), mode=Mode.SUBTRACT)
+                    else:
+                        y_c = map_y(v["y"])
+                        t_span = v["slot_t"] * sy
+                        z_span = v["slot_z"] * sz
+                        slot_w = max(max(t_span, z_span) + p.side_feature_clearance_mm, 0.8)
+                        slot_h = max(min(t_span, z_span) + p.side_feature_clearance_mm, 0.8)
+                        on_neg = v["side"] == "neg"
+                        x_face = min_x + 0.15 if on_neg else max_x - 0.15
+                        cut_depth = max(p.vent_cut_depth_mm, p.wall_mm + 3.0)
+                        with BuildSketch(Plane.YZ.offset(x_face)):
+                            with Locations((y_c, z_c)):
+                                SlotOverall(slot_w, slot_h)
+                        extrude(amount=(cut_depth if on_neg else -cut_depth), mode=Mode.SUBTRACT)
+                    vents_used.append(
+                        {
+                            "axis": v["axis"],
+                            "side": v["side"],
+                            "x": map_x(v["x"]),
+                            "y": map_y(v["y"]),
+                            "z": z_c,
+                            "slot_w": slot_w,
+                            "slot_h": slot_h,
+                        }
+                    )
 
             t = step_features["tripod"]
             if t is not None:
@@ -467,6 +586,7 @@ def build_case(p: MakiCaseParams):
         "step_side_features": {
             "vents_detected": len(step_features["vents"]),
             "vents_applied": len(vents_used),
+            "tripanel_vent_layout_enforced": p.enforce_tripanel_vent_layout,
             "tripod_detected": step_features["tripod"] is not None,
             "tripod_applied": tripod_used,
         },

@@ -25,6 +25,7 @@ Archive policy:
 - Default wall thickness: `3.2 mm`
 - Tripod-side access opening around detected `1/4"-20` region
 - Side vent slots extracted from STEP across flat + corner side panels
+- Enforced vent layout on tripod side: `3` adjacent panels x `8` slots each (`24` total), with through-cuts
 - Built with `build123d` (OpenCascade B-Rep), exported as STEP only
 
 ## Generator Script

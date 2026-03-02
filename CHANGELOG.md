@@ -26,6 +26,13 @@
 - Added fit-stack reporting fields for radial/axial remaining margins and alignment of tripod/vent openings relative to ASA shell coordinates.
 - Updated docs (`README.md`, `README_MEVO_CASE.md`) with the new generator and usage.
 
+### MAKI Sleeve Vent Update
+- Updated MAKI ASA sleeve vent logic to enforce a tripod-side 3-panel vent pattern:
+  - `8` vents on the primary panel,
+  - plus `8` vents on each directly adjacent panel (`24` total).
+- Switched enforced vent pattern cutting to deep box subtraction for full wall penetration.
+- Preserved tripod opening alignment logic from STEP-derived feature mapping.
+
 ### Project Baseline and Repository Packaging
 - Organized the workspace for Git version control with:
   - root `README.md` (project-wide overview),

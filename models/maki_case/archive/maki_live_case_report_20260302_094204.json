@@ -21,10 +21,6 @@
     "vent_slot_h_mm": 2.6,
     "vent_pitch_mm": 5.8,
     "vent_start_from_front_mm": 66.0,
-    "vent_rows_per_panel": 8,
-    "enforce_tripanel_vent_layout": true,
-    "tripanel_fallback_x_offset_mm": 16.0,
-    "vent_cut_depth_mm": 12.0,
     "section_z_ratio": 0.5,
     "profile_simplify_tol_mm": 0.08,
     "offset_resolution": 64,
@@ -59,8 +55,7 @@
     },
     "step_side_features": {
       "vents_detected": 30,
-      "vents_applied": 24,
-      "tripanel_vent_layout_enforced": true,
+      "vents_applied": 30,
       "tripod_detected": true,
       "tripod_applied": {
         "side": "neg",
@@ -79,7 +74,7 @@
         "outer": 22.6371568579467
       },
       "machined_finish_mm": {
-        "sleeve_axis_y_fillet": 0.8
+        "sleeve_axis_y_fillet": 0.0
       },
       "outer_bounds_xy_mm": {
         "min_x": -34.345,
