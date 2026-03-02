@@ -92,15 +92,19 @@ Active hard-shell and TPU workflows:
   - Tripod hole cut orientation is corrected and validated as a true through-cut.
   - Vent pass-through validated (`30/30` total) and vent coordinates emitted in report under `step_side_features.vents_applied_entries`.
 - ASA caps:
-  - Active output: `models/maki_case/maki_live_rear_cap.step`
-  - Generator: `scripts/generate_maki_live_caps.py --profile asa`
-  - Default is rear-cap-only export (front cap is legacy optional via `--include-front-cap`).
+  - Active outputs:
+    - `models/maki_case/maki_live_rear_cap_dual_material.step`
+    - `models/maki_case/maki_live_rear_cap.step` (ASA-only compatibility export)
+  - Generator: `scripts/generate_maki_live_rear_cap_dual_material.py`
+  - Dual rear cap contains: `ASA_Back_Cap` + `TPU_Back_Gasket`.
+  - Legacy rear-cap-only generator remains available (`scripts/generate_maki_live_caps.py --profile asa`).
   - Rear cutouts are extracted from all STEP solids with tiny-hole filtering to preserve port access cutouts over corner fastener holes.
   - Rear cap port cutouts include default oversize clearance (`cutout_extra_mm=1.5`) for cable boot/plastic strain-relief fit.
 - TPU one-piece sleeve (preferred TPU output):
   - `models/maki_case/maki_live_tpu_sleeve.step`
   - Generator: `scripts/generate_maki_live_tpu_liner.py`
-  - Single connected TPU sleeve with thin front/rear edge wraps.
+  - Single connected TPU sleeve with front edge wrap enabled and rear edge wrap disabled by default.
+  - Rear remains open for insertion; rear-side TPU contact is handled by rear cap TPU gasket.
   - Does not use full TPU face caps.
   - Vent pass-through validated (`30/30` through by ray-check), with tripod through-cut also validated.
   - Vent rows are aligned to the ASA sleeve vent coordinates in device frame.
@@ -123,6 +127,7 @@ Current preferred workflow:
 - Geometry intent:
   - ovular/capsule-profile sleeve geometry (not rounded-rectangle profile),
   - front-integrated body by default (front wall fused to sleeve),
+  - TPU body uses front edge wrap only (rear wrap disabled) to keep insertion path open,
   - front lens/LED cutouts enabled by default in closed-front mode,
   - separate back-cap assembly with TPU gasket (ASA-only cap exported for compatibility),
   - TPU-aware back-cap fit clearance default: `0.28 mm` total undersize,
@@ -142,7 +147,7 @@ Current preferred workflow:
 User shorthand often means:
 - “Maki sleeve” = ASA outer sleeve (`maki_live_case_sleeve.step`)
 - “TPU sleeve for Maki” = `maki_live_tpu_sleeve.step` (single part)
-- “Maki caps” = rear cap by default (`maki_live_rear_cap.step`)
+- “Maki caps” = dual-material rear cap by default (`maki_live_rear_cap_dual_material.step`)
 - “Mevo rear closure” = `mevo_start_back_cap_dual_material.step` (ASA cap + TPU gasket)
 - “Mevo ASA-only rear cap” = `mevo_start_back_cap_asa.step` (compatibility export)
 - “Mevo case back plate” = legacy/optional only
@@ -164,8 +169,9 @@ source .venv311/bin/activate
 MAKI:
 ```bash
 python scripts/generate_maki_live_case.py
-python scripts/generate_maki_live_caps.py --profile asa
 python scripts/generate_maki_live_tpu_liner.py
+python scripts/generate_maki_live_dual_material_body.py
+python scripts/generate_maki_live_rear_cap_dual_material.py
 ```
 
 Mevo:

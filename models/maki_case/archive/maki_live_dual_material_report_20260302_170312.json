@@ -5,11 +5,7 @@
     "asa_wall_mm": 3.0,
     "tpu_device_clearance_mm": 0.2,
     "tpu_wall_mm": 2.0,
-    "tpu_end_clearance_mm": 0.2,
-    "tpu_front_edge_wrap_mm": 2.5,
-    "tpu_edge_wrap_radial_mm": 2.0,
-    "include_tpu_front_edge_wrap": true,
-    "include_tpu_rear_edge_wrap": false
+    "tpu_end_clearance_mm": 0.2
   },
   "report": {
     "named_bodies": [
@@ -27,14 +23,6 @@
     "fit_stack_mm": {
       "radial_gap_each_width": 0.10000000000000142,
       "radial_gap_each_height": 0.10000000000000142
-    },
-    "tpu_edge_wrap": {
-      "depth_mm": 2.5,
-      "radial_mm": 2.0,
-      "enabled": {
-        "front": true,
-        "rear": false
-      }
     },
     "sources": {
       "asa_case_report": {
@@ -988,10 +976,6 @@
           },
           "edge_wrap_depth_mm": 2.5,
           "edge_wrap_radial_mm": 2.0,
-          "edge_wrap_enabled": {
-            "front": true,
-            "rear": false
-          },
           "corner_radius_mm": {
             "base_section": 16.7871568579467,
             "inner": 16.9871568579467,

@@ -67,6 +67,8 @@ class MevoTpuLinerParams:
     min_printable_shell_thickness_mm: float = 1.20
     edge_wrap_depth_mm: float = 2.5
     edge_wrap_radial_mm: float = 2.0
+    include_front_edge_wrap: bool = True
+    include_rear_edge_wrap: bool = False
 
     # Optional openings in TPU for tripod/vents
     enable_tripod_opening: bool = True
@@ -222,22 +224,24 @@ def build_liner(p: MevoTpuLinerParams):
             _add_capsule(inner_w, inner_h)
         extrude(amount=liner_depth + 0.4, mode=Mode.SUBTRACT)
 
-        # Thin edge wraps around front/back face perimeter only.
-        # This avoids full-face caps while still protecting impact-prone edges.
-        with BuildSketch(Plane.XY):
-            _add_capsule(inner_w, inner_h)
-        extrude(amount=edge_wrap_depth)
-        with BuildSketch(Plane.XY.offset(-0.1)):
-            _add_capsule(wrap_inner_w, wrap_inner_h)
-        extrude(amount=edge_wrap_depth + 0.2, mode=Mode.SUBTRACT)
+        # Thin edge wraps around selected face perimeter(s) only.
+        # Default is front-only so the camera can slide in from the open rear.
+        if p.include_front_edge_wrap:
+            with BuildSketch(Plane.XY):
+                _add_capsule(inner_w, inner_h)
+            extrude(amount=edge_wrap_depth)
+            with BuildSketch(Plane.XY.offset(-0.1)):
+                _add_capsule(wrap_inner_w, wrap_inner_h)
+            extrude(amount=edge_wrap_depth + 0.2, mode=Mode.SUBTRACT)
 
-        rear_start = liner_depth - edge_wrap_depth
-        with BuildSketch(Plane.XY.offset(rear_start)):
-            _add_capsule(inner_w, inner_h)
-        extrude(amount=edge_wrap_depth)
-        with BuildSketch(Plane.XY.offset(rear_start - 0.1)):
-            _add_capsule(wrap_inner_w, wrap_inner_h)
-        extrude(amount=edge_wrap_depth + 0.2, mode=Mode.SUBTRACT)
+        if p.include_rear_edge_wrap:
+            rear_start = liner_depth - edge_wrap_depth
+            with BuildSketch(Plane.XY.offset(rear_start)):
+                _add_capsule(inner_w, inner_h)
+            extrude(amount=edge_wrap_depth)
+            with BuildSketch(Plane.XY.offset(rear_start - 0.1)):
+                _add_capsule(wrap_inner_w, wrap_inner_h)
+            extrude(amount=edge_wrap_depth + 0.2, mode=Mode.SUBTRACT)
 
         if p.enable_side_vents:
             for side in (-1.0, 1.0):
@@ -282,6 +286,10 @@ def build_liner(p: MevoTpuLinerParams):
                 "outer_width": float(outer_w),
                 "edge_wrap_depth": float(edge_wrap_depth),
                 "edge_wrap_radial": float(edge_wrap_radial),
+                "edge_wrap_enabled": {
+                    "front": bool(p.include_front_edge_wrap),
+                    "rear": bool(p.include_rear_edge_wrap),
+                },
             },
             "fit_margins_mm": {
                 "radial_w_each_side": float(radial_margin_w),
@@ -327,6 +335,16 @@ def main():
     parser.add_argument("--thickness", type=float, default=None, help="Desired TPU shell thickness (mm)")
     parser.add_argument("--edge-wrap-depth", type=float, default=None, help="Front/rear edge wrap depth (mm)")
     parser.add_argument("--edge-wrap-radial", type=float, default=None, help="How far edge wrap extends onto face from perimeter (mm)")
+    parser.add_argument(
+        "--disable-front-edge-wrap",
+        action="store_true",
+        help="Disable TPU front perimeter edge wrap.",
+    )
+    parser.add_argument(
+        "--enable-rear-edge-wrap",
+        action="store_true",
+        help="Enable TPU rear perimeter edge wrap (disabled by default for insertion).",
+    )
     parser.add_argument("--no-tripod-opening", action="store_true", help="Disable TPU tripod opening")
     parser.add_argument("--no-side-vents", action="store_true", help="Disable TPU side vent openings")
     args = parser.parse_args()
@@ -345,6 +363,10 @@ def main():
         params.edge_wrap_depth_mm = args.edge_wrap_depth
     if args.edge_wrap_radial is not None:
         params.edge_wrap_radial_mm = args.edge_wrap_radial
+    if args.disable_front_edge_wrap:
+        params.include_front_edge_wrap = False
+    if args.enable_rear_edge_wrap:
+        params.include_rear_edge_wrap = True
     if args.no_tripod_opening:
         params.enable_tripod_opening = False
     if args.no_side_vents:

@@ -21,8 +21,6 @@
     "min_printable_shell_thickness_mm": 1.2,
     "edge_wrap_depth_mm": 2.5,
     "edge_wrap_radial_mm": 2.0,
-    "include_front_edge_wrap": true,
-    "include_rear_edge_wrap": false,
     "enable_tripod_opening": true,
     "enable_side_vents": true
   },
@@ -47,11 +45,7 @@
         "outer_height": 79.9,
         "outer_width": 38.4,
         "edge_wrap_depth": 2.5,
-        "edge_wrap_radial": 2.0,
-        "edge_wrap_enabled": {
-          "front": true,
-          "rear": false
-        }
+        "edge_wrap_radial": 2.0
       },
       "fit_margins_mm": {
         "radial_w_each_side": 0.10000000000000142,

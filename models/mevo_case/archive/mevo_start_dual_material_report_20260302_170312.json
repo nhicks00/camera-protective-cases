@@ -18,10 +18,6 @@
     "lens_center_y_mm": 16.5,
     "led_hole_d_mm": 3.0,
     "led_hole_offset_from_lens_y_mm": 12.0,
-    "tpu_front_edge_wrap_depth_mm": 2.5,
-    "tpu_front_edge_wrap_radial_mm": 2.0,
-    "include_tpu_front_edge_wrap": true,
-    "include_tpu_rear_edge_wrap": false,
     "tripod_hole_d_mm": 20.5,
     "tripod_center_from_front_mm": 43.2,
     "vent_count": 3,
@@ -84,12 +80,6 @@
       "sun_hood_depth": 3.0,
       "tripod_hole_d": 20.5,
       "tripod_center_from_front": 43.2,
-      "tpu_edge_wrap_depth": 2.5,
-      "tpu_edge_wrap_radial": 2.0,
-      "tpu_edge_wrap_enabled": {
-        "front": true,
-        "rear": false
-      },
       "back_cap_fit_clearance_total": 0.28,
       "back_cap_tongue_depth": 1.4,
       "back_cap_tongue_radial_step": 0.3,

@@ -76,6 +76,10 @@ class DualMaterialParams:
     lens_center_y_mm: float = 16.5
     led_hole_d_mm: float = 3.0
     led_hole_offset_from_lens_y_mm: float = 12.0
+    tpu_front_edge_wrap_depth_mm: float = 2.5
+    tpu_front_edge_wrap_radial_mm: float = 2.0
+    include_tpu_front_edge_wrap: bool = True
+    include_tpu_rear_edge_wrap: bool = False
 
     # Bottom tripod well
     tripod_hole_d_mm: float = 20.50
@@ -239,6 +243,10 @@ def build_dual_material_body(p: DualMaterialParams):
 
     vent_z = cavity_start_z + cavity_depth * p.vent_z_ratio
     tripod_z = p.tripod_center_from_front_mm
+    wrap_depth = max(min(p.tpu_front_edge_wrap_depth_mm, 0.45 * cavity_depth), 0.6)
+    wrap_radial = max(p.tpu_front_edge_wrap_radial_mm, 0.6)
+    wrap_inner_w = max(p.tpu_inner_w_mm - 2.0 * wrap_radial, 2.0)
+    wrap_inner_h = max(p.tpu_inner_h_mm - 2.0 * wrap_radial, wrap_inner_w + 0.2)
 
     # ASA bucket body (front wall + side shell, open at rear)
     with BuildPart() as asa_bp:
@@ -297,6 +305,24 @@ def build_dual_material_body(p: DualMaterialParams):
             _add_profile(p.tpu_inner_w_mm, p.tpu_inner_h_mm, p.enforce_capsule_profile)
         extrude(amount=cavity_depth + 0.4, mode=Mode.SUBTRACT)
 
+        # Front-only edge wrap by default so insertion side remains open.
+        if p.include_tpu_front_edge_wrap:
+            with BuildSketch(Plane.XY.offset(cavity_start_z)):
+                _add_profile(p.tpu_inner_w_mm, p.tpu_inner_h_mm, p.enforce_capsule_profile)
+            extrude(amount=wrap_depth)
+            with BuildSketch(Plane.XY.offset(cavity_start_z - 0.2)):
+                _add_profile(wrap_inner_w, wrap_inner_h, p.enforce_capsule_profile)
+            extrude(amount=wrap_depth + 0.4, mode=Mode.SUBTRACT)
+
+        if p.include_tpu_rear_edge_wrap:
+            rear_start_z = cavity_start_z + cavity_depth - wrap_depth
+            with BuildSketch(Plane.XY.offset(rear_start_z)):
+                _add_profile(p.tpu_inner_w_mm, p.tpu_inner_h_mm, p.enforce_capsule_profile)
+            extrude(amount=wrap_depth)
+            with BuildSketch(Plane.XY.offset(rear_start_z - 0.2)):
+                _add_profile(wrap_inner_w, wrap_inner_h, p.enforce_capsule_profile)
+            extrude(amount=wrap_depth + 0.4, mode=Mode.SUBTRACT)
+
         # Bottom tripod hole through TPU too.
         with BuildSketch(Plane.XZ.offset(min_y_tpu + 0.12)):
             with Locations((0.0, tripod_z)):
@@ -321,6 +347,12 @@ def build_dual_material_body(p: DualMaterialParams):
             "sun_hood_depth": float(p.sun_hood_depth_mm),
             "tripod_hole_d": float(p.tripod_hole_d_mm),
             "tripod_center_from_front": float(p.tripod_center_from_front_mm),
+            "tpu_edge_wrap_depth": float(wrap_depth),
+            "tpu_edge_wrap_radial": float(wrap_radial),
+            "tpu_edge_wrap_enabled": {
+                "front": bool(p.include_tpu_front_edge_wrap),
+                "rear": bool(p.include_tpu_rear_edge_wrap),
+            },
             "back_cap_fit_clearance_total": float(p.back_cap_lip_undersize_total_mm),
             "back_cap_tongue_depth": float(d["tongue_depth_mm"]),
             "back_cap_tongue_radial_step": float(p.back_cap_tongue_radial_step_mm),
@@ -474,6 +506,16 @@ def main():
         help="Disable TPU gasket body on the back-cap assembly.",
     )
     parser.add_argument(
+        "--disable-front-tpu-edge-wrap",
+        action="store_true",
+        help="Disable TPU front perimeter wrap in the main body.",
+    )
+    parser.add_argument(
+        "--enable-rear-tpu-edge-wrap",
+        action="store_true",
+        help="Enable TPU rear perimeter wrap in the main body (disabled by default for insertion).",
+    )
+    parser.add_argument(
         "--back-cap-fit-clearance-total",
         type=float,
         default=None,
@@ -499,6 +541,10 @@ def main():
         p.include_back_utility_slot = False
     if args.disable_back_cap_tpu_gasket:
         p.include_back_cap_tpu_gasket = False
+    if args.disable_front_tpu_edge_wrap:
+        p.include_tpu_front_edge_wrap = False
+    if args.enable_rear_tpu_edge_wrap:
+        p.include_tpu_rear_edge_wrap = True
     if args.back_cap_fit_clearance_total is not None:
         p.back_cap_lip_undersize_total_mm = max(float(args.back_cap_fit_clearance_total), 0.0)
     if args.back_cap_tpu_gasket_thickness is not None:

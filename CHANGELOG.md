@@ -2,6 +2,33 @@
 
 ## 2026-03-02
 
+### Rear-Insertion Fit Rule Update (MAKI + Mevo)
+- Updated TPU body behavior to keep rear insertion open by default:
+  - front edge-wrap enabled,
+  - rear edge-wrap disabled.
+- Applied in:
+  - `scripts/generate_maki_live_tpu_liner.py`
+  - `scripts/generate_mevo_start_tpu_liner.py`
+  - `scripts/generate_maki_live_dual_material_body.py`
+  - `scripts/generate_mevo_dual_material_case.py`
+- Added explicit CLI toggles for edge-wrap behavior in Mevo/MAKI dual-body workflows.
+- Added MAKI dual-material rear cap generator:
+  - `scripts/generate_maki_live_rear_cap_dual_material.py`
+  - outputs:
+    - `models/maki_case/maki_live_rear_cap_dual_material.step` (`ASA_Back_Cap` + `TPU_Back_Gasket`)
+    - `models/maki_case/maki_live_rear_cap.step` (ASA-only compatibility export)
+    - `models/maki_case/reports/maki_live_rear_cap_dual_material_report.json`
+- Regenerated primary current files:
+  - `models/maki_case/maki_live_body_dual_material.step`
+  - `models/maki_case/maki_live_tpu_sleeve.step`
+  - `models/maki_case/maki_live_rear_cap_dual_material.step`
+  - `models/mevo_case/mevo_start_body_dual_material.step`
+  - `models/mevo_case/mevo_start_back_cap_dual_material.step`
+  - `models/mevo_case/mevo_start_tpu_sleeve.step`
+- Validation in reports confirms target state:
+  - TPU body edge-wrap: `front=true`, `rear=false`
+  - rear-cap TPU contact/gasket enabled on both camera families.
+
 ### MAKI Combined Dual-Material Body Export
 - Added `scripts/generate_maki_live_dual_material_body.py`.
 - New output:

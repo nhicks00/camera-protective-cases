@@ -32,6 +32,10 @@ class MakiDualBodyParams:
     tpu_device_clearance_mm: float = 0.2
     tpu_wall_mm: float = 2.0
     tpu_end_clearance_mm: float = 0.2
+    tpu_front_edge_wrap_mm: float = 2.5
+    tpu_edge_wrap_radial_mm: float = 2.0
+    include_tpu_front_edge_wrap: bool = True
+    include_tpu_rear_edge_wrap: bool = False
 
 
 def _archive_existing(paths: list[Path], out_dir: Path) -> list[tuple[str, str]]:
@@ -69,6 +73,10 @@ def build_dual_body(p: MakiDualBodyParams):
     tpu_p.device_clearance_mm = p.tpu_device_clearance_mm
     tpu_p.shell_thickness_mm = p.tpu_wall_mm
     tpu_p.end_clearance_mm = p.tpu_end_clearance_mm
+    tpu_p.edge_wrap_depth_mm = p.tpu_front_edge_wrap_mm
+    tpu_p.edge_wrap_radial_mm = p.tpu_edge_wrap_radial_mm
+    tpu_p.include_front_edge_wrap = p.include_tpu_front_edge_wrap
+    tpu_p.include_rear_edge_wrap = p.include_tpu_rear_edge_wrap
     tpu_sleeve, tpu_report = build_liner(tpu_p)
 
     asa_derived = asa_report["derived"]
@@ -112,6 +120,14 @@ def build_dual_body(p: MakiDualBodyParams):
             "radial_gap_each_width": float(radial_gap_w_each),
             "radial_gap_each_height": float(radial_gap_h_each),
         },
+        "tpu_edge_wrap": {
+            "depth_mm": float(p.tpu_front_edge_wrap_mm),
+            "radial_mm": float(p.tpu_edge_wrap_radial_mm),
+            "enabled": {
+                "front": bool(p.include_tpu_front_edge_wrap),
+                "rear": bool(p.include_tpu_rear_edge_wrap),
+            },
+        },
         "sources": {
             "asa_case_report": asa_report,
             "tpu_sleeve_report": tpu_report,
@@ -138,6 +154,16 @@ def main():
     parser.add_argument("--tpu-clearance", type=float, default=None, help="TPU internal clearance (mm)")
     parser.add_argument("--tpu-wall", type=float, default=None, help="TPU wall thickness (mm)")
     parser.add_argument("--tpu-end-clearance", type=float, default=None, help="TPU end clearance (mm)")
+    parser.add_argument(
+        "--disable-front-tpu-edge-wrap",
+        action="store_true",
+        help="Disable front edge wrap in TPU sleeve.",
+    )
+    parser.add_argument(
+        "--enable-rear-tpu-edge-wrap",
+        action="store_true",
+        help="Enable rear edge wrap in TPU sleeve (disabled by default for insertion).",
+    )
     args = parser.parse_args()
 
     params = MakiDualBodyParams(step_path=args.step)
@@ -151,6 +177,10 @@ def main():
         params.tpu_wall_mm = args.tpu_wall
     if args.tpu_end_clearance is not None:
         params.tpu_end_clearance_mm = args.tpu_end_clearance
+    if args.disable_front_tpu_edge_wrap:
+        params.include_tpu_front_edge_wrap = False
+    if args.enable_rear_tpu_edge_wrap:
+        params.include_tpu_rear_edge_wrap = True
 
     args.out.mkdir(parents=True, exist_ok=True)
     reports_dir = args.out / "reports"
@@ -175,4 +205,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

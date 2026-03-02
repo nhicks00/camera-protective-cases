@@ -62,6 +62,8 @@ class MakiTpuLinerParams:
     shell_thickness_mm: float = 2.0
     edge_wrap_depth_mm: float = 2.5
     edge_wrap_radial_mm: float = 2.0
+    include_front_edge_wrap: bool = True
+    include_rear_edge_wrap: bool = False
 
     # Keep side vent/tripod regions open through TPU
     use_step_side_features: bool = True
@@ -494,30 +496,32 @@ def build_liner(p: MakiTpuLinerParams):
             _add_rounded_rectangle(inner_w, inner_h, inner_corner_r)
         extrude(amount=shell_depth + 0.4, mode=Mode.SUBTRACT)
 
-        # Thin front edge-wrap (perimeter only, no full-face cap).
-        with BuildSketch(Plane.XY):
-            _add_rounded_rectangle(inner_w, inner_h, inner_corner_r)
-        extrude(amount=edge_wrap_depth)
-        with BuildSketch(Plane.XY.offset(-0.2)):
-            _add_rounded_rectangle(
-                wrap_inner_w,
-                wrap_inner_h,
-                max(inner_corner_r - edge_wrap_radial, 0.6),
-            )
-        extrude(amount=edge_wrap_depth + 0.4, mode=Mode.SUBTRACT)
+        # Front edge-wrap (perimeter only, no full-face cap).
+        if p.include_front_edge_wrap:
+            with BuildSketch(Plane.XY):
+                _add_rounded_rectangle(inner_w, inner_h, inner_corner_r)
+            extrude(amount=edge_wrap_depth)
+            with BuildSketch(Plane.XY.offset(-0.2)):
+                _add_rounded_rectangle(
+                    wrap_inner_w,
+                    wrap_inner_h,
+                    max(inner_corner_r - edge_wrap_radial, 0.6),
+                )
+            extrude(amount=edge_wrap_depth + 0.4, mode=Mode.SUBTRACT)
 
-        # Thin rear edge-wrap.
-        rear_start = shell_depth - edge_wrap_depth
-        with BuildSketch(Plane.XY.offset(rear_start)):
-            _add_rounded_rectangle(inner_w, inner_h, inner_corner_r)
-        extrude(amount=edge_wrap_depth)
-        with BuildSketch(Plane.XY.offset(rear_start - 0.2)):
-            _add_rounded_rectangle(
-                wrap_inner_w,
-                wrap_inner_h,
-                max(inner_corner_r - edge_wrap_radial, 0.6),
-            )
-        extrude(amount=edge_wrap_depth + 0.4, mode=Mode.SUBTRACT)
+        # Rear edge-wrap is optional. Default disabled to keep insertion side open.
+        if p.include_rear_edge_wrap:
+            rear_start = shell_depth - edge_wrap_depth
+            with BuildSketch(Plane.XY.offset(rear_start)):
+                _add_rounded_rectangle(inner_w, inner_h, inner_corner_r)
+            extrude(amount=edge_wrap_depth)
+            with BuildSketch(Plane.XY.offset(rear_start - 0.2)):
+                _add_rounded_rectangle(
+                    wrap_inner_w,
+                    wrap_inner_h,
+                    max(inner_corner_r - edge_wrap_radial, 0.6),
+                )
+            extrude(amount=edge_wrap_depth + 0.4, mode=Mode.SUBTRACT)
 
         if p.use_step_side_features:
             if p.enforce_tripanel_vent_layout:
@@ -751,6 +755,10 @@ def build_liner(p: MakiTpuLinerParams):
             },
             "edge_wrap_depth_mm": float(edge_wrap_depth),
             "edge_wrap_radial_mm": float(edge_wrap_radial),
+            "edge_wrap_enabled": {
+                "front": bool(p.include_front_edge_wrap),
+                "rear": bool(p.include_rear_edge_wrap),
+            },
             "corner_radius_mm": {
                 "base_section": float(base_corner_r),
                 "inner": float(inner_corner_r),

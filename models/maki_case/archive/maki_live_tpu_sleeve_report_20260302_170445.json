@@ -11,8 +11,6 @@
     "shell_thickness_mm": 2.0,
     "edge_wrap_depth_mm": 2.5,
     "edge_wrap_radial_mm": 2.0,
-    "include_front_edge_wrap": true,
-    "include_rear_edge_wrap": false,
     "use_step_side_features": true,
     "side_feature_clearance_mm": 0.35,
     "vent_count": 8,
@@ -482,10 +480,6 @@
       },
       "edge_wrap_depth_mm": 2.5,
       "edge_wrap_radial_mm": 2.0,
-      "edge_wrap_enabled": {
-        "front": true,
-        "rear": false
-      },
       "corner_radius_mm": {
         "base_section": 16.7871568579467,
         "inner": 16.9871568579467,
