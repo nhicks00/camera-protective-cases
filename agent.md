@@ -23,8 +23,8 @@ Primary goals:
 Use these as the current default stack unless user explicitly overrides.
 
 Mevo Start:
-- Device envelope reference: `87.0 x 50.0 x 34.0 mm` (L x H x W)
-- TPU inner cavity (review-spec): `34.3 x 50.3 x 85.0 mm` (W x H x depth)
+- Device envelope reference: `87.0 x 75.5 x 34.0 mm` (L x H x W)
+- TPU inner cavity (active fit): `34.3 x 75.8 x 87.3 mm` (W x H x depth)
 - TPU wall: `1.8 mm`
 - TPU inner vertical corner fillet: `4.0 mm`
 - TPU-to-ASA interface gap: `0.0 mm` (coincident interface)

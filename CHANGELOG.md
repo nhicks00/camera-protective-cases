@@ -2,6 +2,16 @@
 
 ## 2026-03-02
 
+### Mevo Dual-Material Height/Depth Fit Correction
+- Corrected Mevo dual-material default fit envelope to match Mevo Start dimensions:
+  - camera nominal: `34.0 x 75.5 x 87.0 mm` (W x H x D)
+  - TPU inner cavity (snug): `34.3 x 75.8 x 87.3 mm` (`+0.15 mm` fit clearance per side/end)
+- This replaces the undersized prior dual-material defaults (`34.3 x 50.3 x 85.0 mm`) that caused the body to appear too short in height.
+- Regenerated:
+  - `models/mevo_case/mevo_start_body_dual_material.step`
+  - `models/mevo_case/mevo_start_back_cap_asa.step`
+  - `models/mevo_case/reports/mevo_start_dual_material_report.json`
+
 ### STEP-Interrogation Upgrade For Cutout Accuracy (MAKI)
 - Upgraded MAKI feature extraction to follow a direct B-Rep interrogation strategy (build123d `import_step`) instead of relying on implicit guesses.
 - `scripts/generate_maki_live_case.py`:

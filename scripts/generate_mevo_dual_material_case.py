@@ -10,7 +10,7 @@ Primary outputs:
 
 This generator implements the reviewed design spec while preserving
 the ovular/capsule Mevo cross-section profile:
-- TPU inner cavity: 34.3 x 50.3 x 85.0 mm
+- TPU inner cavity: 34.3 x 75.8 x 87.3 mm (0.15 mm fit clearance around 34 x 75.5 x 87)
 - TPU wall: 1.8 mm
 - ASA wall: 2.2 mm
 - Interface gap TPU<->ASA: 0.0 mm
@@ -35,13 +35,13 @@ from build123d import Box, BuildPart, BuildSketch, Circle, Compound, Locations, 
 class DualMaterialParams:
     # Device nominal for reference
     device_nominal_w_mm: float = 34.0
-    device_nominal_h_mm: float = 50.0
+    device_nominal_h_mm: float = 75.5
     device_nominal_l_mm: float = 87.0
 
-    # Core reviewed dimensions
+    # Core fit dimensions (snug: nominal + 0.15 mm per side/end)
     tpu_inner_w_mm: float = 34.30
-    tpu_inner_h_mm: float = 50.30
-    tpu_inner_depth_mm: float = 85.00
+    tpu_inner_h_mm: float = 75.80
+    tpu_inner_depth_mm: float = 87.30
     tpu_wall_mm: float = 1.80
 
     asa_wall_mm: float = 2.20
