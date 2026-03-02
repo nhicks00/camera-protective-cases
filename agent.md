@@ -133,7 +133,11 @@ Current preferred workflow:
   - front-integrated body by default (front wall fused to sleeve),
   - TPU body uses front edge wrap only (rear wrap disabled) to keep insertion path open,
   - front lens/LED cutouts enabled by default in closed-front mode,
+  - lens opening defaults updated to `29.5 mm` at `Y=18.0` for improved framing,
   - separate back-cap assembly with TPU gasket (ASA-only cap exported for compatibility),
+  - manual two-cutout rear-cap layout is default-enabled (`include_manual_back_cutouts=true`):
+    - lower slot from Mevo edge offsets (10 mm side margins, 7 mm bottom offset),
+    - upper domed cutout using top offsets (6.0 mm and 25.4 mm from top, 6.35 mm side margins),
   - TPU-aware back-cap fit clearance default: `0.28 mm` total undersize,
   - two-stage tongue engagement with matching rear body groove seat,
   - bottom tripod hole cuts through ASA and TPU so mount contacts camera directly.

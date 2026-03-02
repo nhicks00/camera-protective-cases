@@ -2,6 +2,30 @@
 
 ## 2026-03-02
 
+### Mevo Lens Opening + Manual Back-Cap Cutouts Update
+- Updated Mevo front lens opening in dual-material generator:
+  - diameter reduced from `32.0` to `29.5 mm` (2.5 mm smaller)
+  - center raised from `Y=16.5` to `Y=18.0`
+  - file: `scripts/generate_mevo_dual_material_case.py`
+- Added manual rear-cap cutout layout (enabled by default) using device-edge offsets:
+  - lower slot:
+    - side margins `10 mm` each
+    - bottom offset `7 mm`
+    - resulting width `14.0 mm`
+  - upper domed cutout (half-moon + extended lower section):
+    - side margins `6.35 mm` each (0.25 in)
+    - top offset `6.0 mm`
+    - bottom offset from top `25.4 mm` (1 in)
+    - resulting width `21.3 mm`
+- Manual cutouts are now applied to both:
+  - ASA rear cap body
+  - TPU rear-cap gasket body
+- Regenerated outputs:
+  - `models/mevo_case/mevo_start_body_dual_material.step`
+  - `models/mevo_case/mevo_start_back_cap_dual_material.step`
+  - `models/mevo_case/mevo_start_back_cap_asa.step`
+  - `models/mevo_case/reports/mevo_start_dual_material_report.json`
+
 ### MAKI Side-Vent Geometry + Alignment + Lens-Hood + Rear-Cap Contact Fix
 - Updated MAKI side `3 + 3` vents (both ASA + TPU generators) to rounded slot cuts instead of box cuts:
   - `scripts/generate_maki_live_case.py`

@@ -33,6 +33,7 @@ from datetime import datetime
 from pathlib import Path
 
 from build123d import (
+    Align,
     Box,
     BuildPart,
     BuildSketch,
@@ -42,6 +43,7 @@ from build123d import (
     Mode,
     Plane,
     Rectangle,
+    SlotOverall,
     export_step,
     extrude,
     fillet,
@@ -71,9 +73,9 @@ class DualMaterialParams:
     open_front_ovular: bool = False
     include_front_lens_led_cutouts: bool = True
     sun_hood_depth_mm: float = 3.0
-    lens_cutout_d_mm: float = 32.0
+    lens_cutout_d_mm: float = 29.5
     lens_center_x_mm: float = 0.0
-    lens_center_y_mm: float = 16.5
+    lens_center_y_mm: float = 18.0
     led_hole_d_mm: float = 3.0
     led_hole_offset_from_lens_y_mm: float = 12.0
     tpu_front_edge_wrap_depth_mm: float = 2.5
@@ -109,6 +111,15 @@ class DualMaterialParams:
     back_cap_tpu_gasket_outer_inset_mm: float = 1.0
     back_cap_tpu_gasket_ring_width_mm: float = 1.6
 
+    # Manual back-cap cutouts from Mevo device-edge offsets (default enabled).
+    include_manual_back_cutouts: bool = True
+    lower_cutout_side_margin_mm: float = 10.0
+    lower_cutout_bottom_offset_mm: float = 7.0
+    lower_cutout_height_mm: float = 8.0
+    upper_cutout_side_margin_mm: float = 6.35  # 0.25 in
+    upper_cutout_top_offset_mm: float = 6.0
+    upper_cutout_bottom_offset_from_top_mm: float = 25.4  # 1 in
+
     # Single utility slot on back cap
     include_back_utility_slot: bool = False
     utility_slot_width_mm: float = 15.0
@@ -134,6 +145,28 @@ def _add_profile(width: float, height: float, capsule: bool) -> None:
         _add_vertical_stadium(width, height)
         return
     Rectangle(width, height)
+
+
+def _add_upper_domed_window(width: float, top_y: float, bottom_y: float) -> None:
+    """Add a half-moon top with an extended rectangular lower section."""
+    if width <= 0.0 or top_y <= bottom_y:
+        return
+    r = min(0.5 * width, top_y - bottom_y)
+    if r <= 0.0:
+        return
+    diam_y = top_y - r
+    stem_h = max(diam_y - bottom_y, 0.0)
+
+    # Build top half-circle only (remove lower semicircle).
+    with Locations((0.0, diam_y)):
+        Circle(r)
+    with Locations((0.0, diam_y)):
+        Rectangle(2.0 * r + 0.2, 2.0 * r + 0.2, align=(Align.CENTER, Align.MAX), mode=Mode.SUBTRACT)
+
+    # Extend lower section to requested bottom offset.
+    if stem_h > 0.05:
+        with Locations((0.0, bottom_y + 0.5 * stem_h)):
+            Rectangle(width, stem_h)
 
 
 def _largest_solid(shape):
@@ -204,6 +237,20 @@ def _derived(p: DualMaterialParams) -> dict:
     groove_depth = tongue_depth + p.back_cap_groove_axial_clearance_mm
     groove_start_z = body_depth - groove_depth
 
+    # Manual back-cap cutouts in device-centered coordinates.
+    device_half_w = 0.5 * p.device_nominal_w_mm
+    device_half_h = 0.5 * p.device_nominal_h_mm
+
+    lower_w = max(p.device_nominal_w_mm - 2.0 * p.lower_cutout_side_margin_mm, 2.0)
+    lower_h = max(p.lower_cutout_height_mm, 2.0)
+    lower_center_y = -device_half_h + p.lower_cutout_bottom_offset_mm + 0.5 * lower_h
+
+    upper_w = max(p.device_nominal_w_mm - 2.0 * p.upper_cutout_side_margin_mm, 2.0)
+    upper_top_y = device_half_h - p.upper_cutout_top_offset_mm
+    upper_bottom_y = device_half_h - p.upper_cutout_bottom_offset_from_top_mm
+    if upper_bottom_y > upper_top_y:
+        upper_top_y, upper_bottom_y = upper_bottom_y, upper_top_y
+
     return {
         "tpu_outer_w_mm": tpu_outer_w,
         "tpu_outer_h_mm": tpu_outer_h,
@@ -228,6 +275,12 @@ def _derived(p: DualMaterialParams) -> dict:
         "groove_h_mm": groove_h,
         "groove_depth_mm": groove_depth,
         "groove_start_z_mm": groove_start_z,
+        "manual_lower_w_mm": lower_w,
+        "manual_lower_h_mm": lower_h,
+        "manual_lower_center_y_mm": lower_center_y,
+        "manual_upper_w_mm": upper_w,
+        "manual_upper_top_y_mm": upper_top_y,
+        "manual_upper_bottom_y_mm": upper_bottom_y,
     }
 
 
@@ -388,7 +441,18 @@ def build_back_cap(p: DualMaterialParams):
             _add_profile(d["lip_tip_w_mm"], d["lip_tip_h_mm"], p.enforce_capsule_profile)
         extrude(amount=d["lip_tip_depth_mm"])
 
-        if p.include_back_utility_slot:
+        if p.include_manual_back_cutouts:
+            cut_depth = p.back_cap_thickness_mm + p.back_cap_lip_depth_mm + p.back_cap_tpu_gasket_thickness_mm + 1.0
+            with BuildSketch(Plane.XY.offset(-0.2)):
+                with Locations((0.0, d["manual_lower_center_y_mm"])):
+                    SlotOverall(d["manual_lower_w_mm"], d["manual_lower_h_mm"])
+                _add_upper_domed_window(
+                    d["manual_upper_w_mm"],
+                    d["manual_upper_top_y_mm"],
+                    d["manual_upper_bottom_y_mm"],
+                )
+            extrude(amount=cut_depth, mode=Mode.SUBTRACT)
+        elif p.include_back_utility_slot:
             cut_depth = p.back_cap_thickness_mm + p.back_cap_lip_depth_mm + p.back_cap_tpu_gasket_thickness_mm + 1.0
             with BuildSketch(Plane.XY.offset(-0.2)):
                 with Locations((0.0, slot_center_y)):
@@ -418,7 +482,17 @@ def build_back_cap(p: DualMaterialParams):
                 _add_profile(gasket_inner_w, gasket_inner_h, p.enforce_capsule_profile)
             extrude(amount=p.back_cap_tpu_gasket_thickness_mm + 0.2, mode=Mode.SUBTRACT)
 
-            if p.include_back_utility_slot:
+            if p.include_manual_back_cutouts:
+                with BuildSketch(Plane.XY.offset(p.back_cap_thickness_mm - 0.1)):
+                    with Locations((0.0, d["manual_lower_center_y_mm"])):
+                        SlotOverall(d["manual_lower_w_mm"], d["manual_lower_h_mm"])
+                    _add_upper_domed_window(
+                        d["manual_upper_w_mm"],
+                        d["manual_upper_top_y_mm"],
+                        d["manual_upper_bottom_y_mm"],
+                    )
+                extrude(amount=p.back_cap_tpu_gasket_thickness_mm + 0.2, mode=Mode.SUBTRACT)
+            elif p.include_back_utility_slot:
                 with BuildSketch(Plane.XY.offset(p.back_cap_thickness_mm - 0.1)):
                     with Locations((0.0, slot_center_y)):
                         _add_vertical_stadium(slot_w, slot_h)
@@ -459,6 +533,26 @@ def build_back_cap(p: DualMaterialParams):
             "center_y": float(slot_center_y),
             "top_margin": float(p.utility_slot_top_margin_mm),
             "bottom_margin": float(p.utility_slot_bottom_margin_mm),
+        },
+        "manual_back_cutouts_mm": {
+            "enabled": bool(p.include_manual_back_cutouts),
+            "lower": {
+                "shape": "slot",
+                "side_margin": float(p.lower_cutout_side_margin_mm),
+                "bottom_offset": float(p.lower_cutout_bottom_offset_mm),
+                "width": float(d["manual_lower_w_mm"]),
+                "height": float(d["manual_lower_h_mm"]),
+                "center_y": float(d["manual_lower_center_y_mm"]),
+            },
+            "upper": {
+                "shape": "domed",
+                "side_margin": float(p.upper_cutout_side_margin_mm),
+                "top_offset": float(p.upper_cutout_top_offset_mm),
+                "bottom_offset_from_top": float(p.upper_cutout_bottom_offset_from_top_mm),
+                "width": float(d["manual_upper_w_mm"]),
+                "top_y": float(d["manual_upper_top_y_mm"]),
+                "bottom_y": float(d["manual_upper_bottom_y_mm"]),
+            },
         },
         "tpu_gasket_mm": {
             "enabled": bool(gasket is not None),
@@ -506,6 +600,11 @@ def main():
         help="Disable TPU gasket body on the back-cap assembly.",
     )
     parser.add_argument(
+        "--disable-manual-back-cutouts",
+        action="store_true",
+        help="Disable the manual two-cutout Mevo back-cap layout.",
+    )
+    parser.add_argument(
         "--disable-front-tpu-edge-wrap",
         action="store_true",
         help="Disable TPU front perimeter wrap in the main body.",
@@ -541,6 +640,8 @@ def main():
         p.include_back_utility_slot = False
     if args.disable_back_cap_tpu_gasket:
         p.include_back_cap_tpu_gasket = False
+    if args.disable_manual_back_cutouts:
+        p.include_manual_back_cutouts = False
     if args.disable_front_tpu_edge_wrap:
         p.include_tpu_front_edge_wrap = False
     if args.enable_rear_tpu_edge_wrap:
