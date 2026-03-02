@@ -82,6 +82,13 @@ class MakiCaseParams:
     tripod_armor_extra_mm: float = 1.4
     tripod_armor_margin_mm: float = 4.5
     use_step_side_features: bool = True
+    tripod_thread_radius_mm: float = 3.175
+    tripod_radius_tolerance_mm: float = 1.0
+    tripod_face_normal_min_abs_z: float = 0.92
+    tripod_centerline_x_max_mm: float = 6.0
+    tripod_z_min_mm: float = -110.0
+    tripod_z_max_mm: float = -20.0
+    tripod_expected_side: str = "neg"
 
     # Vent slots (optional)
     vent_count: int = 10
@@ -183,11 +190,11 @@ def _archive_existing(paths: list[Path], out_dir: Path) -> list[tuple[str, str]]
     return moved
 
 
-def _load_step_as_mesh(step_path: Path, tmp_stl: Path):
+def _load_step_as_mesh(step_path: Path, tmp_stl: Path, p: MakiCaseParams):
     shape = import_step(str(step_path))
     housing = max(shape.solids(), key=lambda s: s.volume)
     # Extract side features before STL export. Export can alter queried wire bounds.
-    step_features = _extract_step_side_features(housing)
+    step_features = _extract_step_side_features(housing, p)
 
     tmp_stl.parent.mkdir(parents=True, exist_ok=True)
     export_stl(shape, str(tmp_stl))
@@ -200,7 +207,88 @@ def _load_step_as_mesh(step_path: Path, tmp_stl: Path):
     return mesh, housing, step_features
 
 
-def _extract_step_side_features(housing):
+def _extract_tripod_from_cylindrical_faces(housing, p: MakiCaseParams):
+    candidates = []
+    for f in housing.faces():
+        if f.geom_type != GeomType.CYLINDER:
+            continue
+        r = getattr(f, "radius", None)
+        if r is None:
+            continue
+        if abs(r - p.tripod_thread_radius_mm) > p.tripod_radius_tolerance_mm:
+            continue
+        try:
+            c = f.center()
+            n = f.normal_at()
+        except Exception:
+            continue
+        if abs(float(c.X)) > p.tripod_centerline_x_max_mm:
+            continue
+        if not (p.tripod_z_min_mm <= float(c.Z) <= p.tripod_z_max_mm):
+            continue
+        # Thread axis expected along -Z for this MAKI STEP orientation.
+        if abs(float(n.Z)) < p.tripod_face_normal_min_abs_z or float(n.Z) >= 0.0:
+            continue
+        bb = f.bounding_box()
+        major_span = max(float(bb.size.X), float(bb.size.Y), float(bb.size.Z))
+        if major_span < 4.0:
+            continue
+        side = "neg" if c.Y < 0 else "pos"
+        score = (
+            0.0 if side == p.tripod_expected_side else 1.0,
+            abs(float(r) - p.tripod_thread_radius_mm),
+            abs(float(n.Z) + 1.0),
+            abs(float(c.X)),
+            abs(float(c.Z) + 45.0),
+        )
+        candidates.append(
+            {
+                "side": side,
+                "x": float(c.X),
+                "y": float(c.Y),
+                "z": float(c.Z),
+                "r": float(r),
+                "normal": [float(n.X), float(n.Y), float(n.Z)],
+                "score": score,
+            }
+        )
+    if not candidates:
+        return None, 0
+    best = min(candidates, key=lambda c: c["score"])
+    best.pop("score", None)
+    return best, len(candidates)
+
+
+def _extract_tripod_from_circular_edges(housing):
+    tripod_candidates = []
+    for e in housing.edges():
+        if e.geom_type != GeomType.CIRCLE:
+            continue
+        c = e.center()
+        r = e.radius
+        bb = e.bounding_box()
+        # Circular edges that lie on side walls and describe the tripod feature.
+        if not (2.5 <= r <= 8.0):
+            continue
+        if not (-90.0 <= c.Z <= -20.0):
+            continue
+        if abs(c.X) > 2.0:
+            continue
+        side = "neg" if c.Y < 0 else "pos"
+        circular_in_xz = abs(bb.size.X - bb.size.Z) < 0.25 and bb.size.Y < 0.25
+        if not circular_in_xz:
+            continue
+        tripod_candidates.append(
+            {"side": side, "x": float(c.X), "z": float(c.Z), "r": float(r), "y": float(c.Y)}
+        )
+    if not tripod_candidates:
+        return None, 0
+    neg = [c for c in tripod_candidates if c["side"] == "neg"]
+    pool = neg if neg else tripod_candidates
+    return max(pool, key=lambda c: c["r"]), len(tripod_candidates)
+
+
+def _extract_step_side_features(housing, p: MakiCaseParams):
     """Extract side vent slots + tripod hole from the original STEP housing.
 
     Vents are gathered across flat and corner side panels so multi-panel slot rows
@@ -277,36 +365,20 @@ def _extract_step_side_features(housing):
                 }
             )
 
-    tripod_candidates = []
-    for e in housing.edges():
-        if e.geom_type != GeomType.CIRCLE:
-            continue
-        c = e.center()
-        r = e.radius
-        bb = e.bounding_box()
-        # Circular edges that lie on side walls and describe the tripod feature.
-        if not (2.5 <= r <= 8.0):
-            continue
-        if not (-90.0 <= c.Z <= -20.0):
-            continue
-        if abs(c.X) > 2.0:
-            continue
-        side = "neg" if c.Y < 0 else "pos"
-        circular_in_xz = abs(bb.size.X - bb.size.Z) < 0.25 and bb.size.Y < 0.25
-        if not circular_in_xz:
-            continue
-        tripod_candidates.append(
-            {"side": side, "x": c.X, "z": c.Z, "r": r, "y": c.Y}
-        )
+    tripod, cyl_count = _extract_tripod_from_cylindrical_faces(housing, p)
+    tripod_source = "cylindrical_face"
+    edge_count = 0
+    if tripod is None:
+        tripod, edge_count = _extract_tripod_from_circular_edges(housing)
+        tripod_source = "circle_edge" if tripod is not None else "fallback_param"
 
-    tripod = None
-    if tripod_candidates:
-        # Prefer the largest clear circular edge on the negative-Y tripod side.
-        neg = [c for c in tripod_candidates if c["side"] == "neg"]
-        pool = neg if neg else tripod_candidates
-        tripod = max(pool, key=lambda c: c["r"])
-
-    return {"vents": vents, "tripod": tripod}
+    return {
+        "vents": vents,
+        "tripod": tripod,
+        "tripod_source": tripod_source,
+        "tripod_cyl_candidate_count": int(cyl_count),
+        "tripod_edge_candidate_count": int(edge_count),
+    }
 
 
 def _classify_cutout(xlen: float, ylen: float) -> dict | None:
@@ -498,7 +570,7 @@ def _extract_profile_xy(mesh: trimesh.Trimesh, z_mm: float) -> Polygon:
 
 def build_case(p: MakiCaseParams):
     tmp_stl = Path("tmp/maki_device_from_step.stl")
-    mesh, housing, step_features = _load_step_as_mesh(p.step_path, tmp_stl)
+    mesh, housing, step_features = _load_step_as_mesh(p.step_path, tmp_stl, p)
 
     zmin, zmax = mesh.bounds[:, 2]
     z_section = zmin + (zmax - zmin) * p.section_z_ratio
@@ -547,6 +619,7 @@ def build_case(p: MakiCaseParams):
 
     vents_used = []
     tripod_used = None
+    tripod_detected = step_features["tripod"]
     front_cutouts_applied = []
     front_cutouts_detected = []
 
@@ -663,13 +736,14 @@ def build_case(p: MakiCaseParams):
                         }
                     )
 
-            t = step_features["tripod"]
+            t = tripod_detected
             if t is not None:
                 x_c = map_x(t["x"])
                 z_c = map_z(t["z"])
                 d = max(2.0 * t["r"] * sx + p.side_feature_clearance_mm, 2.0)
                 on_neg = t["side"] == "neg"
                 y_face = min_y + 0.15 if on_neg else max_y - 0.15
+                tripod_from_step_front_mm = float(zmax - float(t["z"]))
 
                 # Local armor boss to distribute impact around tripod region.
                 if on_neg:
@@ -694,7 +768,16 @@ def build_case(p: MakiCaseParams):
                     with Locations((x_c, z_c)):
                         Circle(d * 0.5)
                 extrude(amount=(-cut_depth if on_neg else cut_depth), mode=Mode.SUBTRACT)
-                tripod_used = {"side": t["side"], "x": x_c, "z": z_c, "diameter": d}
+                tripod_used = {
+                    "side": t["side"],
+                    "x": x_c,
+                    "z": z_c,
+                    "diameter": d,
+                    "source": step_features.get("tripod_source", "unknown"),
+                    "detected_radius_raw_mm": float(t.get("r", d * 0.5)),
+                    "from_camera_front_mm_raw": tripod_from_step_front_mm,
+                    "from_case_front_mm_mapped": float(z_c),
+                }
 
         # Fallback if STEP-derived features were unavailable.
         if not vents_used:
@@ -745,7 +828,11 @@ def build_case(p: MakiCaseParams):
             "vents_applied": len(vents_used),
             "vents_applied_entries": vents_used,
             "tripanel_vent_layout_enforced": p.enforce_tripanel_vent_layout,
-            "tripod_detected": step_features["tripod"] is not None,
+            "tripod_detected": tripod_detected is not None,
+            "tripod_source": step_features.get("tripod_source", "unknown"),
+            "tripod_cyl_candidate_count": step_features.get("tripod_cyl_candidate_count", 0),
+            "tripod_edge_candidate_count": step_features.get("tripod_edge_candidate_count", 0),
+            "tripod_detected_raw": tripod_detected,
             "tripod_applied": tripod_used,
         },
         "derived": {

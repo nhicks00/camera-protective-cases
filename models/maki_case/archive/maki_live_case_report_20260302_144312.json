@@ -364,9 +364,7 @@
         "z": 49.53087839784373,
         "diameter": 8.139165114161232,
         "source": "cylindrical_face",
-        "detected_radius_raw_mm": 3.85,
-        "from_camera_front_mm_raw": 44.15000562616651,
-        "from_case_front_mm_mapped": 49.53087839784373
+        "detected_radius_raw_mm": 3.85
       }
     },
     "derived": {

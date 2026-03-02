@@ -2,6 +2,29 @@
 
 ## 2026-03-02
 
+### STEP-Interrogation Upgrade For Cutout Accuracy (MAKI)
+- Upgraded MAKI feature extraction to follow a direct B-Rep interrogation strategy (build123d `import_step`) instead of relying on implicit guesses.
+- `scripts/generate_maki_live_case.py`:
+  - Added cylindrical-face-first tripod detection:
+    - filters cylindrical faces by thread-radius target (`~3.175 mm` ± tolerance),
+    - requires downward thread-axis normal (`-Z`),
+    - constrains expected centerline/depth region,
+    - falls back to circular-edge detection only if no valid cylinder is found.
+  - Report now includes:
+    - `step_side_features.tripod_source`
+    - `tripod_cyl_candidate_count`
+    - `tripod_edge_candidate_count`
+    - `tripod_detected_raw` (raw STEP-space center/radius/normal)
+    - `tripod_applied` (mapped case-space location used in cutout generation)
+- `scripts/generate_maki_live_caps.py`:
+  - End-cap cutout extraction now explicitly anchors to detected front/back end planes and then collects internal-loop cutouts on those planes (with tolerance and window fallback).
+  - Report now includes `report.cutouts.end_planes` with front/back plane coordinates used for extraction.
+- Regenerated MAKI outputs and reports:
+  - `models/maki_case/maki_live_case_sleeve.step`
+  - `models/maki_case/maki_live_rear_cap.step`
+  - `models/maki_case/reports/maki_live_case_report.json`
+  - `models/maki_case/reports/maki_live_caps_report.json`
+
 ### Front-Integrated Rule Applied (Both Cameras)
 - Applied the new assembly rule: front cap is integrated into the sleeve/body; only rear/back cap remains a separate part.
 - Mevo dual-material generator (`generate_mevo_dual_material_case.py`):

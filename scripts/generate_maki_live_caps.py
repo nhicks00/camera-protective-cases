@@ -59,6 +59,7 @@ class MakiCapParams:
     # End-hole extraction windows from source STEP (mm from each end)
     front_window_mm: float = 16.0
     rear_window_mm: float = 16.0
+    end_plane_tol_mm: float = 3.0
 
     # Ignore very large loops that would remove almost entire cap
     max_cutout_ratio_xy: float = 0.80
@@ -174,6 +175,23 @@ def _classify_cutout(xlen: float, ylen: float) -> dict | None:
 
 
 def _extract_end_cutouts(housing, p: MakiCapParams, sx: float, sy: float, zmin: float, zmax: float):
+    front_plane_z = None
+    rear_plane_z = None
+    for f in housing.faces():
+        if f.geom_type != GeomType.PLANE:
+            continue
+        try:
+            n = f.normal_at()
+            c = f.center()
+        except Exception:
+            continue
+        if abs(n.Z) < 0.92:
+            continue
+        if n.Z > 0:
+            front_plane_z = c.Z if front_plane_z is None else max(front_plane_z, c.Z)
+        else:
+            rear_plane_z = c.Z if rear_plane_z is None else min(rear_plane_z, c.Z)
+
     front = []
     rear = []
     for f in housing.faces():
@@ -186,6 +204,9 @@ def _extract_end_cutouts(housing, p: MakiCapParams, sx: float, sy: float, zmin: 
             continue
         if abs(n.Z) < 0.92:
             continue
+        fc = f.center()
+        on_front_plane = front_plane_z is not None and abs(fc.Z - front_plane_z) <= p.end_plane_tol_mm
+        on_rear_plane = rear_plane_z is not None and abs(fc.Z - rear_plane_z) <= p.end_plane_tol_mm
         for w in wires[1:]:
             bb = w.bounding_box()
             xlen = float(bb.size.X)
@@ -228,9 +249,9 @@ def _extract_end_cutouts(housing, p: MakiCapParams, sx: float, sy: float, zmin: 
                 entry["w"] = max(shape["w"] * sx + p.cutout_extra_mm, 0.8)
                 entry["h"] = max(shape["h"] * sy + p.cutout_extra_mm, 0.8)
 
-            if n.Z > 0 and zmid > (zmax - p.front_window_mm):
+            if n.Z > 0 and (on_front_plane or zmid > (zmax - p.front_window_mm)):
                 front.append(entry)
-            if n.Z < 0 and zmid < (zmin + p.rear_window_mm):
+            if n.Z < 0 and (on_rear_plane or zmid < (zmin + p.rear_window_mm)):
                 rear.append(entry)
 
     # Deduplicate by rounded center+size
@@ -248,7 +269,11 @@ def _extract_end_cutouts(housing, p: MakiCapParams, sx: float, sy: float, zmin: 
             out.append(c)
         return out
 
-    return dedupe(front), dedupe(rear)
+    return dedupe(front), dedupe(rear), {
+        "front_plane_z_mm": float(front_plane_z) if front_plane_z is not None else None,
+        "rear_plane_z_mm": float(rear_plane_z) if rear_plane_z is not None else None,
+        "end_plane_tol_mm": float(p.end_plane_tol_mm),
+    }
 
 
 def _build_cap(
@@ -377,7 +402,7 @@ def build_caps(p: MakiCapParams):
     plug_h = max(inner_h - 2.0 * p.plug_clearance_mm, 2.0)
     plug_corner_r = max(inner_corner_r - p.plug_clearance_mm, 0.6)
 
-    front_cutouts, rear_cutouts = _extract_end_cutouts(housing, p, sx, sy, zmin, zmax)
+    front_cutouts, rear_cutouts, end_plane_meta = _extract_end_cutouts(housing, p, sx, sy, zmin, zmax)
 
     front_cap = _build_front_cap_inverted(
         plate_w, plate_h, plate_corner_r, plug_w, plug_h, plug_corner_r, p, front_cutouts
@@ -414,6 +439,7 @@ def build_caps(p: MakiCapParams):
             },
         },
         "cutouts": {
+            "end_planes": end_plane_meta,
             "front_count": len(front_cutouts),
             "rear_count": len(rear_cutouts),
             "front": front_cutouts,

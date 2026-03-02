@@ -16,7 +16,6 @@
     "front_recess_inset_mm": 3.0,
     "front_window_mm": 16.0,
     "rear_window_mm": 16.0,
-    "end_plane_tol_mm": 3.0,
     "max_cutout_ratio_xy": 0.8,
     "include_major_front_aperture": true,
     "section_z_ratio": 0.5,
@@ -70,11 +69,6 @@
       }
     },
     "cutouts": {
-      "end_planes": {
-        "front_plane_z_mm": -4.0,
-        "rear_plane_z_mm": -118.8,
-        "end_plane_tol_mm": 3.0
-      },
       "front_count": 14,
       "rear_count": 4,
       "front": [

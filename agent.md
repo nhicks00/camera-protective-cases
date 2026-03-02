@@ -71,6 +71,11 @@ Active hard-shell and TPU workflows:
   - Front is integrated into sleeve by default (`front_integrated=True`).
   - Front cutouts are extracted from STEP and cut through the integrated front wall.
   - Back remains open for separate rear cap installation.
+  - Tripod detection is STEP-interrogation-first:
+    - cylindrical face detection (thread-radius target near 1/4"-20 geometry),
+    - downward axis normal filter,
+    - centerline/depth region filters,
+    - circular-edge fallback only if cylindrical detection fails.
   - Vent behavior updated to enforced tripod-side 3-panel layout:
     - 8 vent slots on center panel
     - 8 on each adjacent panel
@@ -108,6 +113,8 @@ Current preferred workflow:
   - `--disable-front-lens-led-cutouts` to keep front wall solid.
 - Active review-spec values are recorded in `models/mevo_case/reports/mevo_start_dual_material_report.json`.
 - Legacy open-through/cap workflows remain in repo for fallback only and are not the active default path.
+- Note: manufacturer STEP-based auto-extraction is currently strongest for MAKI.
+  Mevo workflow is dimension/spec-driven unless a full Mevo STEP is provided.
 
 ## Terminology Mapping (Important for user shorthand)
 User shorthand often means:

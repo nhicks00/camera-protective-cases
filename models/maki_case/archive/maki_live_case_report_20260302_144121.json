@@ -27,10 +27,6 @@
     "tripod_thread_radius_mm": 3.175,
     "tripod_radius_tolerance_mm": 1.0,
     "tripod_face_normal_min_abs_z": 0.92,
-    "tripod_centerline_x_max_mm": 6.0,
-    "tripod_z_min_mm": -110.0,
-    "tripod_z_max_mm": -20.0,
-    "tripod_expected_side": "neg",
     "vent_count": 10,
     "vent_slot_w_mm": 16.0,
     "vent_slot_h_mm": 2.6,
@@ -344,29 +340,27 @@
       "tripanel_vent_layout_enforced": true,
       "tripod_detected": true,
       "tripod_source": "cylindrical_face",
-      "tripod_cyl_candidate_count": 1,
+      "tripod_cyl_candidate_count": 3,
       "tripod_edge_candidate_count": 0,
       "tripod_detected_raw": {
-        "side": "neg",
-        "x": 9.42978035343462e-16,
-        "y": -24.15,
-        "z": -44.15,
-        "r": 3.85,
+        "side": "pos",
+        "x": 22.190978199874294,
+        "y": 4.361058398624857,
+        "z": -13.297777479246006,
+        "r": 3.0,
         "normal": [
-          -2.4492935982947064e-16,
-          -0.0,
-          -1.0
+          0.0,
+          0.2588190446312854,
+          -0.9659258264153353
         ]
       },
       "tripod_applied": {
-        "side": "neg",
-        "x": 9.600208465045147e-16,
-        "z": 49.53087839784373,
-        "diameter": 8.139165114161232,
+        "side": "pos",
+        "x": 22.592044435528177,
+        "z": 18.622141620471456,
+        "diameter": 6.408440348697064,
         "source": "cylindrical_face",
-        "detected_radius_raw_mm": 3.85,
-        "from_camera_front_mm_raw": 44.15000562616651,
-        "from_case_front_mm_mapped": 49.53087839784373
+        "detected_radius_raw_mm": 3.0
       }
     },
     "derived": {

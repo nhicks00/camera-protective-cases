@@ -34,6 +34,7 @@ Archive policy:
 - Tripod-side access opening around detected `1/4"-20` region
 - Tripod region reinforcement via local external armor boss
 - Side vent slots extracted from STEP across flat + corner side panels
+- Tripod location extraction is B-Rep based (cylindrical-face-first, circular-edge fallback)
 - Enforced vent layout on tripod side: `3` adjacent panels x `8` slots each (`24` total), with through-cuts
 - Vent coordinates are reported (`step_side_features.vents_applied_entries`) for ASA/TPU alignment audits.
 - Built with `build123d` (OpenCascade B-Rep), exported as STEP only
@@ -74,6 +75,7 @@ Legacy note:
 - Optional legacy output:
   - `models/maki_case/maki_live_front_cap.step` (only when `--include-front-cap` is used)
 - Cap cutouts are extracted from front/rear end-face loop geometry in the original STEP model.
+- End-plane anchoring is reported in `report.cutouts.end_planes` to verify extraction reference planes.
 - Front cap geometry uses an inverted bezel profile:
   - raised outer rim,
   - recessed center panel,
