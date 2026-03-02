@@ -35,7 +35,7 @@ All geometry generation is built with `build123d` (OpenCascade B-REP) and export
 
 ## Current Outputs
 Key generated outputs are in `models/`, including:
-- Mevo ASA body + front/rear caps + TPU sleeve
+- Mevo dual-material body (`TPU_Sleeve` + `ASA_Shell`) + dual-material back cap (`ASA_Back_Cap` + `TPU_Back_Gasket`)
 - MAKI ASA sleeve + front/rear caps + TPU sleeve
 - JSON reports for extracted/applied features and dimensions
 

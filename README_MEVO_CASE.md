@@ -3,7 +3,7 @@
 This workspace now includes a parametric two-piece, print-ready enclosure derived from your reference front-cap STL.
 
 Current focus option:
-- front-integrated dual-material body + separate back cap (`mevo_start_back_cap_asa.step`)
+- front-integrated dual-material body + separate dual-material back cap (`mevo_start_back_cap_dual_material.step`)
 
 ## Generated Outputs
 - `models/mevo_case/mevo_start_case_body.step`
@@ -11,7 +11,8 @@ Current focus option:
 - `models/mevo_case/mevo_start_tpu_sleeve.step`
 - `models/mevo_case/reports/mevo_start_tpu_sleeve_report.json`
 - `models/mevo_case/mevo_start_body_dual_material.step` (single STEP with `TPU_Sleeve` + `ASA_Shell`)
-- `models/mevo_case/mevo_start_back_cap_asa.step` (pure ASA back cap)
+- `models/mevo_case/mevo_start_back_cap_dual_material.step` (single STEP with `ASA_Back_Cap` + `TPU_Back_Gasket`)
+- `models/mevo_case/mevo_start_back_cap_asa.step` (compatibility ASA-only export)
 - `models/mevo_case/reports/mevo_start_dual_material_report.json`
 
 Archive policy:
@@ -60,7 +61,7 @@ Generate legacy closed-front sleeve mode (not default):
 python scripts/generate_mevo_case.py --closed-front
 ```
 
-Generate dual-material body + pure-ASA back cap (new workflow):
+Generate dual-material body + dual-material back cap (new workflow):
 ```bash
 python scripts/generate_mevo_dual_material_case.py
 ```
@@ -68,6 +69,11 @@ python scripts/generate_mevo_dual_material_case.py
 Legacy open-front override:
 ```bash
 python scripts/generate_mevo_dual_material_case.py --open-front-ovular
+```
+
+Disable TPU gasket on back cap (fallback):
+```bash
+python scripts/generate_mevo_dual_material_case.py --disable-back-cap-tpu-gasket
 ```
 
 Generate Mevo TPU inner sleeve matched to the current ASA shell:

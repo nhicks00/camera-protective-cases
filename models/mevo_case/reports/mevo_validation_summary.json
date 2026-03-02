@@ -2,27 +2,18 @@
   "timestamp": "2026-03-02",
   "checks": {
     "body_solids": 2,
-    "named_bodies_reported": [
+    "body_named_bodies": [
       "TPU_Sleeve",
       "ASA_Shell"
     ],
-    "lens_center_y_mm": 16.5,
-    "tripod_hole_d_mm": 20.5,
-    "back_utility_slot_enabled": false,
-    "derived_mm": {
-      "tpu_outer_w_mm": 37.9,
-      "tpu_outer_h_mm": 79.39999999999999,
-      "asa_inner_w_mm": 37.9,
-      "asa_inner_h_mm": 79.39999999999999,
-      "asa_outer_w_mm": 42.3,
-      "asa_outer_h_mm": 83.8,
-      "tpu_outer_profile_r_mm": 18.95,
-      "asa_inner_profile_r_mm": 18.95,
-      "asa_outer_profile_r_mm": 21.15,
-      "cavity_start_z_mm": 3.0,
-      "body_depth_mm": 90.3,
-      "utility_slot_h_mm": 58.8,
-      "utility_slot_center_y_mm": -2.5
-    }
+    "back_cap_dual_solids": 2,
+    "back_cap_named_bodies": [
+      "ASA_Back_Cap",
+      "TPU_Back_Gasket"
+    ],
+    "back_cap_tpu_gasket_enabled": true,
+    "back_cap_fit_clearance_total_mm": 0.28,
+    "back_cap_lip_depth_mm": 5.0,
+    "body_rear_groove_depth_mm": 1.5499999999999998
   }
 }

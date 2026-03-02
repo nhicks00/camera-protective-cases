@@ -28,16 +28,8 @@
     "include_side_vents": true,
     "back_cap_thickness_mm": 3.0,
     "back_cap_lip_depth_mm": 5.0,
-    "back_cap_lip_undersize_total_mm": 0.28,
-    "back_cap_tongue_depth_mm": 1.4,
-    "back_cap_tongue_radial_step_mm": 0.3,
-    "back_cap_groove_radial_clearance_mm": 0.08,
-    "back_cap_groove_axial_clearance_mm": 0.15,
+    "back_cap_lip_undersize_total_mm": 0.1,
     "back_cap_edge_fillet_mm": 0.6,
-    "include_back_cap_tpu_gasket": true,
-    "back_cap_tpu_gasket_thickness_mm": 1.2,
-    "back_cap_tpu_gasket_outer_inset_mm": 1.0,
-    "back_cap_tpu_gasket_ring_width_mm": 1.6,
     "include_back_utility_slot": false,
     "utility_slot_width_mm": 15.0,
     "utility_slot_top_margin_mm": 15.0,
@@ -57,17 +49,7 @@
       "cavity_start_z_mm": 3.0,
       "body_depth_mm": 90.3,
       "utility_slot_h_mm": 58.8,
-      "utility_slot_center_y_mm": -2.5,
-      "lip_tip_w_mm": 37.62,
-      "lip_tip_h_mm": 79.11999999999999,
-      "tongue_w_mm": 38.22,
-      "tongue_h_mm": 79.71999999999998,
-      "tongue_depth_mm": 1.4,
-      "lip_tip_depth_mm": 3.6,
-      "groove_w_mm": 38.379999999999995,
-      "groove_h_mm": 79.87999999999998,
-      "groove_depth_mm": 1.5499999999999998,
-      "groove_start_z_mm": 88.75
+      "utility_slot_center_y_mm": -2.5
     },
     "features_mm": {
       "open_front_ovular": false,
@@ -79,12 +61,7 @@
       "led_hole_offset_from_lens_y": 12.0,
       "sun_hood_depth": 3.0,
       "tripod_hole_d": 20.5,
-      "tripod_center_from_front": 43.2,
-      "back_cap_fit_clearance_total": 0.28,
-      "back_cap_tongue_depth": 1.4,
-      "back_cap_tongue_radial_step": 0.3,
-      "body_rear_groove_depth": 1.5499999999999998,
-      "body_rear_groove_start_z": 88.75
+      "tripod_center_from_front": 43.2
     },
     "named_bodies": [
       "TPU_Sleeve",
@@ -96,22 +73,12 @@
     "back_cap_mm": {
       "plate_w": 42.3,
       "plate_h": 83.8,
-      "lip_tip_w": 37.62,
-      "lip_tip_h": 79.11999999999999,
-      "tongue_w": 38.22,
-      "tongue_h": 79.71999999999998,
-      "tongue_depth": 1.4,
-      "lip_tip_depth": 3.6,
+      "lip_w": 37.8,
+      "lip_h": 79.3,
       "lip_depth": 5.0,
       "thickness": 3.0,
-      "lip_undersize_total": 0.28,
-      "groove_radial_clearance": 0.08,
-      "groove_axial_clearance": 0.15
+      "lip_undersize_total": 0.1
     },
-    "named_bodies": [
-      "ASA_Back_Cap",
-      "TPU_Back_Gasket"
-    ],
     "utility_slot_mm": {
       "enabled": false,
       "shape": "stadium",
@@ -120,12 +87,6 @@
       "center_y": -2.5,
       "top_margin": 15.0,
       "bottom_margin": 10.0
-    },
-    "tpu_gasket_mm": {
-      "enabled": true,
-      "thickness": 1.2,
-      "outer_inset": 1.0,
-      "ring_width": 1.6
     }
   }
 }

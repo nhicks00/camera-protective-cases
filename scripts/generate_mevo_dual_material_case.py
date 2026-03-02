@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Generate a Mevo Start dual-material case plus separate ASA back cap.
+"""Generate a Mevo Start dual-material case plus separate back-cap assembly.
 
 Primary outputs:
 - models/mevo_case/mevo_start_body_dual_material.step
   - contains two named bodies: TPU_Sleeve and ASA_Shell
+- models/mevo_case/mevo_start_back_cap_dual_material.step
+  - contains two named bodies: ASA_Back_Cap and TPU_Back_Gasket
 - models/mevo_case/mevo_start_back_cap_asa.step
-  - separate pure-ASA back cap
+  - compatibility export of ASA-only cap body
 - models/mevo_case/reports/mevo_start_dual_material_report.json
 
 This generator implements the reviewed design spec while preserving
@@ -16,7 +18,8 @@ the ovular/capsule Mevo cross-section profile:
 - Interface gap TPU<->ASA: 0.0 mm
 - Front profile: integrated front wall by default with offset lens opening
 - Bottom tripod hole: 20.5 mm dia, center at Z=43.2 mm from front face
-- Back cap lip depth: 5.0 mm, lip undersize: 0.1 mm vs ASA opening
+- Back cap lip depth: 5.0 mm, TPU-aware fit clearance: 0.28 mm total
+- Back cap engagement: two-stage tongue + body rear groove seat
 - Back utility slot is disabled by default (enable explicitly when port mapping is confirmed)
 """
 
@@ -29,7 +32,20 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 
-from build123d import Box, BuildPart, BuildSketch, Circle, Compound, Locations, Mode, Plane, Rectangle, export_step, extrude, fillet
+from build123d import (
+    Box,
+    BuildPart,
+    BuildSketch,
+    Circle,
+    Compound,
+    Locations,
+    Mode,
+    Plane,
+    Rectangle,
+    export_step,
+    extrude,
+    fillet,
+)
 
 
 @dataclass
@@ -73,11 +89,21 @@ class DualMaterialParams:
     vent_z_ratio: float = 0.57
     include_side_vents: bool = True
 
-    # Back cap (pure ASA)
+    # Back cap engagement geometry
     back_cap_thickness_mm: float = 3.0
     back_cap_lip_depth_mm: float = 5.0
-    back_cap_lip_undersize_total_mm: float = 0.10
+    back_cap_lip_undersize_total_mm: float = 0.28
+    back_cap_tongue_depth_mm: float = 1.4
+    back_cap_tongue_radial_step_mm: float = 0.30
+    back_cap_groove_radial_clearance_mm: float = 0.08
+    back_cap_groove_axial_clearance_mm: float = 0.15
     back_cap_edge_fillet_mm: float = 0.6
+
+    # Optional TPU gasket on cap inner face (recommended)
+    include_back_cap_tpu_gasket: bool = True
+    back_cap_tpu_gasket_thickness_mm: float = 1.2
+    back_cap_tpu_gasket_outer_inset_mm: float = 1.0
+    back_cap_tpu_gasket_ring_width_mm: float = 1.6
 
     # Single utility slot on back cap
     include_back_utility_slot: bool = False
@@ -161,6 +187,19 @@ def _derived(p: DualMaterialParams) -> dict:
         + (-0.5 * asa_outer_h + p.utility_slot_bottom_margin_mm)
     )
 
+    # Two-stage cap tongue and matching rear body groove.
+    lip_tip_w = max(asa_inner_w - p.back_cap_lip_undersize_total_mm, 2.0)
+    lip_tip_h = max(asa_inner_h - p.back_cap_lip_undersize_total_mm, 2.0)
+    tongue_w = lip_tip_w + 2.0 * p.back_cap_tongue_radial_step_mm
+    tongue_h = lip_tip_h + 2.0 * p.back_cap_tongue_radial_step_mm
+    tongue_depth = min(max(p.back_cap_tongue_depth_mm, 0.6), max(p.back_cap_lip_depth_mm - 0.8, 0.6))
+    lip_tip_depth = max(p.back_cap_lip_depth_mm - tongue_depth, 0.6)
+
+    groove_w = tongue_w + 2.0 * p.back_cap_groove_radial_clearance_mm
+    groove_h = tongue_h + 2.0 * p.back_cap_groove_radial_clearance_mm
+    groove_depth = tongue_depth + p.back_cap_groove_axial_clearance_mm
+    groove_start_z = body_depth - groove_depth
+
     return {
         "tpu_outer_w_mm": tpu_outer_w,
         "tpu_outer_h_mm": tpu_outer_h,
@@ -175,6 +214,16 @@ def _derived(p: DualMaterialParams) -> dict:
         "body_depth_mm": body_depth,
         "utility_slot_h_mm": utility_slot_h,
         "utility_slot_center_y_mm": utility_slot_center_y,
+        "lip_tip_w_mm": lip_tip_w,
+        "lip_tip_h_mm": lip_tip_h,
+        "tongue_w_mm": tongue_w,
+        "tongue_h_mm": tongue_h,
+        "tongue_depth_mm": tongue_depth,
+        "lip_tip_depth_mm": lip_tip_depth,
+        "groove_w_mm": groove_w,
+        "groove_h_mm": groove_h,
+        "groove_depth_mm": groove_depth,
+        "groove_start_z_mm": groove_start_z,
     }
 
 
@@ -200,6 +249,11 @@ def build_dual_material_body(p: DualMaterialParams):
         with BuildSketch(Plane.XY.offset(cavity_start_z)):
             _add_profile(d["asa_inner_w_mm"], d["asa_inner_h_mm"], p.enforce_capsule_profile)
         extrude(amount=cavity_depth + 0.2, mode=Mode.SUBTRACT)
+
+        # Rear groove seat for the cap's wider tongue stage (tongue-and-groove guidance).
+        with BuildSketch(Plane.XY.offset(d["groove_start_z_mm"])):
+            _add_profile(d["groove_w_mm"], d["groove_h_mm"], p.enforce_capsule_profile)
+        extrude(amount=d["groove_depth_mm"] + 0.2, mode=Mode.SUBTRACT)
 
         # Optional lens/LED openings when a closed front wall is used.
         if (not p.open_front_ovular) and p.include_front_lens_led_cutouts:
@@ -267,6 +321,11 @@ def build_dual_material_body(p: DualMaterialParams):
             "sun_hood_depth": float(p.sun_hood_depth_mm),
             "tripod_hole_d": float(p.tripod_hole_d_mm),
             "tripod_center_from_front": float(p.tripod_center_from_front_mm),
+            "back_cap_fit_clearance_total": float(p.back_cap_lip_undersize_total_mm),
+            "back_cap_tongue_depth": float(d["tongue_depth_mm"]),
+            "back_cap_tongue_radial_step": float(p.back_cap_tongue_radial_step_mm),
+            "body_rear_groove_depth": float(d["groove_depth_mm"]),
+            "body_rear_groove_start_z": float(d["groove_start_z_mm"]),
         },
         "named_bodies": ["TPU_Sleeve", "ASA_Shell"],
         "warnings": [],
@@ -278,47 +337,88 @@ def build_dual_material_body(p: DualMaterialParams):
 def build_back_cap(p: DualMaterialParams):
     d = _derived(p)
 
-    lip_w = max(d["asa_inner_w_mm"] - p.back_cap_lip_undersize_total_mm, 2.0)
-    lip_h = max(d["asa_inner_h_mm"] - p.back_cap_lip_undersize_total_mm, 2.0)
-
     slot_w = p.utility_slot_width_mm
     slot_h = d["utility_slot_h_mm"]
     slot_center_y = d["utility_slot_center_y_mm"]
 
-    with BuildPart() as cap_bp:
+    with BuildPart() as asa_cap_bp:
         with BuildSketch(Plane.XY):
             _add_profile(d["asa_outer_w_mm"], d["asa_outer_h_mm"], p.enforce_capsule_profile)
         extrude(amount=p.back_cap_thickness_mm)
 
+        # Stage 1: wider tongue that keys into the body rear groove.
         with BuildSketch(Plane.XY.offset(p.back_cap_thickness_mm)):
-            _add_profile(lip_w, lip_h, p.enforce_capsule_profile)
-        extrude(amount=p.back_cap_lip_depth_mm)
+            _add_profile(d["tongue_w_mm"], d["tongue_h_mm"], p.enforce_capsule_profile)
+        extrude(amount=d["tongue_depth_mm"])
+
+        # Stage 2: slimmer tip for controlled friction fit deeper in the sleeve opening.
+        with BuildSketch(Plane.XY.offset(p.back_cap_thickness_mm + d["tongue_depth_mm"])):
+            _add_profile(d["lip_tip_w_mm"], d["lip_tip_h_mm"], p.enforce_capsule_profile)
+        extrude(amount=d["lip_tip_depth_mm"])
 
         if p.include_back_utility_slot:
-            cut_depth = p.back_cap_thickness_mm + p.back_cap_lip_depth_mm + 1.0
+            cut_depth = p.back_cap_thickness_mm + p.back_cap_lip_depth_mm + p.back_cap_tpu_gasket_thickness_mm + 1.0
             with BuildSketch(Plane.XY.offset(-0.2)):
                 with Locations((0.0, slot_center_y)):
                     _add_vertical_stadium(slot_w, slot_h)
             extrude(amount=cut_depth, mode=Mode.SUBTRACT)
 
-    cap = _largest_solid(cap_bp.part)
+    asa_cap = _largest_solid(asa_cap_bp.part)
     try:
-        cap = fillet(cap.edges(), p.back_cap_edge_fillet_mm)
+        asa_cap = fillet(asa_cap.edges(), p.back_cap_edge_fillet_mm)
     except Exception:
         pass
-    cap = _largest_solid(cap)
-    cap.label = "ASA_Back_Cap"
+    asa_cap = _largest_solid(asa_cap)
+    asa_cap.label = "ASA_Back_Cap"
+
+    gasket = None
+    if p.include_back_cap_tpu_gasket and p.back_cap_tpu_gasket_thickness_mm > 0.0:
+        gasket_outer_w = max(d["asa_outer_w_mm"] - 2.0 * p.back_cap_tpu_gasket_outer_inset_mm, 2.0)
+        gasket_outer_h = max(d["asa_outer_h_mm"] - 2.0 * p.back_cap_tpu_gasket_outer_inset_mm, 2.0)
+        gasket_inner_w = max(gasket_outer_w - 2.0 * p.back_cap_tpu_gasket_ring_width_mm, 1.0)
+        gasket_inner_h = max(gasket_outer_h - 2.0 * p.back_cap_tpu_gasket_ring_width_mm, 1.0)
+        with BuildPart() as gasket_bp:
+            with BuildSketch(Plane.XY.offset(p.back_cap_thickness_mm)):
+                _add_profile(gasket_outer_w, gasket_outer_h, p.enforce_capsule_profile)
+            extrude(amount=p.back_cap_tpu_gasket_thickness_mm)
+
+            with BuildSketch(Plane.XY.offset(p.back_cap_thickness_mm - 0.1)):
+                _add_profile(gasket_inner_w, gasket_inner_h, p.enforce_capsule_profile)
+            extrude(amount=p.back_cap_tpu_gasket_thickness_mm + 0.2, mode=Mode.SUBTRACT)
+
+            if p.include_back_utility_slot:
+                with BuildSketch(Plane.XY.offset(p.back_cap_thickness_mm - 0.1)):
+                    with Locations((0.0, slot_center_y)):
+                        _add_vertical_stadium(slot_w, slot_h)
+                extrude(amount=p.back_cap_tpu_gasket_thickness_mm + 0.2, mode=Mode.SUBTRACT)
+
+        gasket = _largest_solid(gasket_bp.part)
+        gasket.label = "TPU_Back_Gasket"
+
+    if gasket is not None:
+        cap_asm = Compound(children=[gasket, asa_cap], label="Mevo_Back_Cap_Assembly")
+        named_bodies = ["ASA_Back_Cap", "TPU_Back_Gasket"]
+    else:
+        cap_asm = asa_cap
+        named_bodies = ["ASA_Back_Cap"]
 
     report = {
         "back_cap_mm": {
             "plate_w": float(d["asa_outer_w_mm"]),
             "plate_h": float(d["asa_outer_h_mm"]),
-            "lip_w": float(lip_w),
-            "lip_h": float(lip_h),
+            "lip_tip_w": float(d["lip_tip_w_mm"]),
+            "lip_tip_h": float(d["lip_tip_h_mm"]),
+            "tongue_w": float(d["tongue_w_mm"]),
+            "tongue_h": float(d["tongue_h_mm"]),
+            "tongue_depth": float(d["tongue_depth_mm"]),
+            "lip_tip_depth": float(d["lip_tip_depth_mm"]),
             "lip_depth": float(p.back_cap_lip_depth_mm),
             "thickness": float(p.back_cap_thickness_mm),
             "lip_undersize_total": float(p.back_cap_lip_undersize_total_mm),
+            "groove_radial_clearance": float(p.back_cap_groove_radial_clearance_mm),
+            "groove_axial_clearance": float(p.back_cap_groove_axial_clearance_mm),
         },
+        "named_bodies": named_bodies,
         "utility_slot_mm": {
             "enabled": bool(p.include_back_utility_slot),
             "shape": "stadium",
@@ -328,9 +428,15 @@ def build_back_cap(p: DualMaterialParams):
             "top_margin": float(p.utility_slot_top_margin_mm),
             "bottom_margin": float(p.utility_slot_bottom_margin_mm),
         },
+        "tpu_gasket_mm": {
+            "enabled": bool(gasket is not None),
+            "thickness": float(p.back_cap_tpu_gasket_thickness_mm),
+            "outer_inset": float(p.back_cap_tpu_gasket_outer_inset_mm),
+            "ring_width": float(p.back_cap_tpu_gasket_ring_width_mm),
+        },
     }
 
-    return cap, report
+    return cap_asm, asa_cap, report
 
 
 def main():
@@ -362,6 +468,23 @@ def main():
         action="store_true",
         help="Use rectangular profile instead of ovular capsule profile.",
     )
+    parser.add_argument(
+        "--disable-back-cap-tpu-gasket",
+        action="store_true",
+        help="Disable TPU gasket body on the back-cap assembly.",
+    )
+    parser.add_argument(
+        "--back-cap-fit-clearance-total",
+        type=float,
+        default=None,
+        help="Total undersize clearance for the cap lip vs body opening (mm).",
+    )
+    parser.add_argument(
+        "--back-cap-tpu-gasket-thickness",
+        type=float,
+        default=None,
+        help="TPU gasket thickness on cap inner face (mm).",
+    )
     args = parser.parse_args()
 
     p = DualMaterialParams()
@@ -374,23 +497,31 @@ def main():
         p.include_back_utility_slot = True
     if args.disable_back_utility_slot:
         p.include_back_utility_slot = False
+    if args.disable_back_cap_tpu_gasket:
+        p.include_back_cap_tpu_gasket = False
+    if args.back_cap_fit_clearance_total is not None:
+        p.back_cap_lip_undersize_total_mm = max(float(args.back_cap_fit_clearance_total), 0.0)
+    if args.back_cap_tpu_gasket_thickness is not None:
+        p.back_cap_tpu_gasket_thickness_mm = max(float(args.back_cap_tpu_gasket_thickness), 0.0)
     p.enforce_capsule_profile = not bool(args.disable_capsule_profile)
 
     body_asm, body_report = build_dual_material_body(p)
-    back_cap, cap_report = build_back_cap(p)
+    back_cap_asm, back_cap_asa, cap_report = build_back_cap(p)
 
     args.out.mkdir(parents=True, exist_ok=True)
     reports_dir = args.out / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
 
     body_step = args.out / "mevo_start_body_dual_material.step"
-    cap_step = args.out / "mevo_start_back_cap_asa.step"
+    cap_step_dual = args.out / "mevo_start_back_cap_dual_material.step"
+    cap_step_asa = args.out / "mevo_start_back_cap_asa.step"
     report_json = reports_dir / "mevo_start_dual_material_report.json"
 
-    archived = _archive_existing([body_step, cap_step, report_json], args.out)
+    archived = _archive_existing([body_step, cap_step_dual, cap_step_asa, report_json], args.out)
 
     export_step(body_asm, str(body_step))
-    export_step(back_cap, str(cap_step))
+    export_step(back_cap_asm, str(cap_step_dual))
+    export_step(back_cap_asa, str(cap_step_asa))
 
     payload = {
         "params": asdict(p),
@@ -402,7 +533,8 @@ def main():
     if archived:
         print(f"Archived {len(archived)} previous file(s) to {args.out / 'archive'}")
     print(f"Wrote {body_step}")
-    print(f"Wrote {cap_step}")
+    print(f"Wrote {cap_step_dual}")
+    print(f"Wrote {cap_step_asa}")
     print(f"Wrote {report_json}")
 
 

@@ -106,14 +106,18 @@ Active hard-shell and TPU workflows:
 Current preferred workflow:
 - Dual-material bucket-body workflow (primary):
   - `models/mevo_case/mevo_start_body_dual_material.step`
+  - `models/mevo_case/mevo_start_back_cap_dual_material.step`
   - `models/mevo_case/mevo_start_back_cap_asa.step`
   - Generator: `scripts/generate_mevo_dual_material_case.py`
   - Body STEP contains named solids: `TPU_Sleeve`, `ASA_Shell`.
+  - Back-cap dual STEP contains named solids: `ASA_Back_Cap`, `TPU_Back_Gasket`.
 - Geometry intent:
   - ovular/capsule-profile sleeve geometry (not rounded-rectangle profile),
   - front-integrated body by default (front wall fused to sleeve),
   - front lens/LED cutouts enabled by default in closed-front mode,
-  - separate pure-ASA back cap,
+  - separate back-cap assembly with TPU gasket (ASA-only cap exported for compatibility),
+  - TPU-aware back-cap fit clearance default: `0.28 mm` total undersize,
+  - two-stage tongue engagement with matching rear body groove seat,
   - bottom tripod hole cuts through ASA and TPU so mount contacts camera directly.
 - Mevo back cap utility slot is default-disabled (`include_back_utility_slot=false`) until exact rear port map is confirmed.
 - Mevo lens opening uses offset center (`lens_center_y_mm=16.5`) to avoid centered misalignment.
@@ -130,7 +134,8 @@ User shorthand often means:
 - “Maki sleeve” = ASA outer sleeve (`maki_live_case_sleeve.step`)
 - “TPU sleeve for Maki” = `maki_live_tpu_sleeve.step` (single part)
 - “Maki caps” = rear cap by default (`maki_live_rear_cap.step`)
-- “Mevo rear closure” = `mevo_start_back_cap_asa.step` (single rear piece)
+- “Mevo rear closure” = `mevo_start_back_cap_dual_material.step` (ASA cap + TPU gasket)
+- “Mevo ASA-only rear cap” = `mevo_start_back_cap_asa.step` (compatibility export)
 - “Mevo case back plate” = legacy/optional only
 
 ## Key References
@@ -156,10 +161,7 @@ python scripts/generate_maki_live_tpu_liner.py
 
 Mevo:
 ```bash
-python scripts/generate_mevo_case.py
-python scripts/generate_mevo_start_caps.py --profile asa
-python scripts/generate_mevo_start_caps.py --profile tpu
-python scripts/generate_mevo_start_tpu_liner.py
+python scripts/generate_mevo_dual_material_case.py
 ```
 
 Legacy Mevo back plate (only when explicitly requested):

@@ -2,6 +2,24 @@
 
 ## 2026-03-02
 
+### Mevo Production Assembly Upgrade (Dual-Material Back Cap + TPU-Aware Fit)
+- Updated `scripts/generate_mevo_dual_material_case.py` for a production-oriented two-part assembly workflow:
+  - Main body remains dual-material (`TPU_Sleeve` + `ASA_Shell`).
+  - Back cap is now generated as a dual-material assembly (`ASA_Back_Cap` + `TPU_Back_Gasket`).
+  - Compatibility ASA-only cap export is still generated.
+- Implemented TPU-aware back-cap fit tuning:
+  - Back-cap lip undersize changed from `0.10 mm` to `0.28 mm` total for more reliable real-world insert/removal with TPU interfaces.
+- Implemented tongue-and-groove style engagement:
+  - Added a two-stage cap lip (wider tongue stage + slimmer friction stage).
+  - Added matching rear groove seat in the main body opening.
+- Added back-cap TPU gasket ring:
+  - Default enabled, thin inner-face gasket for damped closure and reduced rattle.
+- New outputs:
+  - `models/mevo_case/mevo_start_back_cap_dual_material.step`
+  - `models/mevo_case/mevo_start_back_cap_asa.step` (compatibility)
+  - updated `models/mevo_case/reports/mevo_start_dual_material_report.json`
+  - updated `models/mevo_case/reports/mevo_validation_summary.json`
+
 ### MAKI Vent Pattern Correction (`24 + 6`)
 - Corrected MAKI vent layout implementation to match requested pattern:
   - `24` vents above tripod area across the 3-panel bank (`8 x 3`).
