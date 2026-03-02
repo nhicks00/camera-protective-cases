@@ -19,11 +19,11 @@ from datetime import datetime
 from pathlib import Path
 
 from build123d import (
-    Align,
     Axis,
     Box,
     BuildPart,
     BuildSketch,
+    Circle,
     Locations,
     Rectangle,
     Mode,
@@ -49,8 +49,7 @@ class MevoTpuLinerParams:
     asa_clearance_mm: float = 2.3
     asa_front_wall_mm: float = 0.0
     tripod_zone_z_ratio: float = 0.78
-    tripod_slot_w_mm: float = 14.0
-    tripod_slot_l_mm: float = 12.0
+    tripod_hole_d_mm: float = 25.4
 
     # Mevo vent alignment copied from ASA shell script.
     vent_count: int = 3
@@ -158,8 +157,12 @@ def _load_asa_defaults(p: MevoTpuLinerParams) -> None:
     else:
         p.asa_front_wall_mm = float(params.get("front_wall_mm", p.asa_front_wall_mm))
     p.tripod_zone_z_ratio = float(params.get("tripod_zone_z_ratio", p.tripod_zone_z_ratio))
-    p.tripod_slot_w_mm = float(params.get("tripod_slot_w_mm", p.tripod_slot_w_mm))
-    p.tripod_slot_l_mm = float(params.get("tripod_slot_l_mm", p.tripod_slot_l_mm))
+    p.tripod_hole_d_mm = float(
+        params.get(
+            "tripod_hole_d_mm",
+            max(params.get("tripod_slot_w_mm", p.tripod_hole_d_mm), params.get("tripod_slot_l_mm", p.tripod_hole_d_mm)),
+        )
+    )
     p.vent_count = int(params.get("vent_count", p.vent_count))
     p.vent_h_mm = float(params.get("vent_h_mm", p.vent_h_mm))
     p.vent_len_mm = float(params.get("vent_len_mm", p.vent_len_mm))
@@ -245,15 +248,11 @@ def build_liner(p: MevoTpuLinerParams):
                         Box(shell_t * 2.4, p.vent_h_mm, p.vent_len_mm, mode=Mode.SUBTRACT)
 
         if p.enable_tripod_opening:
-            slot_depth = shell_t + 1.8
-            with Locations((0.0, min_y + 0.12, tripod_z)):
-                Box(
-                    p.tripod_slot_w_mm + 0.8,
-                    slot_depth,
-                    p.tripod_slot_l_mm + 0.8,
-                    align=(Align.CENTER, Align.MIN, Align.CENTER),
-                    mode=Mode.SUBTRACT,
-                )
+            hole_depth = shell_t + 1.8
+            with BuildSketch(Plane.XZ.offset(min_y + 0.12)):
+                with Locations((0.0, tripod_z)):
+                    Circle(0.5 * p.tripod_hole_d_mm)
+            extrude(amount=-hole_depth, mode=Mode.SUBTRACT)
 
     liner = _largest_solid(liner_bp.part)
     liner, axis_y_fillet = _apply_axis_fillet(liner, Axis.Y, (0.7, 0.55, 0.4, 0.3, 0.2))
@@ -293,7 +292,8 @@ def build_liner(p: MevoTpuLinerParams):
                 "axial_cap_budget_total_two_caps": float(axial_margin - 2.0 * p.asa_cap_plug_depth_mm),
             },
             "openings_alignment_mm": {
-                "tripod_slot_center_z": float(tripod_z),
+                "tripod_hole_center_z": float(tripod_z),
+                "tripod_hole_diameter": float(p.tripod_hole_d_mm),
                 "vent_center_z": float(vent_z),
             },
             "machined_finish_mm": {

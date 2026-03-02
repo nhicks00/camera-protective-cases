@@ -81,7 +81,7 @@ class CaseParams:
     # Tripod mount protection zone
     tripod_slot_w_mm: float = 14.0
     tripod_slot_l_mm: float = 12.0
-    tripod_hole_d_mm: float = 12.7
+    tripod_hole_d_mm: float = 25.4
     tripod_pad_w_mm: float = 28.0
     tripod_pad_l_mm: float = 18.0
     tripod_pad_h_mm: float = 2.2

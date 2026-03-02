@@ -2,6 +2,13 @@
 
 ## 2026-03-02
 
+### Mevo Tripod Hole Diameter Update
+- Updated Mevo bottom tripod opening default to `25.4 mm` (`1.0 in`) for:
+  - `generate_mevo_case.py` (ASA case body)
+  - `generate_mevo_start_tpu_liner.py` (TPU sleeve)
+  - `generate_mevo_dual_material_case.py` (ASA+TPU dual-material body)
+- Regenerated Mevo outputs and reports with the new diameter.
+
 ### Mevo Dual-Material Body + Pure ASA Back Cap Workflow
 - Added `scripts/generate_mevo_dual_material_case.py`.
 - New outputs:

@@ -7,7 +7,8 @@
     "asa_clearance_mm": 2.3,
     "asa_front_wall_mm": 0.0,
     "tripod_zone_z_ratio": 0.78,
-    "tripod_hole_d_mm": 25.4,
+    "tripod_slot_w_mm": 14.0,
+    "tripod_slot_l_mm": 12.0,
     "vent_count": 3,
     "vent_h_mm": 2.2,
     "vent_len_mm": 12.0,
@@ -56,8 +57,7 @@
         "axial_cap_budget_total_two_caps": 0.5999999999999885
       },
       "openings_alignment_mm": {
-        "tripod_hole_center_z": 71.448,
-        "tripod_hole_diameter": 25.4,
+        "tripod_slot_center_z": 71.448,
         "vent_center_z": 52.21199999999999
       },
       "machined_finish_mm": {

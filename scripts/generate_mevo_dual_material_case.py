@@ -70,7 +70,7 @@ class DualMaterialParams:
     vent_z_ratio: float = 0.57
 
     # Bottom tripod opening (body)
-    tripod_hole_d_mm: float = 12.7
+    tripod_hole_d_mm: float = 25.4
     tripod_zone_z_ratio: float = 0.78
 
     # Back cap (pure ASA)
@@ -151,6 +151,7 @@ def build_dual_material_body(p: DualMaterialParams):
     min_y = -0.5 * asa_outer_h
     max_x = 0.5 * asa_outer_w
     min_x = -0.5 * asa_outer_w
+    tpu_min_y = -0.5 * tpu_outer_h
 
     vent_z = p.lens_recess_mm + cavity_depth * p.vent_z_ratio
     tripod_z = p.lens_recess_mm + cavity_depth * p.tripod_zone_z_ratio
@@ -204,6 +205,13 @@ def build_dual_material_body(p: DualMaterialParams):
         with BuildSketch(Plane.XY.offset(p.lens_recess_mm - 0.2)):
             _add_capsule(tpu_inner_w, tpu_inner_h)
         extrude(amount=cavity_depth + 0.4, mode=Mode.SUBTRACT)
+
+        # Bottom centered tripod hole through TPU wall as well.
+        tpu_hole_depth = p.tpu_thickness_mm + 1.5
+        with BuildSketch(Plane.XZ.offset(tpu_min_y + 0.12)):
+            with Locations((0.0, tripod_z)):
+                Circle(0.5 * p.tripod_hole_d_mm)
+        extrude(amount=-tpu_hole_depth, mode=Mode.SUBTRACT)
 
     tpu_sleeve = _largest_solid(tpu_bp.part)
     tpu_sleeve, tpu_vert_fillet = _apply_vertical_fillet(tpu_sleeve, p.internal_vertical_fillet_mm)

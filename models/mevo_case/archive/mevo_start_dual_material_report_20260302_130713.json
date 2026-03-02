@@ -16,7 +16,7 @@
     "vent_len_mm": 12.0,
     "vent_pitch_mm": 4.8,
     "vent_z_ratio": 0.57,
-    "tripod_hole_d_mm": 25.4,
+    "tripod_hole_d_mm": 12.7,
     "tripod_zone_z_ratio": 0.78,
     "back_cap_thickness_mm": 3.0,
     "back_cap_plug_depth_mm": 1.8,
@@ -42,13 +42,13 @@
       "cavity_depth": 87.15,
       "body_depth": 89.15,
       "lens_recess": 2.0,
-      "tripod_hole_d": 25.4,
+      "tripod_hole_d": 12.7,
       "interface_gap": 0.0
     },
     "fillets_mm": {
       "requested_internal_vertical": 3.0,
       "applied_asa_vertical": 0.0,
-      "applied_tpu_vertical": 3.0,
+      "applied_tpu_vertical": 0.0,
       "effective_internal_profile_corner_radius": 17.099999999999998,
       "meets_internal_fillet_requirement": true
     },
