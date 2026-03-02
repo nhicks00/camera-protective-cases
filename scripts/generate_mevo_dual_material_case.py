@@ -9,12 +9,12 @@ Primary outputs:
 - models/mevo_case/reports/mevo_start_dual_material_report.json
 
 This generator implements the reviewed design spec while preserving
-the ovular/capsule Mevo front profile style:
+the ovular/capsule Mevo cross-section profile:
 - TPU inner cavity: 34.3 x 50.3 x 85.0 mm
 - TPU wall: 1.8 mm
 - ASA wall: 2.2 mm
 - Interface gap TPU<->ASA: 0.0 mm
-- Front profile: open ovular/capsule opening by default (no front circular cutout)
+- Front profile: integrated front wall by default (lens + LED cutouts enabled)
 - Bottom tripod hole: 20.5 mm dia, center at Z=43.2 mm from front face
 - Back cap lip depth: 5.0 mm, lip undersize: 0.1 mm vs ASA opening
 """
@@ -51,8 +51,8 @@ class DualMaterialParams:
     enforce_capsule_profile: bool = True
 
     # Front behavior
-    open_front_ovular: bool = True
-    include_front_lens_led_cutouts: bool = False
+    open_front_ovular: bool = False
+    include_front_lens_led_cutouts: bool = True
     sun_hood_depth_mm: float = 3.0
     lens_cutout_d_mm: float = 32.0
     led_hole_d_mm: float = 3.0
@@ -328,11 +328,16 @@ def build_back_cap(p: DualMaterialParams):
 def main():
     parser = argparse.ArgumentParser(description="Generate reviewed Mevo dual-material body + ASA back cap")
     parser.add_argument("--out", type=Path, default=Path("models/mevo_case"), help="Output directory")
-    parser.add_argument("--closed-front", action="store_true", help="Use a closed front wall (bucket mode).")
+    parser.add_argument("--open-front-ovular", action="store_true", help="Keep the front open (legacy mode).")
     parser.add_argument(
         "--enable-front-lens-led-cutouts",
         action="store_true",
-        help="When used with --closed-front, cut lens and LED holes into the front wall.",
+        help="Cut lens and LED holes into the front wall (closed-front mode).",
+    )
+    parser.add_argument(
+        "--disable-front-lens-led-cutouts",
+        action="store_true",
+        help="Disable front lens/LED cutouts in closed-front mode.",
     )
     parser.add_argument(
         "--disable-capsule-profile",
@@ -342,8 +347,11 @@ def main():
     args = parser.parse_args()
 
     p = DualMaterialParams()
-    p.open_front_ovular = not bool(args.closed_front)
-    p.include_front_lens_led_cutouts = bool(args.enable_front_lens_led_cutouts)
+    p.open_front_ovular = bool(args.open_front_ovular)
+    if args.enable_front_lens_led_cutouts:
+        p.include_front_lens_led_cutouts = True
+    if args.disable_front_lens_led_cutouts:
+        p.include_front_lens_led_cutouts = False
     p.enforce_capsule_profile = not bool(args.disable_capsule_profile)
 
     body_asm, body_report = build_dual_material_body(p)

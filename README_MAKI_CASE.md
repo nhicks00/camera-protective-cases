@@ -22,7 +22,7 @@ Archive policy:
 
 ## Design Characteristics
 - Tight, one-piece sleeve
-- Fully open-through shell (no front plate and no rear plate)
+- Front-integrated shell by default (front wall fused to sleeve, rear remains open)
 - Default ASA internal clearance: `2.3 mm`
 - Default ASA wall thickness: `3.0 mm`
 - TPU sleeve defaults:
@@ -68,10 +68,11 @@ Legacy note:
 
 ## Front/Rear Caps
 - `scripts/generate_maki_live_caps.py`
-- Outputs:
-  - `models/maki_case/maki_live_front_cap.step`
+- Default outputs:
   - `models/maki_case/maki_live_rear_cap.step`
   - `models/maki_case/reports/maki_live_caps_report.json`
+- Optional legacy output:
+  - `models/maki_case/maki_live_front_cap.step` (only when `--include-front-cap` is used)
 - Cap cutouts are extracted from front/rear end-face loop geometry in the original STEP model.
 - Front cap geometry uses an inverted bezel profile:
   - raised outer rim,
@@ -82,6 +83,11 @@ Legacy note:
 Generate ASA caps:
 ```bash
 python scripts/generate_maki_live_caps.py --profile asa
+```
+
+Generate ASA caps including legacy front cap:
+```bash
+python scripts/generate_maki_live_caps.py --profile asa --include-front-cap
 ```
 
 Generate TPU caps (legacy separate parts):

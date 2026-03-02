@@ -445,6 +445,11 @@ def main():
     parser.add_argument("--cutout-extra", type=float, default=None, help="Extra clearance added around extracted cutouts (mm)")
     parser.add_argument("--front-recess-depth", type=float, default=None, help="Front cap center recess depth (mm)")
     parser.add_argument("--front-recess-inset", type=float, default=None, help="Front cap recess inset from OD edge (mm)")
+    parser.add_argument(
+        "--include-front-cap",
+        action="store_true",
+        help="Also export the separate front cap (legacy mode). Default is back-cap only.",
+    )
     args = parser.parse_args()
 
     params = MakiCapParams(step_path=args.step)
@@ -486,17 +491,22 @@ def main():
         rear_step = args.out / "maki_live_tpu_rear_cap.step"
         report_json = reports_dir / "maki_live_tpu_caps_report.json"
         legacy_report_json = args.out / "maki_live_tpu_caps_report.json"
+
+    # Front cap is optional now; default workflow is integrated front body + separate rear cap.
     archived = _archive_existing([front_step, rear_step, report_json, legacy_report_json], args.out)
 
-    export_step(front_cap, str(front_step))
+    if args.include_front_cap:
+        export_step(front_cap, str(front_step))
     export_step(rear_cap, str(rear_step))
     payload = {"profile": args.profile, "params": asdict(params), "report": report}
+    payload["include_front_cap"] = bool(args.include_front_cap)
     payload["params"]["step_path"] = str(params.step_path)
     report_json.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
     if archived:
         print(f"Archived {len(archived)} previous file(s) to {args.out / 'archive'}")
-    print(f"Wrote {front_step}")
+    if args.include_front_cap:
+        print(f"Wrote {front_step}")
     print(f"Wrote {rear_step}")
     print(f"Wrote {report_json}")
 

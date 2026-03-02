@@ -35,6 +35,7 @@ from build123d import (
     Mode,
     Plane,
     Rectangle,
+    SlotOverall,
     export_step,
     export_stl,
     extrude,
@@ -60,6 +61,12 @@ class MakiCaseParams:
     clearance_mm: float = 2.3
     wall_mm: float = 3.0
     front_wall_mm: float = 3.0
+    front_integrated: bool = True
+    include_front_cutouts: bool = True
+    front_window_mm: float = 16.0
+    cutout_extra_mm: float = 0.25
+    max_cutout_ratio_xy: float = 0.80
+    include_major_front_aperture: bool = True
 
     # Front optics opening
     lens_center_y_mm: float = 4.5
@@ -190,7 +197,7 @@ def _load_step_as_mesh(step_path: Path, tmp_stl: Path):
         tmp_stl.unlink(missing_ok=True)
     except Exception:
         pass
-    return mesh, step_features
+    return mesh, housing, step_features
 
 
 def _extract_step_side_features(housing):
@@ -300,6 +307,79 @@ def _extract_step_side_features(housing):
         tripod = max(pool, key=lambda c: c["r"])
 
     return {"vents": vents, "tripod": tripod}
+
+
+def _classify_cutout(xlen: float, ylen: float) -> dict | None:
+    d_max = max(xlen, ylen)
+    d_min = min(xlen, ylen)
+    if d_min < 0.6:
+        return None
+    ratio = d_max / max(d_min, 1e-6)
+    if ratio <= 1.18:
+        return {"shape": "circle", "d": (xlen + ylen) * 0.5}
+    if ratio <= 3.6:
+        return {"shape": "slot", "w": d_max, "h": d_min}
+    return {"shape": "rect", "w": xlen, "h": ylen}
+
+
+def _extract_front_cutouts(housing, p: MakiCaseParams, sx: float, sy: float, zmax: float):
+    cutouts = []
+    for f in housing.faces():
+        wires = f.wires()
+        if len(wires) <= 1:
+            continue
+        try:
+            n = f.normal_at()
+        except Exception:
+            continue
+        if n.Z <= 0 or abs(n.Z) < 0.92:
+            continue
+        for w in wires[1:]:
+            bb = w.bounding_box()
+            xlen = float(bb.size.X)
+            ylen = float(bb.size.Y)
+            zmid = float((bb.min.Z + bb.max.Z) * 0.5)
+            if zmid <= (zmax - p.front_window_mm):
+                continue
+
+            xmid = float((bb.min.X + bb.max.X) * 0.5)
+            ymid = float((bb.min.Y + bb.max.Y) * 0.5)
+
+            too_large = (
+                xlen > p.nominal_width_mm * p.max_cutout_ratio_xy
+                and ylen > p.nominal_height_mm * p.max_cutout_ratio_xy
+            )
+            if too_large and not p.include_major_front_aperture:
+                continue
+
+            if too_large:
+                d_maj = (xlen + ylen) * 0.5 * (sx + sy) * 0.5 + p.cutout_extra_mm
+                cutouts.append({"x": xmid * sx, "y": ymid * sy, "shape": "circle", "d": d_maj})
+                continue
+
+            shape = _classify_cutout(xlen, ylen)
+            if shape is None:
+                continue
+            entry = {"x": xmid * sx, "y": ymid * sy, "shape": shape["shape"]}
+            if shape["shape"] == "circle":
+                entry["d"] = shape["d"] * (sx + sy) * 0.5 + p.cutout_extra_mm
+            else:
+                entry["w"] = max(shape["w"] * sx + p.cutout_extra_mm, 0.8)
+                entry["h"] = max(shape["h"] * sy + p.cutout_extra_mm, 0.8)
+            cutouts.append(entry)
+
+    out = []
+    seen = set()
+    for c in cutouts:
+        if c["shape"] == "circle":
+            key = (c["shape"], round(c["x"], 2), round(c["y"], 2), round(c["d"], 2))
+        else:
+            key = (c["shape"], round(c["x"], 2), round(c["y"], 2), round(c["w"], 2), round(c["h"], 2))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(c)
+    return out
 
 
 def _collapse_close(values: list[float], tol: float) -> list[float]:
@@ -418,7 +498,7 @@ def _extract_profile_xy(mesh: trimesh.Trimesh, z_mm: float) -> Polygon:
 
 def build_case(p: MakiCaseParams):
     tmp_stl = Path("tmp/maki_device_from_step.stl")
-    mesh, step_features = _load_step_as_mesh(p.step_path, tmp_stl)
+    mesh, housing, step_features = _load_step_as_mesh(p.step_path, tmp_stl)
 
     zmin, zmax = mesh.bounds[:, 2]
     z_section = zmin + (zmax - zmin) * p.section_z_ratio
@@ -443,9 +523,13 @@ def build_case(p: MakiCaseParams):
     inner_corner_r = min(base_corner_r + p.clearance_mm, 0.5 * min(inner_w, inner_h) - 0.2)
     outer_corner_r = min(inner_corner_r + p.wall_mm, 0.5 * min(outer_w, outer_h) - 0.2)
 
-    # Fully open sleeve (no front/back plates), with equal end clearance.
     inner_depth = p.nominal_length_mm + 2.0 * p.clearance_mm
-    shell_depth = inner_depth
+    if p.front_integrated:
+        cavity_front_z = p.front_wall_mm
+        shell_depth = p.front_wall_mm + inner_depth
+    else:
+        cavity_front_z = 0.0
+        shell_depth = inner_depth
 
     min_x = -0.5 * outer_w
     max_x = 0.5 * outer_w
@@ -458,22 +542,44 @@ def build_case(p: MakiCaseParams):
         return float(y_dev * sy)
 
     def map_z(z_dev: float) -> float:
-        # Device front is at zmax (~0), case front opening starts at z=0.
-        # Keep equal clearance at both front/back sleeve ends.
-        return float((zmax - z_dev) * sz + p.clearance_mm)
+        # Device front is near zmax in source STEP; map into sleeve cavity space.
+        return float(cavity_front_z + (zmax - z_dev) * sz + p.clearance_mm)
 
     vents_used = []
     tripod_used = None
+    front_cutouts_applied = []
+    front_cutouts_detected = []
 
     with BuildPart() as sleeve_bp:
         with BuildSketch(Plane.XY):
             _add_rounded_rectangle(outer_w, outer_h, outer_corner_r)
         extrude(amount=shell_depth)
 
-        # Hollow the sleeve all the way through so both ends remain open.
-        with BuildSketch(Plane.XY.offset(-0.2)):
+        # Hollow sleeve cavity; front wall remains when front-integrated mode is enabled.
+        inner_cut_z = cavity_front_z if p.front_integrated else -0.2
+        inner_cut_depth = inner_depth + 0.2 if p.front_integrated else shell_depth + 0.4
+        with BuildSketch(Plane.XY.offset(inner_cut_z)):
             _add_rounded_rectangle(inner_w, inner_h, inner_corner_r)
-        extrude(amount=shell_depth + 0.4, mode=Mode.SUBTRACT)
+        extrude(amount=inner_cut_depth, mode=Mode.SUBTRACT)
+
+        # Front cutouts in integrated front wall.
+        if p.front_integrated and p.include_front_cutouts:
+            front_cutouts_detected = _extract_front_cutouts(housing, p, sx, sy, zmax)
+            if not front_cutouts_detected:
+                front_cutouts_detected = [
+                    {"x": 0.0, "y": p.lens_center_y_mm, "shape": "circle", "d": p.lens_diameter_mm}
+                ]
+            with BuildSketch(Plane.XY.offset(-0.2)):
+                for c in front_cutouts_detected:
+                    with Locations((c["x"], c["y"])):
+                        if c["shape"] == "circle":
+                            Circle(c["d"] * 0.5)
+                        elif c["shape"] == "slot":
+                            SlotOverall(c["w"], c["h"])
+                        else:
+                            Rectangle(c["w"], c["h"])
+            extrude(amount=p.front_wall_mm + 0.6, mode=Mode.SUBTRACT)
+            front_cutouts_applied = list(front_cutouts_detected)
 
         if p.use_step_side_features:
             if p.enforce_tripanel_vent_layout:
@@ -592,7 +698,7 @@ def build_case(p: MakiCaseParams):
 
         # Fallback if STEP-derived features were unavailable.
         if not vents_used:
-            vent_z0 = p.clearance_mm + p.vent_start_from_front_mm
+            vent_z0 = cavity_front_z + p.clearance_mm + p.vent_start_from_front_mm
             y_face = min_y - 0.2
             cut_depth = max(p.vent_cut_depth_mm, p.wall_mm + p.tripod_armor_extra_mm + 3.0)
             for i in range(p.vent_count):
@@ -607,7 +713,7 @@ def build_case(p: MakiCaseParams):
                     )
 
         if tripod_used is None:
-            tripod_z = p.clearance_mm + p.tripod_center_from_front_mm
+            tripod_z = cavity_front_z + p.clearance_mm + p.tripod_center_from_front_mm
 
             with Locations((0.0, min_y, tripod_z)):
                 Box(
@@ -645,12 +751,20 @@ def build_case(p: MakiCaseParams):
         "derived": {
             "inner_depth_mm": float(inner_depth),
             "shell_depth_mm": float(shell_depth),
-            "open_sleeve": True,
+            "open_sleeve": not bool(p.front_integrated),
+            "front_integrated": bool(p.front_integrated),
+            "cavity_front_z_mm": float(cavity_front_z),
             "inner_w_mm": float(inner_w),
             "inner_h_mm": float(inner_h),
             "outer_w_mm": float(outer_w),
             "outer_h_mm": float(outer_h),
             "end_clearance_each_mm": float(p.clearance_mm),
+            "front_cutouts": {
+                "enabled": bool(p.include_front_cutouts),
+                "detected": len(front_cutouts_detected),
+                "applied": len(front_cutouts_applied),
+                "entries": front_cutouts_applied,
+            },
             "tripod_armor_mm": {
                 "extra_thickness": float(p.tripod_armor_extra_mm),
                 "margin": float(p.tripod_armor_margin_mm),
@@ -686,6 +800,8 @@ def main():
     )
     parser.add_argument("--clearance", type=float, default=None, help="Internal clearance (mm)")
     parser.add_argument("--wall", type=float, default=None, help="Wall thickness (mm)")
+    parser.add_argument("--open-front", action="store_true", help="Legacy mode: keep front end fully open.")
+    parser.add_argument("--no-front-cutouts", action="store_true", help="Disable front-wall cutouts in integrated-front mode.")
     parser.add_argument("--lens-d", type=float, default=None, help="Front lens opening diameter (mm)")
     parser.add_argument("--tripod-z", type=float, default=None, help="Fallback tripod opening center from front (mm)")
     parser.add_argument("--no-step-side-features", action="store_true", help="Disable STEP-derived side vents/tripod hole")
@@ -696,6 +812,10 @@ def main():
         params.clearance_mm = args.clearance
     if args.wall is not None:
         params.wall_mm = args.wall
+    if args.open_front:
+        params.front_integrated = False
+    if args.no_front_cutouts:
+        params.include_front_cutouts = False
     if args.lens_d is not None:
         params.lens_diameter_mm = args.lens_d
     if args.tripod_z is not None:

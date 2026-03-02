@@ -3,15 +3,11 @@
 This workspace now includes a parametric two-piece, print-ready enclosure derived from your reference front-cap STL.
 
 Current focus option:
-- front and rear cap workflow (`mevo_start_front_cap.step` + `mevo_start_rear_cap.step`)
-- single rear closure approach: `mevo_start_rear_cap.step` (legacy `case_back_plate` export is opt-in only)
+- front-integrated dual-material body + separate back cap (`mevo_start_back_cap_asa.step`)
 
 ## Generated Outputs
 - `models/mevo_case/mevo_start_case_body.step`
 - `models/mevo_case/reports/mevo_start_case_report.json`
-- `models/mevo_case/mevo_start_front_cap.step`
-- `models/mevo_case/mevo_start_rear_cap.step`
-- `models/mevo_case/reports/mevo_start_caps_report.json`
 - `models/mevo_case/mevo_start_tpu_sleeve.step`
 - `models/mevo_case/reports/mevo_start_tpu_sleeve_report.json`
 - `models/mevo_case/mevo_start_body_dual_material.step` (single STEP with `TPU_Sleeve` + `ASA_Shell`)
@@ -30,16 +26,14 @@ Archive policy:
   - `34.0 mm` front-profile minor axis
 - Internal ASA clearance default: `2.3 mm`
 - Main ASA wall default: `3.0 mm`
-- Open-through sleeve default (no fixed front wall)
+- Front-integrated dual-material body default (closed front wall with lens/LED cutouts)
 - TPU sleeve defaults:
   - internal camera clearance: `0.2 mm`
   - TPU wall thickness: `2.0 mm`
   - TPU-to-ASA radial gap: `0.1 mm`
 - Required access implemented:
-  - Open front/rear sleeve for cap system
-  - Rear power button slot
-  - Rear audio jack hole
-  - Rear USB-C slot
+  - Front lens + LED openings in integrated front wall
+  - Rear utility slot on separate back cap
   - Bottom tripod access opening
 - Optional side vent slots included
 - Tripod impact zone includes an external armor pad on the sleeve body.
@@ -66,14 +60,14 @@ Generate legacy closed-front sleeve mode (not default):
 python scripts/generate_mevo_case.py --closed-front
 ```
 
-Generate Mevo caps (ASA profile):
-```bash
-python scripts/generate_mevo_start_caps.py --profile asa
-```
-
 Generate dual-material body + pure-ASA back cap (new workflow):
 ```bash
 python scripts/generate_mevo_dual_material_case.py
+```
+
+Legacy open-front override:
+```bash
+python scripts/generate_mevo_dual_material_case.py --open-front-ovular
 ```
 
 Generate Mevo TPU inner sleeve matched to the current ASA shell:

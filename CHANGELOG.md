@@ -2,6 +2,29 @@
 
 ## 2026-03-02
 
+### Front-Integrated Rule Applied (Both Cameras)
+- Applied the new assembly rule: front cap is integrated into the sleeve/body; only rear/back cap remains a separate part.
+- Mevo dual-material generator (`generate_mevo_dual_material_case.py`):
+  - Default changed to closed/front-integrated body (`open_front_ovular=false`).
+  - Front lens + LED cutouts are enabled by default in closed-front mode.
+  - Added `--open-front-ovular` (legacy override) and `--disable-front-lens-led-cutouts`.
+- MAKI sleeve generator (`generate_maki_live_case.py`):
+  - Added integrated-front mode as default (`front_integrated=true`).
+  - Front-wall cutouts are extracted from source STEP end-face loops and cut through the integrated front wall.
+  - Added `--open-front` (legacy override) and `--no-front-cutouts`.
+- MAKI cap generator (`generate_maki_live_caps.py`):
+  - Default export is now rear-cap only.
+  - Front cap export is legacy optional via `--include-front-cap`.
+- Regenerated and updated active outputs:
+  - `models/mevo_case/mevo_start_body_dual_material.step`
+  - `models/mevo_case/mevo_start_back_cap_asa.step`
+  - `models/mevo_case/reports/mevo_start_dual_material_report.json`
+  - `models/maki_case/maki_live_case_sleeve.step`
+  - `models/maki_case/maki_live_rear_cap.step`
+  - `models/maki_case/reports/maki_live_case_report.json`
+  - `models/maki_case/reports/maki_live_caps_report.json`
+- Archived legacy Mevo separate front/rear cap artifacts from top-level outputs.
+
 ### Mevo Dual-Body Ovular Profile Regression Fix
 - Updated `scripts/generate_mevo_dual_material_case.py` to remove rounded-rectangle default shell generation for the dual body.
 - Dual-body defaults now use a true vertical capsule/ovular cross-section for:

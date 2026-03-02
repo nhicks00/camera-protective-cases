@@ -68,6 +68,9 @@ Active hard-shell and TPU workflows:
 - ASA sleeve:
   - `models/maki_case/maki_live_case_sleeve.step`
   - Generator: `scripts/generate_maki_live_case.py`
+  - Front is integrated into sleeve by default (`front_integrated=True`).
+  - Front cutouts are extracted from STEP and cut through the integrated front wall.
+  - Back remains open for separate rear cap installation.
   - Vent behavior updated to enforced tripod-side 3-panel layout:
     - 8 vent slots on center panel
     - 8 on each adjacent panel
@@ -76,13 +79,9 @@ Active hard-shell and TPU workflows:
   - Tripod side includes local armor boss thickening around the mount opening.
   - Vent pass-through validated (`24/24` through by ray-check) and vent coordinates emitted in report under `step_side_features.vents_applied_entries`.
 - ASA caps:
-  - `models/maki_case/maki_live_front_cap.step`
-  - `models/maki_case/maki_live_rear_cap.step`
+  - Active output: `models/maki_case/maki_live_rear_cap.step`
   - Generator: `scripts/generate_maki_live_caps.py --profile asa`
-  - Front cap is intentionally inverted-bezel style:
-    - raised outer rim
-    - recessed center panel
-    - plug on rear side
+  - Default is rear-cap-only export (front cap is legacy optional via `--include-front-cap`).
 - TPU one-piece sleeve (preferred TPU output):
   - `models/maki_case/maki_live_tpu_sleeve.step`
   - Generator: `scripts/generate_maki_live_tpu_liner.py`
@@ -100,12 +99,13 @@ Current preferred workflow:
   - Body STEP contains named solids: `TPU_Sleeve`, `ASA_Shell`.
 - Geometry intent:
   - ovular/capsule-profile sleeve geometry (not rounded-rectangle profile),
-  - open ovular front by default (matches `mevo_start_case_body` opening style),
+  - front-integrated body by default (front wall fused to sleeve),
+  - front lens/LED cutouts enabled by default in closed-front mode,
   - separate pure-ASA back cap,
   - bottom tripod hole cuts through ASA and TPU so mount contacts camera directly.
 - Optional flags:
-  - `--closed-front` to restore a front wall,
-  - `--enable-front-lens-led-cutouts` to add front lens/LED holes when closed-front mode is enabled.
+  - `--open-front-ovular` for legacy open-front mode,
+  - `--disable-front-lens-led-cutouts` to keep front wall solid.
 - Active review-spec values are recorded in `models/mevo_case/reports/mevo_start_dual_material_report.json`.
 - Legacy open-through/cap workflows remain in repo for fallback only and are not the active default path.
 
@@ -113,8 +113,8 @@ Current preferred workflow:
 User shorthand often means:
 - “Maki sleeve” = ASA outer sleeve (`maki_live_case_sleeve.step`)
 - “TPU sleeve for Maki” = `maki_live_tpu_sleeve.step` (single part)
-- “Maki caps” = ASA front/rear caps
-- “Mevo rear closure” = `mevo_start_rear_cap.step` (single rear piece)
+- “Maki caps” = rear cap by default (`maki_live_rear_cap.step`)
+- “Mevo rear closure” = `mevo_start_back_cap_asa.step` (single rear piece)
 - “Mevo case back plate” = legacy/optional only
 
 ## Key References
