@@ -53,6 +53,8 @@ class MakiCapParams:
     plug_clearance_mm: float = 0.28
     cap_plate_extra_mm: float = 0.0
     cutout_extra_mm: float = 0.25
+    front_recess_depth_mm: float = 1.2
+    front_recess_inset_mm: float = 3.0
 
     # End-hole extraction windows from source STEP (mm from each end)
     front_window_mm: float = 16.0
@@ -289,6 +291,58 @@ def _build_cap(
     return part
 
 
+def _build_front_cap_inverted(
+    plate_w: float,
+    plate_h: float,
+    plate_r: float,
+    plug_w: float,
+    plug_h: float,
+    plug_r: float,
+    p: MakiCapParams,
+    cutouts: list[dict],
+):
+    recess_w = max(plate_w - 2.0 * p.front_recess_inset_mm, 2.0)
+    recess_h = max(plate_h - 2.0 * p.front_recess_inset_mm, 2.0)
+    recess_r = max(plate_r - p.front_recess_inset_mm, 0.6)
+    recess_depth = max(min(p.front_recess_depth_mm, p.cap_thickness_mm - 0.4), 0.25)
+
+    with BuildPart() as cap_bp:
+        # Main plate (outside face is at +Z).
+        with BuildSketch(Plane.XY):
+            _add_rounded_rectangle(plate_w, plate_h, plate_r)
+        extrude(amount=p.cap_thickness_mm)
+
+        # Plug goes to back side so the front is not center-protruding.
+        with BuildSketch(Plane.XY):
+            _add_rounded_rectangle(plug_w, plug_h, plug_r)
+        extrude(amount=-p.plug_depth_mm)
+
+        # Recess center panel on front face, leaving raised perimeter rim.
+        with BuildSketch(Plane.XY.offset(p.cap_thickness_mm)):
+            _add_rounded_rectangle(recess_w, recess_h, recess_r)
+        extrude(amount=-(recess_depth + 0.12), mode=Mode.SUBTRACT)
+
+        # Front cutouts go through full cap stack.
+        cut_depth = p.cap_thickness_mm + p.plug_depth_mm + 2.0
+        with BuildSketch(Plane.XY.offset(p.cap_thickness_mm + 1.0)):
+            for c in cutouts:
+                with Locations((c["x"], c["y"])):
+                    if c["shape"] == "circle":
+                        Circle(c["d"] * 0.5)
+                    elif c["shape"] == "slot":
+                        SlotOverall(c["w"], c["h"])
+                    else:
+                        Rectangle(c["w"], c["h"])
+        extrude(amount=-cut_depth, mode=Mode.SUBTRACT)
+
+    part = cap_bp.part
+    try:
+        part = fillet(part.edges(), 0.5)
+    except Exception:
+        pass
+    return part
+
+
 def build_caps(p: MakiCapParams):
     tmp_stl = Path("tmp/maki_device_from_step_caps_ref.stl")
     mesh, housing = _load_step_as_mesh(p.step_path, tmp_stl)
@@ -325,7 +379,9 @@ def build_caps(p: MakiCapParams):
 
     front_cutouts, rear_cutouts = _extract_end_cutouts(housing, p, sx, sy, zmin, zmax)
 
-    front_cap = _build_cap(plate_w, plate_h, plate_corner_r, plug_w, plug_h, plug_corner_r, p, front_cutouts)
+    front_cap = _build_front_cap_inverted(
+        plate_w, plate_h, plate_corner_r, plug_w, plug_h, plug_corner_r, p, front_cutouts
+    )
     rear_cap = _build_cap(plate_w, plate_h, plate_corner_r, plug_w, plug_h, plug_corner_r, p, rear_cutouts)
 
     report = {
@@ -351,6 +407,10 @@ def build_caps(p: MakiCapParams):
                 "sleeve_outer": float(sleeve_outer_corner_r),
                 "plate_outer": float(plate_corner_r),
                 "plug": float(plug_corner_r),
+            },
+            "front_bezel_mm": {
+                "recess_depth": float(max(min(p.front_recess_depth_mm, p.cap_thickness_mm - 0.4), 0.25)),
+                "recess_inset": float(p.front_recess_inset_mm),
             },
         },
         "cutouts": {
@@ -383,6 +443,8 @@ def main():
     parser.add_argument("--plug-clearance", type=float, default=None, help="Plug clearance inside sleeve (mm)")
     parser.add_argument("--cap-plate-extra", type=float, default=None, help="Extra radial plate overhang beyond sleeve OD (mm)")
     parser.add_argument("--cutout-extra", type=float, default=None, help="Extra clearance added around extracted cutouts (mm)")
+    parser.add_argument("--front-recess-depth", type=float, default=None, help="Front cap center recess depth (mm)")
+    parser.add_argument("--front-recess-inset", type=float, default=None, help="Front cap recess inset from OD edge (mm)")
     args = parser.parse_args()
 
     params = MakiCapParams(step_path=args.step)
@@ -404,6 +466,10 @@ def main():
         params.cap_plate_extra_mm = args.cap_plate_extra
     if args.cutout_extra is not None:
         params.cutout_extra_mm = args.cutout_extra
+    if args.front_recess_depth is not None:
+        params.front_recess_depth_mm = args.front_recess_depth
+    if args.front_recess_inset is not None:
+        params.front_recess_inset_mm = args.front_recess_inset
 
     front_cap, rear_cap, report = build_caps(params)
 

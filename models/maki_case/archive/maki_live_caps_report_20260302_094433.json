@@ -12,8 +12,6 @@
     "plug_clearance_mm": 0.28,
     "cap_plate_extra_mm": 0.0,
     "cutout_extra_mm": 0.25,
-    "front_recess_depth_mm": 1.2,
-    "front_recess_inset_mm": 3.0,
     "front_window_mm": 16.0,
     "rear_window_mm": 16.0,
     "max_cutout_ratio_xy": 0.8,
@@ -62,10 +60,6 @@
         "sleeve_outer": 22.6371568579467,
         "plate_outer": 22.6371568579467,
         "plug": 19.1571568579467
-      },
-      "front_bezel_mm": {
-        "recess_depth": 1.2,
-        "recess_inset": 3.0
       }
     },
     "cutouts": {

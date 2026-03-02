@@ -33,6 +33,16 @@
 - Switched enforced vent pattern cutting to deep box subtraction for full wall penetration.
 - Preserved tripod opening alignment logic from STEP-derived feature mapping.
 
+### MAKI Front Cap Bezel Inversion
+- Updated MAKI front cap geometry to an inverted bezel profile:
+  - center panel recessed,
+  - outer rim proud/raised,
+  - insertion plug moved to the rear side.
+- Rear cap geometry kept unchanged.
+- Added tuning parameters to `generate_maki_live_caps.py`:
+  - `--front-recess-depth`
+  - `--front-recess-inset`
+
 ### Project Baseline and Repository Packaging
 - Organized the workspace for Git version control with:
   - root `README.md` (project-wide overview),

@@ -1,19 +1,17 @@
 {
-  "profile": "asa",
+  "profile": "tpu",
   "params": {
     "step_path": "refs/BirdDog_MAKI-Live_3D-file.step",
     "nominal_width_mm": 56.99,
     "nominal_height_mm": 56.99,
     "nominal_length_mm": 120.32,
-    "sleeve_clearance_mm": 2.65,
-    "sleeve_wall_mm": 3.2,
-    "cap_thickness_mm": 3.0,
-    "plug_depth_mm": 4.0,
-    "plug_clearance_mm": 0.28,
-    "cap_plate_extra_mm": 0.0,
+    "sleeve_clearance_mm": 0.2,
+    "sleeve_wall_mm": 2.1,
+    "cap_thickness_mm": 2.4,
+    "plug_depth_mm": 3.4,
+    "plug_clearance_mm": 0.3,
+    "cap_plate_extra_mm": 0.55,
     "cutout_extra_mm": 0.25,
-    "front_recess_depth_mm": 1.2,
-    "front_recess_inset_mm": 3.0,
     "front_window_mm": 16.0,
     "rear_window_mm": 16.0,
     "max_cutout_ratio_xy": 0.8,
@@ -48,24 +46,20 @@
       "sy": 1.0180733971842062
     },
     "derived": {
-      "sleeve_outer_w_mm": 68.69,
-      "sleeve_outer_h_mm": 68.69,
-      "plate_w_mm": 68.69,
-      "plate_h_mm": 68.69,
-      "inner_w_mm": 62.29,
-      "inner_h_mm": 62.29,
-      "plug_w_mm": 61.73,
-      "plug_h_mm": 61.73,
+      "sleeve_outer_w_mm": 61.59,
+      "sleeve_outer_h_mm": 61.59,
+      "plate_w_mm": 62.690000000000005,
+      "plate_h_mm": 62.690000000000005,
+      "inner_w_mm": 57.39,
+      "inner_h_mm": 57.39,
+      "plug_w_mm": 56.79,
+      "plug_h_mm": 56.79,
       "corner_radius_mm": {
         "base_section": 16.7871568579467,
-        "inner": 19.4371568579467,
-        "sleeve_outer": 22.6371568579467,
-        "plate_outer": 22.6371568579467,
-        "plug": 19.1571568579467
-      },
-      "front_bezel_mm": {
-        "recess_depth": 1.2,
-        "recess_inset": 3.0
+        "inner": 16.9871568579467,
+        "sleeve_outer": 19.087156857946702,
+        "plate_outer": 19.637156857946703,
+        "plug": 16.6871568579467
       }
     },
     "cutouts": {

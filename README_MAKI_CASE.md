@@ -60,6 +60,10 @@ python scripts/generate_maki_live_tpu_liner.py \
   - `models/maki_case/maki_live_rear_cap.step`
   - `models/maki_case/maki_live_caps_report.json`
 - Cap cutouts are extracted from front/rear end-face loop geometry in the original STEP model.
+- Front cap geometry uses an inverted bezel profile:
+  - raised outer rim,
+  - recessed center panel,
+  - rear-side plug (instead of front-side center protrusion).
 
 Generate ASA caps:
 ```bash
