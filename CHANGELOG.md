@@ -2,6 +2,18 @@
 
 ## 2026-03-02
 
+### Mevo TPU Nesting Compatibility
+- Added `scripts/generate_mevo_start_tpu_liner.py` to generate a TPU inner sleeve that is dimensioned to fit inside the existing Mevo ASA shell.
+- Added auto-fit thickness budgeting:
+  - reads `models/mevo_start_case_report.json`,
+  - computes maximum TPU wall thickness allowed by current ASA clearance and requested assembly gap,
+  - clamps to fit-safe thickness.
+- Added Mevo TPU output artifacts:
+  - `models/mevo_start_tpu_liner.step`
+  - `models/mevo_start_tpu_liner_report.json`
+- Added fit-stack reporting fields for radial/axial remaining margins and alignment of tripod/vent openings relative to ASA shell coordinates.
+- Updated docs (`README.md`, `README_MEVO_CASE.md`) with the new generator and usage.
+
 ### Project Baseline and Repository Packaging
 - Organized the workspace for Git version control with:
   - root `README.md` (project-wide overview),
