@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Generate a Mevo Start TPU sleeve that fits inside the ASA shell.
 
-The script reads ASA shell parameters from models/mevo_start_case_report.json by default,
+The script reads ASA shell parameters from models/mevo_case/reports/mevo_start_case_report.json by default,
 then computes the maximum TPU shell thickness that still nests with a target assembly gap.
 
 Outputs:
 - mevo_start_tpu_sleeve.step
-- mevo_start_tpu_sleeve_report.json
+- reports/mevo_start_tpu_sleeve_report.json
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ from build123d import (
 @dataclass
 class MevoTpuLinerParams:
     # Source ASA case report to inherit device and shell alignment defaults.
-    asa_report_json: Path = Path("models/mevo_case/mevo_start_case_report.json")
+    asa_report_json: Path = Path("models/mevo_case/reports/mevo_start_case_report.json")
 
     # Device dimensions (mm)
     device_length_mm: float = 87.0
@@ -123,6 +123,17 @@ def _archive_existing(paths: list[Path], out_dir: Path) -> list[tuple[str, str]]
         shutil.move(str(path), str(target))
         moved.append((str(path), str(target)))
     return moved
+
+
+def _resolve_asa_report_path(path: Path) -> Path:
+    """Prefer reports/ path, but fall back to legacy top-level report location."""
+    if path.exists():
+        return path
+    if path.parent.name == "reports":
+        legacy = path.parent.parent / path.name
+        if legacy.exists():
+            return legacy
+    return path
 
 
 def _load_asa_defaults(p: MevoTpuLinerParams) -> None:
@@ -298,7 +309,7 @@ def main():
     parser.add_argument(
         "--asa-report",
         type=Path,
-        default=Path("models/mevo_case/mevo_start_case_report.json"),
+        default=Path("models/mevo_case/reports/mevo_start_case_report.json"),
         help="ASA case report JSON used for alignment and fit budget",
     )
     parser.add_argument("--device-clearance", type=float, default=None, help="TPU-to-device radial clearance (mm)")
@@ -311,7 +322,7 @@ def main():
     parser.add_argument("--no-side-vents", action="store_true", help="Disable TPU side vent openings")
     args = parser.parse_args()
 
-    params = MevoTpuLinerParams(asa_report_json=args.asa_report)
+    params = MevoTpuLinerParams(asa_report_json=_resolve_asa_report_path(args.asa_report))
     _load_asa_defaults(params)
     if args.device_clearance is not None:
         params.device_clearance_mm = args.device_clearance
@@ -333,12 +344,15 @@ def main():
     liner, report = build_liner(params)
 
     args.out.mkdir(parents=True, exist_ok=True)
+    reports_dir = args.out / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
     out_step = args.out / "mevo_start_tpu_sleeve.step"
-    out_json = args.out / "mevo_start_tpu_sleeve_report.json"
+    out_json = reports_dir / "mevo_start_tpu_sleeve_report.json"
     archived = _archive_existing(
         [
             out_step,
             out_json,
+            args.out / "mevo_start_tpu_sleeve_report.json",  # legacy top-level location
             args.out / "mevo_start_tpu_liner.step",
             args.out / "mevo_start_tpu_liner_report.json",
         ],

@@ -4,6 +4,7 @@
 Outputs:
 - mevo_start_case_body.step: main impact sleeve (open rear)
 - mevo_start_case_back_plate.step: friction-fit rear plate with I/O cutouts
+- reports/mevo_start_case_report.json
 
 The front profile and lens location are extracted from refs/Mevo_Start_lens_cover_corrected.stl.
 """
@@ -551,11 +552,21 @@ def main():
     body, rear_plate, report = build_case(params)
 
     args.out.mkdir(parents=True, exist_ok=True)
+    reports_dir = args.out / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
 
     body_step = args.out / "mevo_start_case_body.step"
     plate_step = args.out / "mevo_start_case_back_plate.step"
-    report_json = args.out / "mevo_start_case_report.json"
-    archived = _archive_existing([body_step, plate_step, report_json], args.out)
+    report_json = reports_dir / "mevo_start_case_report.json"
+    archived = _archive_existing(
+        [
+            body_step,
+            plate_step,
+            report_json,
+            args.out / "mevo_start_case_report.json",  # legacy top-level location
+        ],
+        args.out,
+    )
 
     export_step(body, str(body_step))
     if args.include_back_plate:

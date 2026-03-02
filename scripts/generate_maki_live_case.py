@@ -7,7 +7,7 @@ Inputs:
 
 Outputs:
 - maki_live_case_sleeve.step
-- maki_live_case_report.json
+- reports/maki_live_case_report.json
 """
 
 from __future__ import annotations
@@ -645,9 +645,18 @@ def main():
     sleeve, report = build_case(params)
 
     args.out.mkdir(parents=True, exist_ok=True)
+    reports_dir = args.out / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
     out_step = args.out / "maki_live_case_sleeve.step"
-    out_json = args.out / "maki_live_case_report.json"
-    archived = _archive_existing([out_step, out_json], args.out)
+    out_json = reports_dir / "maki_live_case_report.json"
+    archived = _archive_existing(
+        [
+            out_step,
+            out_json,
+            args.out / "maki_live_case_report.json",  # legacy top-level location
+        ],
+        args.out,
+    )
 
     export_step(sleeve, str(out_step))
 

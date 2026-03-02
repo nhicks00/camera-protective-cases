@@ -44,11 +44,14 @@ Slicer baseline (ASA):
 ## Output Organization Policy
 - Current outputs:
   - `models/mevo_case/`
+  - `models/mevo_case/reports/`
   - `models/maki_case/`
+  - `models/maki_case/reports/`
 - Each generator archives old versions into:
   - `models/mevo_case/archive/`
   - `models/maki_case/archive/`
-- Top-level in each case folder should show only the latest files for that case.
+- Top-level in each case folder should show only latest STEP outputs for that case.
+- JSON reports should live in each case's `reports/` subfolder.
 
 ## Current Project State
 
@@ -83,7 +86,7 @@ Current preferred workflow:
 - Main outputs:
   - `models/mevo_case/mevo_start_front_cap.step`
   - `models/mevo_case/mevo_start_rear_cap.step`
-  - `models/mevo_case/mevo_start_caps_report.json`
+  - `models/mevo_case/reports/mevo_start_caps_report.json`
 - Mevo body:
   - `models/mevo_case/mevo_start_case_body.step`
   - Generator: `scripts/generate_mevo_case.py`
@@ -148,6 +151,6 @@ When the user gives brief or “random” update requests, assume they refer to 
 
 If the user asks for changes that affect fit/alignment:
 - Regenerate relevant model(s).
-- Check the JSON report in the same folder.
+- Check the JSON report in the case `reports/` subfolder.
 - Verify outputs are single-solid STEP where applicable.
-- Keep latest at top level and auto-archive previous versions.
+- Keep latest STEP outputs at top level and auto-archive previous versions.

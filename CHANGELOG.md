@@ -2,6 +2,14 @@
 
 ## 2026-03-02
 
+### Report Folder Organization
+- Added `reports/` subfolders to both case output roots:
+  - `models/mevo_case/reports/`
+  - `models/maki_case/reports/`
+- Moved current JSON reports out of top-level case folders into those `reports/` subfolders.
+- Updated all active generators so future report outputs are written to `reports/` by default.
+- Added backward-compatible cleanup behavior so legacy top-level report files are auto-archived when present.
+
 ### Mevo TPU Output Cleanup
 - Removed legacy Mevo TPU cap artifacts from top-level `models/mevo_case/`:
   - `mevo_start_tpu_front_cap.step`

@@ -13,9 +13,9 @@ This project now includes a printable protective sleeve generated from the MAKI 
 
 ## Generated Outputs
 - `models/maki_case/maki_live_case_sleeve.step`
-- `models/maki_case/maki_live_case_report.json`
+- `models/maki_case/reports/maki_live_case_report.json`
 - `models/maki_case/maki_live_tpu_sleeve.step`
-- `models/maki_case/maki_live_tpu_sleeve_report.json`
+- `models/maki_case/reports/maki_live_tpu_sleeve_report.json`
 
 Archive policy:
 - Previous versions are auto-moved to `models/maki_case/archive/` before new files are written.
@@ -42,7 +42,7 @@ Archive policy:
 ## TPU Sleeve (Single Print)
 - `scripts/generate_maki_live_tpu_liner.py`
 - Output: `models/maki_case/maki_live_tpu_sleeve.step`
-- Output report: `models/maki_case/maki_live_tpu_sleeve_report.json`
+- Output report: `models/maki_case/reports/maki_live_tpu_sleeve_report.json`
 - Purpose: one connected TPU sleeve with thin front/rear edge wraps (not full face caps).
 
 Generate one-piece TPU sleeve:
@@ -69,7 +69,7 @@ Legacy note:
 - Outputs:
   - `models/maki_case/maki_live_front_cap.step`
   - `models/maki_case/maki_live_rear_cap.step`
-  - `models/maki_case/maki_live_caps_report.json`
+  - `models/maki_case/reports/maki_live_caps_report.json`
 - Cap cutouts are extracted from front/rear end-face loop geometry in the original STEP model.
 - Front cap geometry uses an inverted bezel profile:
   - raised outer rim,
@@ -89,7 +89,7 @@ python scripts/generate_maki_live_caps.py --profile tpu
 TPU cap outputs:
 - `models/maki_case/maki_live_tpu_front_cap.step`
 - `models/maki_case/maki_live_tpu_rear_cap.step`
-- `models/maki_case/maki_live_tpu_caps_report.json`
+- `models/maki_case/reports/maki_live_tpu_caps_report.json`
 
 Regenerate:
 ```bash

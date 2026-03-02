@@ -15,8 +15,10 @@ All geometry generation is built with `build123d` (OpenCascade B-REP) and export
 
 ## Repository Structure
 - `scripts/`: parametric generators for sleeves, liners, and caps
-- `models/mevo_case/`: generated Mevo STEP outputs and JSON reports
-- `models/maki_case/`: generated MAKI STEP outputs and JSON reports
+- `models/mevo_case/`: generated Mevo STEP outputs
+- `models/mevo_case/reports/`: generated Mevo JSON reports
+- `models/maki_case/`: generated MAKI STEP outputs
+- `models/maki_case/reports/`: generated MAKI JSON reports
 - `refs/`: source reference CAD/STL/PDF assets used for extraction and alignment
 - `README_MEVO_CASE.md`: Mevo-specific generator details
 - `README_MAKI_CASE.md`: MAKI-specific generator details
@@ -60,5 +62,5 @@ python scripts/generate_mevo_start_caps.py --profile tpu
 - Temporary meshes/renders are excluded from version control.
 - Output rollover policy:
   - each generator archives existing outputs into `models/mevo_case/archive/` or `models/maki_case/archive/` before writing new files,
-  - top-level case folders always keep only the latest generated files.
+  - top-level case folders keep only latest STEP outputs while JSON reports live under each case's `reports/` subfolder.
 - See `CHANGELOG.md` for latest engineering status and open alignment tasks.

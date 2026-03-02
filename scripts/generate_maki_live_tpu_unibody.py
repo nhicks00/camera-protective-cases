@@ -3,7 +3,7 @@
 
 Outputs:
 - models/maki_case/maki_live_tpu_unibody.step
-- models/maki_case/maki_live_tpu_unibody_report.json
+- models/maki_case/reports/maki_live_tpu_unibody_report.json
 
 By default, legacy separate TPU files are archived so only the unibody TPU part
 remains visible in models/maki_case top-level.
@@ -179,11 +179,13 @@ def main():
         params.archive_legacy_separate_tpu_parts = False
 
     args.out.mkdir(parents=True, exist_ok=True)
+    reports_dir = args.out / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
 
     out_step = args.out / "maki_live_tpu_unibody.step"
-    out_json = args.out / "maki_live_tpu_unibody_report.json"
+    out_json = reports_dir / "maki_live_tpu_unibody_report.json"
 
-    to_archive = [out_step, out_json]
+    to_archive = [out_step, out_json, args.out / "maki_live_tpu_unibody_report.json"]
     if params.archive_legacy_separate_tpu_parts:
         to_archive.extend(
             [

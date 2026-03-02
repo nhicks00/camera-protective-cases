@@ -8,12 +8,12 @@ Current focus option:
 
 ## Generated Outputs
 - `models/mevo_case/mevo_start_case_body.step`
-- `models/mevo_case/mevo_start_case_report.json`
+- `models/mevo_case/reports/mevo_start_case_report.json`
 - `models/mevo_case/mevo_start_front_cap.step`
 - `models/mevo_case/mevo_start_rear_cap.step`
-- `models/mevo_case/mevo_start_caps_report.json`
+- `models/mevo_case/reports/mevo_start_caps_report.json`
 - `models/mevo_case/mevo_start_tpu_sleeve.step`
-- `models/mevo_case/mevo_start_tpu_sleeve_report.json`
+- `models/mevo_case/reports/mevo_start_tpu_sleeve_report.json`
 
 Archive policy:
 - Previous versions are auto-moved to `models/mevo_case/archive/` before new files are written.
@@ -100,7 +100,7 @@ The cap generator defaults to:
 - Rear Mevo I/O cutouts disabled (until exact Mevo rear port mapping is confirmed)
 
 The TPU sleeve generator auto-clamps shell thickness so the sleeve fits inside the ASA shell.
-Actual applied thickness and remaining fit margins are written to `models/mevo_case/mevo_start_tpu_sleeve_report.json`.
+Actual applied thickness and remaining fit margins are written to `models/mevo_case/reports/mevo_start_tpu_sleeve_report.json`.
 
 ## Important Fit Note
 Port and button positions are parameterized defaults in `scripts/generate_mevo_case.py` and may need small tuning to your exact camera revision and print shrink behavior (ASA + printer profile).

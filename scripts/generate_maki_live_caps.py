@@ -474,15 +474,19 @@ def main():
     front_cap, rear_cap, report = build_caps(params)
 
     args.out.mkdir(parents=True, exist_ok=True)
+    reports_dir = args.out / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
     if args.profile == "asa":
         front_step = args.out / "maki_live_front_cap.step"
         rear_step = args.out / "maki_live_rear_cap.step"
-        report_json = args.out / "maki_live_caps_report.json"
+        report_json = reports_dir / "maki_live_caps_report.json"
+        legacy_report_json = args.out / "maki_live_caps_report.json"
     else:
         front_step = args.out / "maki_live_tpu_front_cap.step"
         rear_step = args.out / "maki_live_tpu_rear_cap.step"
-        report_json = args.out / "maki_live_tpu_caps_report.json"
-    archived = _archive_existing([front_step, rear_step, report_json], args.out)
+        report_json = reports_dir / "maki_live_tpu_caps_report.json"
+        legacy_report_json = args.out / "maki_live_tpu_caps_report.json"
+    archived = _archive_existing([front_step, rear_step, report_json, legacy_report_json], args.out)
 
     export_step(front_cap, str(front_step))
     export_step(rear_cap, str(rear_step))

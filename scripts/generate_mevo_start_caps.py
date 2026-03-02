@@ -4,12 +4,12 @@
 Outputs (profile=asa):
 - mevo_start_front_cap.step
 - mevo_start_rear_cap.step
-- mevo_start_caps_report.json
+- reports/mevo_start_caps_report.json
 
 Outputs (profile=tpu):
 - mevo_start_tpu_front_cap.step
 - mevo_start_tpu_rear_cap.step
-- mevo_start_tpu_caps_report.json
+- reports/mevo_start_tpu_caps_report.json
 """
 
 from __future__ import annotations
@@ -327,15 +327,19 @@ def main():
     front_cap, rear_cap, report = build_caps(params)
 
     args.out.mkdir(parents=True, exist_ok=True)
+    reports_dir = args.out / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
     if args.profile == "asa":
         front_step = args.out / "mevo_start_front_cap.step"
         rear_step = args.out / "mevo_start_rear_cap.step"
-        report_json = args.out / "mevo_start_caps_report.json"
+        report_json = reports_dir / "mevo_start_caps_report.json"
+        legacy_report_json = args.out / "mevo_start_caps_report.json"
     else:
         front_step = args.out / "mevo_start_tpu_front_cap.step"
         rear_step = args.out / "mevo_start_tpu_rear_cap.step"
-        report_json = args.out / "mevo_start_tpu_caps_report.json"
-    archived = _archive_existing([front_step, rear_step, report_json], args.out)
+        report_json = reports_dir / "mevo_start_tpu_caps_report.json"
+        legacy_report_json = args.out / "mevo_start_tpu_caps_report.json"
+    archived = _archive_existing([front_step, rear_step, report_json, legacy_report_json], args.out)
 
     export_step(front_cap, str(front_step))
     export_step(rear_cap, str(rear_step))
