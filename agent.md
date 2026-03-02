@@ -103,6 +103,11 @@ Active hard-shell and TPU workflows:
   - Vent pass-through validated (`30/30` through by ray-check), with tripod through-cut also validated.
   - Vent rows are aligned to the ASA sleeve vent coordinates in device frame.
   - Legacy separate TPU liner/caps and unibody files are archived automatically.
+- Dual-material body assembly (combined slicer object):
+  - `models/maki_case/maki_live_body_dual_material.step`
+  - Generator: `scripts/generate_maki_live_dual_material_body.py`
+  - Contains two bodies: `TPU_Sleeve` + `ASA_Shell`.
+  - TPU is auto-aligned into ASA cavity with report-verified fit stack (default ~0.1 mm radial gap each side, ~2.1 mm axial front/back gap).
 
 ### Mevo Start
 Current preferred workflow:

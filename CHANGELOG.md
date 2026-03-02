@@ -2,6 +2,21 @@
 
 ## 2026-03-02
 
+### MAKI Combined Dual-Material Body Export
+- Added `scripts/generate_maki_live_dual_material_body.py`.
+- New output:
+  - `models/maki_case/maki_live_body_dual_material.step` (single STEP assembly with `TPU_Sleeve` + `ASA_Shell`)
+  - `models/maki_case/reports/maki_live_dual_material_report.json`
+- The new generator composes existing validated MAKI ASA + TPU generators and aligns TPU into ASA automatically.
+- Report includes:
+  - axial alignment offset,
+  - front/back axial gaps,
+  - radial fit gaps,
+  - warnings for any interference.
+- Default fit verified in report:
+  - radial gap: `~0.1 mm` each side,
+  - axial front/back gap: `~2.1 mm` each end.
+
 ### Mevo Production Assembly Upgrade (Dual-Material Back Cap + TPU-Aware Fit)
 - Updated `scripts/generate_mevo_dual_material_case.py` for a production-oriented two-part assembly workflow:
   - Main body remains dual-material (`TPU_Sleeve` + `ASA_Shell`).

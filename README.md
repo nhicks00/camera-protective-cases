@@ -31,12 +31,13 @@ All geometry generation is built with `build123d` (OpenCascade B-REP) and export
 - `scripts/generate_mevo_dual_material_case.py`
 - `scripts/generate_maki_live_case.py`
 - `scripts/generate_maki_live_tpu_liner.py`
+- `scripts/generate_maki_live_dual_material_body.py`
 - `scripts/generate_maki_live_caps.py`
 
 ## Current Outputs
 Key generated outputs are in `models/`, including:
 - Mevo dual-material body (`TPU_Sleeve` + `ASA_Shell`) + dual-material back cap (`ASA_Back_Cap` + `TPU_Back_Gasket`)
-- MAKI ASA sleeve + front/rear caps + TPU sleeve
+- MAKI ASA sleeve + front/rear caps + TPU sleeve + combined dual-material body (`TPU_Sleeve` + `ASA_Shell`)
 - JSON reports for extracted/applied features and dimensions
 
 ## Regeneration
@@ -50,6 +51,7 @@ python scripts/generate_mevo_dual_material_case.py
 
 python scripts/generate_maki_live_case.py
 python scripts/generate_maki_live_tpu_liner.py
+python scripts/generate_maki_live_dual_material_body.py
 python scripts/generate_maki_live_caps.py --profile asa
 python scripts/generate_maki_live_caps.py --profile tpu
 ```

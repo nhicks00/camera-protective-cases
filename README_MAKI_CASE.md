@@ -16,6 +16,8 @@ This project now includes a printable protective sleeve generated from the MAKI 
 - `models/maki_case/reports/maki_live_case_report.json`
 - `models/maki_case/maki_live_tpu_sleeve.step`
 - `models/maki_case/reports/maki_live_tpu_sleeve_report.json`
+- `models/maki_case/maki_live_body_dual_material.step` (single STEP with `TPU_Sleeve` + `ASA_Shell`)
+- `models/maki_case/reports/maki_live_dual_material_report.json`
 
 Archive policy:
 - Previous versions are auto-moved to `models/maki_case/archive/` before new files are written.
@@ -66,6 +68,20 @@ python scripts/generate_maki_live_tpu_liner.py \
 
 Legacy note:
 - `scripts/generate_maki_live_tpu_unibody.py` still exists for older full fused-cap style, but current preferred TPU workflow is `maki_live_tpu_sleeve.step`.
+
+## Dual-Material Body Assembly (Single Combined STEP)
+- `scripts/generate_maki_live_dual_material_body.py`
+- Output: `models/maki_case/maki_live_body_dual_material.step`
+- Output report: `models/maki_case/reports/maki_live_dual_material_report.json`
+- Purpose: export one combined slicer-ready assembly containing:
+  - `ASA_Shell` body
+  - `TPU_Sleeve` insert
+
+Generate combined dual-material body:
+```bash
+source .venv311/bin/activate
+python scripts/generate_maki_live_dual_material_body.py
+```
 
 ## Front/Rear Caps
 - `scripts/generate_maki_live_caps.py`
