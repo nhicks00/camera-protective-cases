@@ -50,6 +50,11 @@
   - `models/maki_case/maki_live_tpu_unibody_report.json`
 - Default behavior archives legacy separate TPU parts into `models/maki_case/archive/` so top-level shows only the current unibody TPU output.
 
+### Mevo Rear Closure De-duplication
+- Updated `scripts/generate_mevo_case.py` so `mevo_start_case_back_plate.step` is no longer exported by default.
+- Added optional flag `--include-back-plate` for legacy scenarios only.
+- Default Mevo output path now avoids duplicate rear closure artifacts when front/rear cap workflow is used.
+
 ### Project Baseline and Repository Packaging
 - Organized the workspace for Git version control with:
   - root `README.md` (project-wide overview),

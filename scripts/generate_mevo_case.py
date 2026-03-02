@@ -516,6 +516,11 @@ def main():
     parser.add_argument("--power-y", type=float, default=None, help="Power slot center Y (mm)")
     parser.add_argument("--audio-y", type=float, default=None, help="Audio hole center Y (mm)")
     parser.add_argument("--usb-y", type=float, default=None, help="USB-C slot center Y (mm)")
+    parser.add_argument(
+        "--include-back-plate",
+        action="store_true",
+        help="Also export legacy rear back-plate file (disabled by default to avoid duplicate rear closures)",
+    )
     args = parser.parse_args()
 
     params = CaseParams(reference_stl=args.reference)
@@ -553,16 +558,21 @@ def main():
     archived = _archive_existing([body_step, plate_step, report_json], args.out)
 
     export_step(body, str(body_step))
-    export_step(rear_plate, str(plate_step))
+    if args.include_back_plate:
+        export_step(rear_plate, str(plate_step))
 
     report_payload = {"params": asdict(params), "extraction": report}
+    report_payload["outputs"] = {"back_plate_exported": bool(args.include_back_plate)}
     report_payload["params"]["reference_stl"] = str(params.reference_stl)
     report_json.write_text(json.dumps(report_payload, indent=2), encoding="utf-8")
 
     if archived:
         print(f"Archived {len(archived)} previous file(s) to {args.out / 'archive'}")
     print(f"Wrote {body_step}")
-    print(f"Wrote {plate_step}")
+    if args.include_back_plate:
+        print(f"Wrote {plate_step}")
+    else:
+        print(f"Skipped {plate_step.name} (use --include-back-plate to export)")
     print(f"Wrote {report_json}")
 
 

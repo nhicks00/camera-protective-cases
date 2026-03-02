@@ -4,10 +4,10 @@ This workspace now includes a parametric two-piece, print-ready enclosure derive
 
 Current focus option:
 - front and rear cap workflow (`mevo_start_front_cap.step` + `mevo_start_rear_cap.step`)
+- single rear closure approach: `mevo_start_rear_cap.step` (legacy `case_back_plate` export is opt-in only)
 
 ## Generated Outputs
 - `models/mevo_case/mevo_start_case_body.step`
-- `models/mevo_case/mevo_start_case_back_plate.step`
 - `models/mevo_case/mevo_start_case_report.json`
 - `models/mevo_case/mevo_start_front_cap.step`
 - `models/mevo_case/mevo_start_rear_cap.step`
@@ -47,6 +47,11 @@ The solid modeling is done with `build123d` (OpenCascade B-Rep) and exported as 
 ```bash
 source .venv311/bin/activate
 python scripts/generate_mevo_case.py
+```
+
+Export legacy case back plate only when explicitly needed:
+```bash
+python scripts/generate_mevo_case.py --include-back-plate
 ```
 
 Generate Mevo caps (ASA profile):
