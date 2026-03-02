@@ -14,6 +14,9 @@ Current focus option:
 - `models/mevo_case/reports/mevo_start_caps_report.json`
 - `models/mevo_case/mevo_start_tpu_sleeve.step`
 - `models/mevo_case/reports/mevo_start_tpu_sleeve_report.json`
+- `models/mevo_case/mevo_start_body_dual_material.step` (single STEP with `TPU_Sleeve` + `ASA_Shell`)
+- `models/mevo_case/mevo_start_back_cap_asa.step` (pure ASA back cap)
+- `models/mevo_case/reports/mevo_start_dual_material_report.json`
 
 Archive policy:
 - Previous versions are auto-moved to `models/mevo_case/archive/` before new files are written.
@@ -66,6 +69,11 @@ python scripts/generate_mevo_case.py --closed-front
 Generate Mevo caps (ASA profile):
 ```bash
 python scripts/generate_mevo_start_caps.py --profile asa
+```
+
+Generate dual-material body + pure-ASA back cap (new workflow):
+```bash
+python scripts/generate_mevo_dual_material_case.py
 ```
 
 Generate Mevo TPU inner sleeve matched to the current ASA shell:

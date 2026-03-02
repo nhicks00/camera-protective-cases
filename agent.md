@@ -95,6 +95,11 @@ Current preferred workflow:
 - Mevo body:
   - `models/mevo_case/mevo_start_case_body.step`
   - Generator: `scripts/generate_mevo_case.py`
+- Dual-material Mevo body workflow (ASA + TPU bonded interface):
+  - `models/mevo_case/mevo_start_body_dual_material.step`
+  - `models/mevo_case/mevo_start_back_cap_asa.step`
+  - Generator: `scripts/generate_mevo_dual_material_case.py`
+  - Body STEP contains named solids: `TPU_Sleeve`, `ASA_Shell`.
 - Sleeve defaults to open-through mode (`open_through_sleeve=True`) for cap compatibility.
 - Tripod zone includes external armor pad reinforcement on the sleeve body.
 - Bottom tripod opening in sleeve body is a centered circular through-hole (`12.7 mm` default).

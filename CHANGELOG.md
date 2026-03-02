@@ -2,6 +2,19 @@
 
 ## 2026-03-02
 
+### Mevo Dual-Material Body + Pure ASA Back Cap Workflow
+- Added `scripts/generate_mevo_dual_material_case.py`.
+- New outputs:
+  - `models/mevo_case/mevo_start_body_dual_material.step` (single STEP with named bodies `TPU_Sleeve` and `ASA_Shell`)
+  - `models/mevo_case/mevo_start_back_cap_asa.step`
+  - `models/mevo_case/reports/mevo_start_dual_material_report.json`
+- New default stack in this workflow:
+  - TPU internal clearance: `0.15 mm`
+  - TPU-to-ASA interface gap: `0.0 mm`
+  - Internal vertical fillet target: `3.0 mm` (capsule profile exceeds this requirement)
+- Body updated to front-closed bucket architecture with `2.0 mm` lens recess.
+- Back cap is separate pure ASA part with built-in USB-C and power button cutouts.
+
 ### Vent + Tripod Cutout Corrections
 - Mevo sleeve:
   - Replaced bottom tripod opening with a centered circular through-hole (`12.7 mm` default diameter).
