@@ -23,13 +23,19 @@ Primary goals:
 Use these as the current default stack unless user explicitly overrides.
 
 Mevo Start:
-- Device envelope: `87.0 x 75.5 x 34.0 mm` (L x H x W)
-- ASA shell wall: `3.0 mm`
-- ASA radial clearance to device: `2.3 mm`
-- TPU sleeve wall: `2.0 mm`
-- TPU radial device clearance: `0.2 mm`
-- TPU-to-ASA radial air gap: `0.1 mm`
-- ASA cap plug depth: `1.8 mm`
+- Device envelope reference: `87.0 x 50.0 x 34.0 mm` (L x H x W)
+- TPU inner cavity (review-spec): `34.3 x 50.3 x 85.0 mm` (W x H x depth)
+- TPU wall: `1.8 mm`
+- TPU inner vertical corner fillet: `4.0 mm`
+- TPU-to-ASA interface gap: `0.0 mm` (coincident interface)
+- ASA shell wall: `2.2 mm`
+- ASA outer vertical corner fillet: `6.0 mm`
+- Front bucket/sun hood depth: `3.0 mm`
+- Front lens cutout: `32.0 mm`
+- Front tally LED hole: `3.0 mm`, centered `12.0 mm` above lens center
+- Bottom tripod hole: `20.5 mm` diameter, center `43.2 mm` from front face
+- ASA back-cap plug lip: `5.0 mm` depth, `0.1 mm` total undersize
+- Back utility slot: `15.0 mm` wide, top margin `15.0 mm`, bottom margin `10.0 mm`
 
 BirdDog MAKI Live:
 - Device envelope: `120.32 x 56.99 x 56.99 mm` (L x W x H)
@@ -87,32 +93,17 @@ Active hard-shell and TPU workflows:
 
 ### Mevo Start
 Current preferred workflow:
-- Use open-through sleeve + front/rear cap path.
-- Main outputs:
-  - `models/mevo_case/mevo_start_front_cap.step`
-  - `models/mevo_case/mevo_start_rear_cap.step`
-  - `models/mevo_case/reports/mevo_start_caps_report.json`
-- Mevo body:
-  - `models/mevo_case/mevo_start_case_body.step`
-  - Generator: `scripts/generate_mevo_case.py`
-- Dual-material Mevo body workflow (ASA + TPU bonded interface):
+- Dual-material bucket-body workflow (primary):
   - `models/mevo_case/mevo_start_body_dual_material.step`
   - `models/mevo_case/mevo_start_back_cap_asa.step`
   - Generator: `scripts/generate_mevo_dual_material_case.py`
   - Body STEP contains named solids: `TPU_Sleeve`, `ASA_Shell`.
-- Sleeve defaults to open-through mode (`open_through_sleeve=True`) for cap compatibility.
-- Tripod zone includes external armor pad reinforcement on the sleeve body.
-- Bottom tripod opening in sleeve body is a centered circular through-hole (`12.7 mm` default).
-- Mevo vent openings default to sharp/right-angled edges (`preserve_sharp_vent_edges=True`).
-- Back-plate duplication resolved:
-  - `mevo_start_case_back_plate.step` is now opt-in only (`--include-back-plate`).
-  - Default generation does not export back plate.
-
-Optional/secondary Mevo TPU:
-- `models/mevo_case/mevo_start_tpu_sleeve.step`
-- Generator: `scripts/generate_mevo_start_tpu_liner.py`
-- Auto-clamps thickness to fit existing ASA shell clearance.
-- Includes thin front/rear edge wraps (perimeter-only hold on face edges).
+- Geometry intent:
+  - front-closed ASA bucket integrated with main sleeve (sun-hood protection),
+  - separate pure-ASA back cap,
+  - bottom tripod hole cuts through ASA and TPU so mount contacts camera directly.
+- Active review-spec values are recorded in `models/mevo_case/reports/mevo_start_dual_material_report.json`.
+- Legacy open-through/cap workflows remain in repo for fallback only and are not the active default path.
 
 ## Terminology Mapping (Important for user shorthand)
 User shorthand often means:

@@ -1,0 +1,82 @@
+{
+  "params": {
+    "device_length_mm": 87.0,
+    "device_height_mm": 75.5,
+    "device_width_mm": 34.0,
+    "device_clearance_mm": 0.15,
+    "tpu_thickness_mm": 2.0,
+    "asa_wall_mm": 3.0,
+    "interface_gap_mm": 0.0,
+    "internal_vertical_fillet_mm": 3.0,
+    "lens_recess_mm": 2.0,
+    "rear_clearance_mm": 0.15,
+    "lens_opening_d_mm": 38.8,
+    "vent_count": 3,
+    "vent_h_mm": 2.2,
+    "vent_len_mm": 12.0,
+    "vent_pitch_mm": 4.8,
+    "vent_z_ratio": 0.57,
+    "tripod_hole_d_mm": 25.4,
+    "tripod_zone_z_ratio": 0.78,
+    "back_cap_thickness_mm": 3.0,
+    "back_cap_plug_depth_mm": 1.8,
+    "back_cap_plug_clearance_mm": 0.25,
+    "back_cap_edge_fillet_mm": 0.5,
+    "power_y_mm": 15.0,
+    "power_w_mm": 9.0,
+    "power_h_mm": 4.0,
+    "usb_y_mm": -2.8,
+    "usb_w_mm": 12.8,
+    "usb_h_mm": 6.4
+  },
+  "body_report": {
+    "derived_mm": {
+      "tpu_inner_w": 34.3,
+      "tpu_inner_h": 75.8,
+      "tpu_outer_w": 38.3,
+      "tpu_outer_h": 79.8,
+      "asa_inner_w": 38.3,
+      "asa_inner_h": 79.8,
+      "asa_outer_w": 44.3,
+      "asa_outer_h": 85.8,
+      "cavity_depth": 87.15,
+      "body_depth": 89.15,
+      "lens_recess": 2.0,
+      "tripod_hole_d": 25.4,
+      "interface_gap": 0.0
+    },
+    "fillets_mm": {
+      "requested_internal_vertical": 3.0,
+      "applied_asa_vertical": 0.0,
+      "applied_tpu_vertical": 3.0,
+      "effective_internal_profile_corner_radius": 17.099999999999998,
+      "meets_internal_fillet_requirement": true
+    },
+    "named_bodies": [
+      "TPU_Sleeve",
+      "ASA_Shell"
+    ]
+  },
+  "back_cap_report": {
+    "back_cap_mm": {
+      "plate_w": 44.3,
+      "plate_h": 85.8,
+      "plug_w": 33.8,
+      "plug_h": 75.3,
+      "plug_depth": 1.8,
+      "thickness": 3.0
+    },
+    "cutouts_mm": {
+      "power": {
+        "y": 15.0,
+        "w": 9.0,
+        "h": 4.0
+      },
+      "usb": {
+        "y": -2.8,
+        "w": 12.8,
+        "h": 6.4
+      }
+    }
+  }
+}

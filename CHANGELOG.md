@@ -2,6 +2,27 @@
 
 ## 2026-03-02
 
+### Mevo Review-Spec Alignment (Dual-Material Bucket + Back Cap)
+- Updated `scripts/generate_mevo_dual_material_case.py` to match the latest reviewed Mevo spec exactly:
+  - TPU inner cavity: `34.3 x 50.3 x 85.0 mm`
+  - TPU wall: `1.8 mm`
+  - ASA wall: `2.2 mm`
+  - TPU-to-ASA interface gap: `0.0 mm`
+  - TPU inner corner radius: `4.0 mm`
+  - ASA outer corner radius: `6.0 mm` (now default target, no auto-expansion)
+  - Front lens cutout: `32.0 mm`
+  - Front LED hole: `3.0 mm` at `+12.0 mm` Y from lens center
+  - Sun-hood depth: `3.0 mm`
+  - Bottom tripod hole: `20.5 mm` diameter, centered `43.2 mm` from front
+  - Back-cap lip: `5.0 mm` depth, `0.1 mm` total undersize
+  - Back utility slot: `15.0 mm` width with `15.0 mm` top and `10.0 mm` bottom margins
+- Regenerated:
+  - `models/mevo_case/mevo_start_body_dual_material.step`
+  - `models/mevo_case/mevo_start_back_cap_asa.step`
+  - `models/mevo_case/reports/mevo_start_dual_material_report.json`
+- Confirmed named solids remain present in the body STEP: `TPU_Sleeve`, `ASA_Shell`.
+- Note: this supersedes prior dual-material tripod defaults (`25.4 mm` and earlier `12.7 mm`) for the active Mevo reviewed workflow.
+
 ### Mevo Tripod Hole Diameter Update
 - Updated Mevo bottom tripod opening default to `25.4 mm` (`1.0 in`) for:
   - `generate_mevo_case.py` (ASA case body)

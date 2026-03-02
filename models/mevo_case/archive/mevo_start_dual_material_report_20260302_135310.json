@@ -11,7 +11,7 @@
     "interface_gap_mm": 0.0,
     "tpu_inner_corner_r_mm": 4.0,
     "asa_outer_corner_r_target_mm": 6.0,
-    "enforce_uniform_corner_wall": false,
+    "enforce_uniform_corner_wall": true,
     "sun_hood_depth_mm": 3.0,
     "lens_cutout_d_mm": 32.0,
     "led_hole_d_mm": 3.0,
@@ -42,7 +42,7 @@
       "asa_outer_h_mm": 58.3,
       "tpu_outer_corner_r_mm": 5.8,
       "asa_inner_corner_r_mm": 5.8,
-      "asa_outer_corner_r_mm": 6.0,
+      "asa_outer_corner_r_mm": 8.0,
       "body_depth_mm": 88.0,
       "utility_slot_h_mm": 33.3,
       "utility_slot_center_y_mm": -2.5
@@ -59,7 +59,9 @@
       "TPU_Sleeve",
       "ASA_Shell"
     ],
-    "warnings": []
+    "warnings": [
+      "ASA outer corner radius target was adjusted to maintain uniform corner wall thickness (target=6.00, applied=8.00)."
+    ]
   },
   "back_cap_report": {
     "back_cap_mm": {

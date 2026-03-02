@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
-"""Generate a dual-material Mevo case with a separate ASA back cap.
+"""Generate a Mevo Start dual-material case plus separate ASA back cap.
 
-Outputs:
-- models/mevo_case/mevo_start_body_dual_material.step  (two solids in one STEP)
-  - TPU_Sleeve
-  - ASA_Shell
-- models/mevo_case/mevo_start_back_cap_asa.step        (pure ASA)
+Primary outputs:
+- models/mevo_case/mevo_start_body_dual_material.step
+  - contains two named bodies: TPU_Sleeve and ASA_Shell
+- models/mevo_case/mevo_start_back_cap_asa.step
+  - separate pure-ASA back cap
 - models/mevo_case/reports/mevo_start_dual_material_report.json
 
-Design intent:
-- Body is a single front-closed bucket with integrated sleeve.
-- TPU is fused against ASA with zero interface gap.
-- Back cap is a separate ASA-only part with USB-C and power access.
+This generator implements the reviewed design spec:
+- TPU inner cavity: 34.3 x 50.3 x 85.0 mm
+- TPU wall: 1.8 mm
+- ASA wall: 2.2 mm
+- Interface gap TPU<->ASA: 0.0 mm
+- Front lens hole: 32.0 mm, LED hole: 3.0 mm (+12 mm Y offset)
+- Bottom tripod hole: 20.5 mm dia, center at Z=43.2 mm from front face
+- Back cap lip depth: 5.0 mm, lip undersize: 0.1 mm vs ASA opening
 """
 
 from __future__ import annotations
@@ -25,7 +29,6 @@ from pathlib import Path
 
 from build123d import (
     Align,
-    Axis,
     Box,
     BuildPart,
     BuildSketch,
@@ -35,7 +38,6 @@ from build123d import (
     Mode,
     Plane,
     Rectangle,
-    SlotOverall,
     export_step,
     extrude,
     fillet,
@@ -45,56 +47,76 @@ from build123d import (
 
 @dataclass
 class DualMaterialParams:
-    # Mevo envelope (mm)
-    device_length_mm: float = 87.0
-    device_height_mm: float = 75.5
-    device_width_mm: float = 34.0
+    # Device nominal for reference
+    device_nominal_w_mm: float = 34.0
+    device_nominal_h_mm: float = 50.0
+    device_nominal_l_mm: float = 87.0
 
-    # Requested material/fit stack
-    device_clearance_mm: float = 0.15
-    tpu_thickness_mm: float = 2.0
-    asa_wall_mm: float = 3.0
+    # Core reviewed dimensions
+    tpu_inner_w_mm: float = 34.30
+    tpu_inner_h_mm: float = 50.30
+    tpu_inner_depth_mm: float = 85.00
+    tpu_wall_mm: float = 1.80
+
+    asa_wall_mm: float = 2.20
     interface_gap_mm: float = 0.0
-    internal_vertical_fillet_mm: float = 3.0
 
-    # Body architecture
-    lens_recess_mm: float = 2.0
-    rear_clearance_mm: float = 0.15
-    lens_opening_d_mm: float = 38.8
+    # Corner radii
+    tpu_inner_corner_r_mm: float = 4.0
+    asa_outer_corner_r_target_mm: float = 6.0
+    # Default to exact target radii from review spec.
+    enforce_uniform_corner_wall: bool = False
 
-    # Venting
+    # Front bucket
+    sun_hood_depth_mm: float = 3.0
+    lens_cutout_d_mm: float = 32.0
+    led_hole_d_mm: float = 3.0
+    led_hole_offset_y_mm: float = 12.0
+
+    # Bottom tripod well
+    tripod_hole_d_mm: float = 20.50
+    tripod_center_from_front_mm: float = 43.20
+
+    # Optional side vents (kept for prior workflow compatibility)
     vent_count: int = 3
     vent_h_mm: float = 2.2
     vent_len_mm: float = 12.0
     vent_pitch_mm: float = 4.8
     vent_z_ratio: float = 0.57
-
-    # Bottom tripod opening (body)
-    tripod_hole_d_mm: float = 25.4
-    tripod_zone_z_ratio: float = 0.78
+    include_side_vents: bool = True
 
     # Back cap (pure ASA)
     back_cap_thickness_mm: float = 3.0
-    back_cap_plug_depth_mm: float = 1.8
-    back_cap_plug_clearance_mm: float = 0.25
-    back_cap_edge_fillet_mm: float = 0.5
+    back_cap_lip_depth_mm: float = 5.0
+    back_cap_lip_undersize_total_mm: float = 0.10
+    back_cap_edge_fillet_mm: float = 0.6
 
-    # Back cap cutouts (Mevo rear controls)
-    power_y_mm: float = 15.0
-    power_w_mm: float = 9.0
-    power_h_mm: float = 4.0
-    usb_y_mm: float = -2.8
-    usb_w_mm: float = 12.8
-    usb_h_mm: float = 6.4
+    # Single utility slot on back cap
+    utility_slot_width_mm: float = 15.0
+    utility_slot_top_margin_mm: float = 15.0
+    utility_slot_bottom_margin_mm: float = 10.0
 
 
 def _safe_fillet_radius(width: float, height: float, radius: float) -> float:
-    return max(0.3, min(float(radius), 0.5 * min(width, height) - 0.05))
+    return max(0.25, min(float(radius), 0.5 * min(width, height) - 0.05))
 
 
-def _add_capsule(width: float, height: float) -> None:
+def _add_rounded_rectangle(width: float, height: float, radius: float) -> None:
     Rectangle(width, height)
-    fillet(vertices(), _safe_fillet_radius(width, height, 0.5 * width - 0.05))
+    fillet(vertices(), _safe_fillet_radius(width, height, radius))
+
+
+def _add_vertical_stadium(width: float, height: float) -> None:
+    """Centered stadium aligned with Y axis (vertical)."""
+    if height <= width:
+        Circle(0.5 * width)
+        return
+    straight = height - width
+    Rectangle(width, straight)
+    with Locations((0.0, 0.5 * straight)):
+        Circle(0.5 * width)
+    with Locations((0.0, -0.5 * straight)):
+        Circle(0.5 * width)
 
 
 def _largest_solid(shape):
@@ -122,167 +144,177 @@ def _archive_existing(paths: list[Path], out_dir: Path) -> list[tuple[str, str]]
     return moved
 
 
-def _apply_vertical_fillet(shape, radius: float):
-    if radius <= 0:
-        return shape, 0.0
-    try:
-        return fillet(shape.edges().filter_by(Axis.Z), radius), float(radius)
-    except Exception:
-        return shape, 0.0
+def _derived(p: DualMaterialParams) -> dict:
+    tpu_outer_w = p.tpu_inner_w_mm + 2.0 * p.tpu_wall_mm
+    tpu_outer_h = p.tpu_inner_h_mm + 2.0 * p.tpu_wall_mm
+
+    asa_inner_w = tpu_outer_w + 2.0 * p.interface_gap_mm
+    asa_inner_h = tpu_outer_h + 2.0 * p.interface_gap_mm
+    asa_outer_w = asa_inner_w + 2.0 * p.asa_wall_mm
+    asa_outer_h = asa_inner_h + 2.0 * p.asa_wall_mm
+
+    tpu_outer_corner_r = p.tpu_inner_corner_r_mm + p.tpu_wall_mm
+    asa_inner_corner_r = tpu_outer_corner_r + p.interface_gap_mm
+
+    if p.enforce_uniform_corner_wall:
+        asa_outer_corner_r = asa_inner_corner_r + p.asa_wall_mm
+    else:
+        asa_outer_corner_r = p.asa_outer_corner_r_target_mm
+
+    body_depth = p.sun_hood_depth_mm + p.tpu_inner_depth_mm
+
+    utility_slot_h = max(
+        asa_outer_h - p.utility_slot_top_margin_mm - p.utility_slot_bottom_margin_mm,
+        p.utility_slot_width_mm,
+    )
+    utility_slot_center_y = 0.5 * (
+        (0.5 * asa_outer_h - p.utility_slot_top_margin_mm)
+        + (-0.5 * asa_outer_h + p.utility_slot_bottom_margin_mm)
+    )
+
+    return {
+        "tpu_outer_w_mm": tpu_outer_w,
+        "tpu_outer_h_mm": tpu_outer_h,
+        "asa_inner_w_mm": asa_inner_w,
+        "asa_inner_h_mm": asa_inner_h,
+        "asa_outer_w_mm": asa_outer_w,
+        "asa_outer_h_mm": asa_outer_h,
+        "tpu_outer_corner_r_mm": tpu_outer_corner_r,
+        "asa_inner_corner_r_mm": asa_inner_corner_r,
+        "asa_outer_corner_r_mm": asa_outer_corner_r,
+        "body_depth_mm": body_depth,
+        "utility_slot_h_mm": utility_slot_h,
+        "utility_slot_center_y_mm": utility_slot_center_y,
+    }
 
 
 def build_dual_material_body(p: DualMaterialParams):
-    # Inner TPU cavity around the device.
-    tpu_inner_w = p.device_width_mm + 2.0 * p.device_clearance_mm
-    tpu_inner_h = p.device_height_mm + 2.0 * p.device_clearance_mm
+    d = _derived(p)
 
-    # TPU outer profile and matching ASA interface profile.
-    tpu_outer_w = tpu_inner_w + 2.0 * p.tpu_thickness_mm
-    tpu_outer_h = tpu_inner_h + 2.0 * p.tpu_thickness_mm
+    min_y_asa = -0.5 * d["asa_outer_h_mm"]
+    max_x_asa = 0.5 * d["asa_outer_w_mm"]
+    min_x_asa = -0.5 * d["asa_outer_w_mm"]
+    min_y_tpu = -0.5 * d["tpu_outer_h_mm"]
 
-    asa_inner_w = tpu_outer_w + 2.0 * p.interface_gap_mm
-    asa_inner_h = tpu_outer_h + 2.0 * p.interface_gap_mm
-    asa_outer_w = asa_inner_w + 2.0 * p.asa_wall_mm
-    asa_outer_h = asa_inner_h + 2.0 * p.asa_wall_mm
+    cavity_start_z = p.sun_hood_depth_mm
+    cavity_depth = p.tpu_inner_depth_mm
 
-    cavity_depth = p.device_length_mm + p.rear_clearance_mm
-    body_depth = p.lens_recess_mm + cavity_depth
+    vent_z = cavity_start_z + cavity_depth * p.vent_z_ratio
+    tripod_z = p.tripod_center_from_front_mm
 
-    min_y = -0.5 * asa_outer_h
-    max_x = 0.5 * asa_outer_w
-    min_x = -0.5 * asa_outer_w
-    tpu_min_y = -0.5 * tpu_outer_h
-
-    vent_z = p.lens_recess_mm + cavity_depth * p.vent_z_ratio
-    tripod_z = p.lens_recess_mm + cavity_depth * p.tripod_zone_z_ratio
-
-    # ASA shell bucket (front-closed, rear-open).
+    # ASA bucket body (front wall + side shell, open at rear)
     with BuildPart() as asa_bp:
         with BuildSketch(Plane.XY):
-            _add_capsule(asa_outer_w, asa_outer_h)
-        extrude(amount=body_depth)
+            _add_rounded_rectangle(d["asa_outer_w_mm"], d["asa_outer_h_mm"], d["asa_outer_corner_r_mm"])
+        extrude(amount=d["body_depth_mm"])
 
-        with BuildSketch(Plane.XY.offset(p.lens_recess_mm)):
-            _add_capsule(asa_inner_w, asa_inner_h)
+        with BuildSketch(Plane.XY.offset(cavity_start_z)):
+            _add_rounded_rectangle(d["asa_inner_w_mm"], d["asa_inner_h_mm"], d["asa_inner_corner_r_mm"])
         extrude(amount=cavity_depth + 0.2, mode=Mode.SUBTRACT)
 
-        # Lens aperture through front with protected recess depth.
+        # Lens + LED openings in front wall.
         with BuildSketch(Plane.XY.offset(-0.2)):
-            Circle(0.5 * p.lens_opening_d_mm)
-        extrude(amount=p.lens_recess_mm + 0.5, mode=Mode.SUBTRACT)
+            with Locations((0.0, 0.0)):
+                Circle(0.5 * p.lens_cutout_d_mm)
+            with Locations((0.0, p.led_hole_offset_y_mm)):
+                Circle(0.5 * p.led_hole_d_mm)
+        extrude(amount=p.sun_hood_depth_mm + 0.6, mode=Mode.SUBTRACT)
 
-        # Side vents (sharp rectangular slots).
-        for side in (-1.0, 1.0):
-            x = side * (max_x - p.asa_wall_mm * 0.55)
-            for i in range(p.vent_count):
-                y = (i - (p.vent_count - 1) * 0.5) * p.vent_pitch_mm
-                with Locations((x, y, vent_z)):
-                    Box(
-                        p.asa_wall_mm * 2.4,
-                        p.vent_h_mm,
-                        p.vent_len_mm,
-                        mode=Mode.SUBTRACT,
-                    )
+        # Optional side vents.
+        if p.include_side_vents:
+            for side in (-1.0, 1.0):
+                x = side * (max_x_asa - p.asa_wall_mm * 0.55)
+                for i in range(p.vent_count):
+                    y = (i - (p.vent_count - 1) * 0.5) * p.vent_pitch_mm
+                    with Locations((x, y, vent_z)):
+                        Box(
+                            p.asa_wall_mm * 2.4,
+                            p.vent_h_mm,
+                            p.vent_len_mm,
+                            mode=Mode.SUBTRACT,
+                        )
 
-        # Bottom centered tripod hole.
-        hole_depth = p.asa_wall_mm + 2.0
-        with BuildSketch(Plane.XZ.offset(min_y + 0.2)):
+        # Bottom tripod hole through ASA.
+        with BuildSketch(Plane.XZ.offset(min_y_asa + 0.12)):
             with Locations((0.0, tripod_z)):
                 Circle(0.5 * p.tripod_hole_d_mm)
-        extrude(amount=-hole_depth, mode=Mode.SUBTRACT)
+        extrude(amount=-(p.asa_wall_mm + 2.0), mode=Mode.SUBTRACT)
 
     asa_shell = _largest_solid(asa_bp.part)
-    asa_shell, asa_vert_fillet = _apply_vertical_fillet(asa_shell, p.internal_vertical_fillet_mm)
-    asa_shell = _largest_solid(asa_shell)
     asa_shell.label = "ASA_Shell"
 
-    # TPU sleeve body fused inside ASA body only.
+    # TPU sleeve fused in body region only (starts after sun hood).
     with BuildPart() as tpu_bp:
-        with BuildSketch(Plane.XY.offset(p.lens_recess_mm)):
-            _add_capsule(tpu_outer_w, tpu_outer_h)
+        with BuildSketch(Plane.XY.offset(cavity_start_z)):
+            _add_rounded_rectangle(d["tpu_outer_w_mm"], d["tpu_outer_h_mm"], d["tpu_outer_corner_r_mm"])
         extrude(amount=cavity_depth)
 
-        with BuildSketch(Plane.XY.offset(p.lens_recess_mm - 0.2)):
-            _add_capsule(tpu_inner_w, tpu_inner_h)
+        with BuildSketch(Plane.XY.offset(cavity_start_z - 0.2)):
+            _add_rounded_rectangle(p.tpu_inner_w_mm, p.tpu_inner_h_mm, p.tpu_inner_corner_r_mm)
         extrude(amount=cavity_depth + 0.4, mode=Mode.SUBTRACT)
 
-        # Bottom centered tripod hole through TPU wall as well.
-        tpu_hole_depth = p.tpu_thickness_mm + 1.5
-        with BuildSketch(Plane.XZ.offset(tpu_min_y + 0.12)):
+        # Bottom tripod hole through TPU too.
+        with BuildSketch(Plane.XZ.offset(min_y_tpu + 0.12)):
             with Locations((0.0, tripod_z)):
                 Circle(0.5 * p.tripod_hole_d_mm)
-        extrude(amount=-tpu_hole_depth, mode=Mode.SUBTRACT)
+        extrude(amount=-(p.tpu_wall_mm + 1.5), mode=Mode.SUBTRACT)
 
     tpu_sleeve = _largest_solid(tpu_bp.part)
-    tpu_sleeve, tpu_vert_fillet = _apply_vertical_fillet(tpu_sleeve, p.internal_vertical_fillet_mm)
-    tpu_sleeve = _largest_solid(tpu_sleeve)
     tpu_sleeve.label = "TPU_Sleeve"
 
-    body_assembly = Compound(children=[tpu_sleeve, asa_shell], label="Mevo_Body_Assembly")
+    assembly = Compound(children=[tpu_sleeve, asa_shell], label="Mevo_Body_Assembly")
 
-    # Capsule profiles already include large continuous corner curvature.
-    # This reports the effective internal corner radius in the profile itself.
-    effective_internal_corner_radius = max(0.5 * tpu_inner_w - 0.05, 0.0)
+    warnings: list[str] = []
+    if p.enforce_uniform_corner_wall and abs(d["asa_outer_corner_r_mm"] - p.asa_outer_corner_r_target_mm) > 1e-6:
+        warnings.append(
+            "ASA outer corner radius target was adjusted to maintain uniform corner wall thickness "
+            f"(target={p.asa_outer_corner_r_target_mm:.2f}, applied={d['asa_outer_corner_r_mm']:.2f})."
+        )
 
     report = {
-        "derived_mm": {
-            "tpu_inner_w": float(tpu_inner_w),
-            "tpu_inner_h": float(tpu_inner_h),
-            "tpu_outer_w": float(tpu_outer_w),
-            "tpu_outer_h": float(tpu_outer_h),
-            "asa_inner_w": float(asa_inner_w),
-            "asa_inner_h": float(asa_inner_h),
-            "asa_outer_w": float(asa_outer_w),
-            "asa_outer_h": float(asa_outer_h),
-            "cavity_depth": float(cavity_depth),
-            "body_depth": float(body_depth),
-            "lens_recess": float(p.lens_recess_mm),
+        "derived_mm": d,
+        "features_mm": {
+            "lens_cutout_d": float(p.lens_cutout_d_mm),
+            "led_hole_d": float(p.led_hole_d_mm),
+            "led_hole_offset_y": float(p.led_hole_offset_y_mm),
+            "sun_hood_depth": float(p.sun_hood_depth_mm),
             "tripod_hole_d": float(p.tripod_hole_d_mm),
-            "interface_gap": float(p.interface_gap_mm),
-        },
-        "fillets_mm": {
-            "requested_internal_vertical": float(p.internal_vertical_fillet_mm),
-            "applied_asa_vertical": float(asa_vert_fillet),
-            "applied_tpu_vertical": float(tpu_vert_fillet),
-            "effective_internal_profile_corner_radius": float(effective_internal_corner_radius),
-            "meets_internal_fillet_requirement": bool(
-                effective_internal_corner_radius >= p.internal_vertical_fillet_mm
-            ),
+            "tripod_center_from_front": float(p.tripod_center_from_front_mm),
         },
         "named_bodies": ["TPU_Sleeve", "ASA_Shell"],
+        "warnings": warnings,
     }
-    return body_assembly, asa_shell, tpu_sleeve, report
+
+    return assembly, report
 
 
 def build_back_cap(p: DualMaterialParams):
-    tpu_inner_w = p.device_width_mm + 2.0 * p.device_clearance_mm
-    tpu_inner_h = p.device_height_mm + 2.0 * p.device_clearance_mm
-    tpu_outer_w = tpu_inner_w + 2.0 * p.tpu_thickness_mm
-    tpu_outer_h = tpu_inner_h + 2.0 * p.tpu_thickness_mm
-    asa_inner_w = tpu_outer_w + 2.0 * p.interface_gap_mm
-    asa_inner_h = tpu_outer_h + 2.0 * p.interface_gap_mm
-    asa_outer_w = asa_inner_w + 2.0 * p.asa_wall_mm
-    asa_outer_h = asa_inner_h + 2.0 * p.asa_wall_mm
+    d = _derived(p)
 
-    # Plug inserts into the TPU inner opening so the cap can close the rear.
-    plug_w = max(tpu_inner_w - 2.0 * p.back_cap_plug_clearance_mm, 2.0)
-    plug_h = max(tpu_inner_h - 2.0 * p.back_cap_plug_clearance_mm, 2.0)
+    lip_w = max(d["asa_inner_w_mm"] - p.back_cap_lip_undersize_total_mm, 2.0)
+    lip_h = max(d["asa_inner_h_mm"] - p.back_cap_lip_undersize_total_mm, 2.0)
+    lip_corner_r = max(
+        d["asa_inner_corner_r_mm"] - 0.5 * p.back_cap_lip_undersize_total_mm,
+        0.6,
+    )
+
+    slot_w = p.utility_slot_width_mm
+    slot_h = d["utility_slot_h_mm"]
+    slot_center_y = d["utility_slot_center_y_mm"]
 
     with BuildPart() as cap_bp:
         with BuildSketch(Plane.XY):
-            _add_capsule(asa_outer_w, asa_outer_h)
+            _add_rounded_rectangle(d["asa_outer_w_mm"], d["asa_outer_h_mm"], d["asa_outer_corner_r_mm"])
         extrude(amount=p.back_cap_thickness_mm)
 
         with BuildSketch(Plane.XY.offset(p.back_cap_thickness_mm)):
-            _add_capsule(plug_w, plug_h)
-        extrude(amount=p.back_cap_plug_depth_mm)
+            _add_rounded_rectangle(lip_w, lip_h, lip_corner_r)
+        extrude(amount=p.back_cap_lip_depth_mm)
 
-        cut_depth = p.back_cap_thickness_mm + p.back_cap_plug_depth_mm + 2.0
-        with BuildSketch(Plane.XY.offset(-1.0)):
-            with Locations((0.0, p.power_y_mm)):
-                SlotOverall(p.power_w_mm, p.power_h_mm)
-            with Locations((0.0, p.usb_y_mm)):
-                SlotOverall(p.usb_w_mm, p.usb_h_mm)
+        cut_depth = p.back_cap_thickness_mm + p.back_cap_lip_depth_mm + 1.0
+        with BuildSketch(Plane.XY.offset(-0.2)):
+            with Locations((0.0, slot_center_y)):
+                _add_vertical_stadium(slot_w, slot_h)
         extrude(amount=cut_depth, mode=Mode.SUBTRACT)
 
     cap = _largest_solid(cap_bp.part)
@@ -295,58 +327,41 @@ def build_back_cap(p: DualMaterialParams):
 
     report = {
         "back_cap_mm": {
-            "plate_w": float(asa_outer_w),
-            "plate_h": float(asa_outer_h),
-            "plug_w": float(plug_w),
-            "plug_h": float(plug_h),
-            "plug_depth": float(p.back_cap_plug_depth_mm),
+            "plate_w": float(d["asa_outer_w_mm"]),
+            "plate_h": float(d["asa_outer_h_mm"]),
+            "lip_w": float(lip_w),
+            "lip_h": float(lip_h),
+            "lip_depth": float(p.back_cap_lip_depth_mm),
             "thickness": float(p.back_cap_thickness_mm),
+            "lip_undersize_total": float(p.back_cap_lip_undersize_total_mm),
         },
-        "cutouts_mm": {
-            "power": {
-                "y": float(p.power_y_mm),
-                "w": float(p.power_w_mm),
-                "h": float(p.power_h_mm),
-            },
-            "usb": {
-                "y": float(p.usb_y_mm),
-                "w": float(p.usb_w_mm),
-                "h": float(p.usb_h_mm),
-            },
+        "utility_slot_mm": {
+            "shape": "stadium",
+            "width": float(slot_w),
+            "height": float(slot_h),
+            "center_y": float(slot_center_y),
+            "top_margin": float(p.utility_slot_top_margin_mm),
+            "bottom_margin": float(p.utility_slot_bottom_margin_mm),
         },
     }
+
     return cap, report
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate Mevo dual-material body + ASA back cap")
+    parser = argparse.ArgumentParser(description="Generate reviewed Mevo dual-material body + ASA back cap")
     parser.add_argument("--out", type=Path, default=Path("models/mevo_case"), help="Output directory")
-    parser.add_argument("--clearance", type=float, default=None, help="Device clearance inside TPU (mm)")
-    parser.add_argument("--interface-gap", type=float, default=None, help="TPU-to-ASA interface gap (mm)")
-    parser.add_argument("--asa-wall", type=float, default=None, help="ASA wall thickness (mm)")
-    parser.add_argument("--tpu-thickness", type=float, default=None, help="TPU sleeve thickness (mm)")
-    parser.add_argument("--fillet", type=float, default=None, help="Internal vertical fillet target (mm)")
-    parser.add_argument("--lens-recess", type=float, default=None, help="Front lens recess depth (mm)")
-    parser.add_argument("--tripod-hole-d", type=float, default=None, help="Bottom tripod hole diameter (mm)")
+    parser.add_argument(
+        "--enforce-uniform-corner-wall",
+        action="store_true",
+        help="Adjust ASA outer corner radius to preserve corner wall thickness.",
+    )
     args = parser.parse_args()
 
     p = DualMaterialParams()
-    if args.clearance is not None:
-        p.device_clearance_mm = args.clearance
-    if args.interface_gap is not None:
-        p.interface_gap_mm = args.interface_gap
-    if args.asa_wall is not None:
-        p.asa_wall_mm = args.asa_wall
-    if args.tpu_thickness is not None:
-        p.tpu_thickness_mm = args.tpu_thickness
-    if args.fillet is not None:
-        p.internal_vertical_fillet_mm = args.fillet
-    if args.lens_recess is not None:
-        p.lens_recess_mm = args.lens_recess
-    if args.tripod_hole_d is not None:
-        p.tripod_hole_d_mm = args.tripod_hole_d
+    p.enforce_uniform_corner_wall = bool(args.enforce_uniform_corner_wall)
 
-    body_assembly, _, _, body_report = build_dual_material_body(p)
+    body_asm, body_report = build_dual_material_body(p)
     back_cap, cap_report = build_back_cap(p)
 
     args.out.mkdir(parents=True, exist_ok=True)
@@ -356,9 +371,10 @@ def main():
     body_step = args.out / "mevo_start_body_dual_material.step"
     cap_step = args.out / "mevo_start_back_cap_asa.step"
     report_json = reports_dir / "mevo_start_dual_material_report.json"
+
     archived = _archive_existing([body_step, cap_step, report_json], args.out)
 
-    export_step(body_assembly, str(body_step))
+    export_step(body_asm, str(body_step))
     export_step(back_cap, str(cap_step))
 
     payload = {
