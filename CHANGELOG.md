@@ -2,6 +2,16 @@
 
 ## 2026-03-02
 
+### Mevo TPU Output Cleanup
+- Removed legacy Mevo TPU cap artifacts from top-level `models/mevo_case/`:
+  - `mevo_start_tpu_front_cap.step`
+  - `mevo_start_tpu_rear_cap.step`
+  - `mevo_start_tpu_caps_report.json`
+- Archived those legacy artifacts under `models/mevo_case/archive/` with timestamped names.
+- Clarified docs so active Mevo TPU output is the single-file sleeve workflow:
+  - `mevo_start_tpu_sleeve.step`
+  - `mevo_start_tpu_sleeve_report.json`
+
 ### Unified Wall-Stack Update (Both Cameras)
 - Updated baseline defaults to:
   - ASA wall thickness: `2.5 mm`

@@ -12,9 +12,6 @@ Current focus option:
 - `models/mevo_case/mevo_start_front_cap.step`
 - `models/mevo_case/mevo_start_rear_cap.step`
 - `models/mevo_case/mevo_start_caps_report.json`
-- `models/mevo_case/mevo_start_tpu_front_cap.step`
-- `models/mevo_case/mevo_start_tpu_rear_cap.step`
-- `models/mevo_case/mevo_start_tpu_caps_report.json`
 - `models/mevo_case/mevo_start_tpu_sleeve.step`
 - `models/mevo_case/mevo_start_tpu_sleeve_report.json`
 
@@ -63,14 +60,14 @@ Generate Mevo caps (ASA profile):
 python scripts/generate_mevo_start_caps.py --profile asa
 ```
 
-Generate Mevo caps (TPU profile):
-```bash
-python scripts/generate_mevo_start_caps.py --profile tpu
-```
-
 Generate Mevo TPU inner sleeve matched to the current ASA shell:
 ```bash
 python scripts/generate_mevo_start_tpu_liner.py
+```
+
+Generate legacy Mevo TPU caps (optional, archived workflow):
+```bash
+python scripts/generate_mevo_start_caps.py --profile tpu
 ```
 
 Tune TPU sleeve fit stack (example):

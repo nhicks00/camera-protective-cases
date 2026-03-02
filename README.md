@@ -42,13 +42,17 @@ source .venv311/bin/activate
 
 python scripts/generate_mevo_case.py
 python scripts/generate_mevo_start_caps.py --profile asa
-python scripts/generate_mevo_start_caps.py --profile tpu
 python scripts/generate_mevo_start_tpu_liner.py
 
 python scripts/generate_maki_live_case.py
 python scripts/generate_maki_live_tpu_liner.py
 python scripts/generate_maki_live_caps.py --profile asa
 python scripts/generate_maki_live_caps.py --profile tpu
+```
+
+Legacy optional command (not part of current Mevo TPU path):
+```bash
+python scripts/generate_mevo_start_caps.py --profile tpu
 ```
 
 ## Notes
