@@ -6,8 +6,6 @@
     "nominal_length_mm": 120.32,
     "device_clearance_mm": 0.2,
     "end_clearance_mm": 0.2,
-    "asa_shell_clearance_mm": 2.3,
-    "asa_cap_plug_depth_mm": 1.8,
     "shell_thickness_mm": 2.0,
     "edge_wrap_depth_mm": 2.5,
     "edge_wrap_radial_mm": 2.0,
@@ -58,7 +56,7 @@
       "tripod_applied": {
         "side": "neg",
         "x": 0.34221829986430846,
-        "z": 52.90126909246757,
+        "z": 52.70126909246757,
         "diameter": 9.751206546731504
       }
     },
@@ -66,13 +64,6 @@
       "open_sleeve": true,
       "inner_depth_mm": 120.72,
       "shell_depth_mm": 120.72,
-      "nominal_asa_fit_mm": {
-        "asa_clearance_each_side": 2.3,
-        "expected_radial_gap_each_side": 0.09999999999999964,
-        "expected_axial_gap_each_end": 2.0999999999999996,
-        "expected_cap_budget_each_end": 0.2999999999999996,
-        "expected_cap_budget_total_two_caps": 0.5999999999999992
-      },
       "edge_wrap_depth_mm": 2.5,
       "edge_wrap_radial_mm": 2.0,
       "corner_radius_mm": {

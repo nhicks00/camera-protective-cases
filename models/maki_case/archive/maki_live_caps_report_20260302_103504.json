@@ -6,9 +6,9 @@
     "nominal_height_mm": 56.99,
     "nominal_length_mm": 120.32,
     "sleeve_clearance_mm": 2.3,
-    "sleeve_wall_mm": 3.0,
+    "sleeve_wall_mm": 2.5,
     "cap_thickness_mm": 3.0,
-    "plug_depth_mm": 1.8,
+    "plug_depth_mm": 4.0,
     "plug_clearance_mm": 0.28,
     "cap_plate_extra_mm": 0.0,
     "cutout_extra_mm": 0.25,
@@ -48,10 +48,10 @@
       "sy": 1.0180733971842062
     },
     "derived": {
-      "sleeve_outer_w_mm": 67.59,
-      "sleeve_outer_h_mm": 67.59,
-      "plate_w_mm": 67.59,
-      "plate_h_mm": 67.59,
+      "sleeve_outer_w_mm": 66.59,
+      "sleeve_outer_h_mm": 66.59,
+      "plate_w_mm": 66.59,
+      "plate_h_mm": 66.59,
       "inner_w_mm": 61.59,
       "inner_h_mm": 61.59,
       "plug_w_mm": 61.03,
@@ -59,8 +59,8 @@
       "corner_radius_mm": {
         "base_section": 16.7871568579467,
         "inner": 19.087156857946702,
-        "sleeve_outer": 22.087156857946702,
-        "plate_outer": 22.087156857946702,
+        "sleeve_outer": 21.587156857946702,
+        "plate_outer": 21.587156857946702,
         "plug": 18.8071568579467
       },
       "front_bezel_mm": {

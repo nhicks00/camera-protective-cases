@@ -2,6 +2,17 @@
 
 ## 2026-03-02
 
+### Assembly Fit Hardening + 3.0 mm ASA Wall Update
+- Updated default ASA wall thickness to `3.0 mm` for both Mevo and MAKI sleeve/cap workflows.
+- Mevo sleeve now defaults to open-through mode for front/rear cap assembly compatibility.
+- Reduced ASA cap plug depth defaults to `1.8 mm` (Mevo + MAKI) to avoid TPU interference at end interfaces.
+- Updated MAKI sleeve depth to symmetric end-clearance layout (`nominal length + 2*clearance`) for balanced two-cap fit.
+- Added tripod-region reinforcement:
+  - Mevo: enabled external bottom armor pad around tripod opening.
+  - MAKI: added local side armor boss around tripod opening.
+- Added/expanded fit reporting fields for cap insertion budget and axial/radial assembly margins.
+- Regenerated active models and reports with the updated stack and validated cap/sleeve/TPU fit budgets.
+
 ### Report Folder Organization
 - Added `reports/` subfolders to both case output roots:
   - `models/mevo_case/reports/`

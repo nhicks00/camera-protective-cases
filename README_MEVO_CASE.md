@@ -26,19 +26,20 @@ Archive policy:
   - `75.5 mm` front-profile major axis
   - `34.0 mm` front-profile minor axis
 - Internal ASA clearance default: `2.3 mm`
-- Main ASA wall default: `2.5 mm`
-- Front wall default: `2.5 mm`
+- Main ASA wall default: `3.0 mm`
+- Open-through sleeve default (no fixed front wall)
 - TPU sleeve defaults:
   - internal camera clearance: `0.2 mm`
   - TPU wall thickness: `2.0 mm`
   - TPU-to-ASA radial gap: `0.1 mm`
 - Required access implemented:
-  - Front lens opening (manual default or reference-derived)
+  - Open front/rear sleeve for cap system
   - Rear power button slot
   - Rear audio jack hole
   - Rear USB-C slot
   - Bottom tripod access opening
 - Optional side vent slots included
+- Tripod impact zone includes an external armor pad on the sleeve body.
 
 For alternate cap STLs where the inner circular opening is not reliable, the generator still uses the cap for outer curvature and defaults to a manual lens cutout target.
 The current default profile logic uses the cap's **inner pill loop** and enforces a symmetric capsule profile before extending to full length.
@@ -53,6 +54,11 @@ python scripts/generate_mevo_case.py
 Export legacy case back plate only when explicitly needed:
 ```bash
 python scripts/generate_mevo_case.py --include-back-plate
+```
+
+Generate legacy closed-front sleeve mode (not default):
+```bash
+python scripts/generate_mevo_case.py --closed-front
 ```
 
 Generate Mevo caps (ASA profile):
@@ -98,9 +104,13 @@ python scripts/generate_mevo_case.py --use-reference-lens-hole
 The cap generator defaults to:
 - Front cap lens opening enabled
 - Rear Mevo I/O cutouts disabled (until exact Mevo rear port mapping is confirmed)
+- ASA cap plug depth tuned to `1.8 mm` for TPU-compatible assembly stack.
 
 The TPU sleeve generator auto-clamps shell thickness so the sleeve fits inside the ASA shell.
 Actual applied thickness and remaining fit margins are written to `models/mevo_case/reports/mevo_start_tpu_sleeve_report.json`.
+Current default stack yields:
+- radial TPU-to-ASA gap: `0.1 mm` per side
+- cap insertion budget with TPU installed: `0.3 mm` remaining per end (with `1.8 mm` ASA cap plug depth)
 
 ## Important Fit Note
 Port and button positions are parameterized defaults in `scripts/generate_mevo_case.py` and may need small tuning to your exact camera revision and print shrink behavior (ASA + printer profile).

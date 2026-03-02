@@ -54,6 +54,8 @@ class MakiTpuLinerParams:
     # Fit against camera body (snug)
     device_clearance_mm: float = 0.2
     end_clearance_mm: float = 0.2
+    asa_shell_clearance_mm: float = 2.3
+    asa_cap_plug_depth_mm: float = 1.8
 
     # TPU shell geometry
     shell_thickness_mm: float = 2.0
@@ -331,8 +333,8 @@ def build_liner(p: MakiTpuLinerParams):
         return float(y_dev * sy)
 
     def map_z(z_dev: float) -> float:
-        # Match ASA sleeve feature datum: front of device maps to z=0.
-        return float((zmax - z_dev) * sz)
+        # Match ASA sleeve datum with end clearance offset from front edge.
+        return float((zmax - z_dev) * sz + p.end_clearance_mm)
 
     vents_used = []
     tripod_used = None
@@ -429,7 +431,7 @@ def build_liner(p: MakiTpuLinerParams):
 
         if not vents_used:
             for i in range(p.vent_count):
-                z = p.vent_start_from_front_mm + i * p.vent_pitch_mm
+                z = p.end_clearance_mm + p.vent_start_from_front_mm + i * p.vent_pitch_mm
                 with BuildSketch(Plane.XZ.offset(min_y + 0.12)):
                     with Locations((0.0, z)):
                         SlotOverall(p.vent_slot_w_mm, p.vent_slot_h_mm)
@@ -437,13 +439,13 @@ def build_liner(p: MakiTpuLinerParams):
 
         if tripod_used is None:
             with BuildSketch(Plane.XZ.offset(min_y + 0.12)):
-                with Locations((0.0, p.tripod_center_from_front_mm)):
+                with Locations((0.0, p.end_clearance_mm + p.tripod_center_from_front_mm)):
                     Circle(p.tripod_hole_diameter_mm * 0.5)
             extrude(amount=-(p.shell_thickness_mm + 2.5), mode=Mode.SUBTRACT)
             tripod_used = {
                 "side": "neg",
                 "x": 0.0,
-                "z": p.tripod_center_from_front_mm,
+                "z": p.end_clearance_mm + p.tripod_center_from_front_mm,
                 "diameter": p.tripod_hole_diameter_mm,
             }
 
@@ -468,6 +470,19 @@ def build_liner(p: MakiTpuLinerParams):
             "open_sleeve": True,
             "inner_depth_mm": float(inner_depth),
             "shell_depth_mm": float(shell_depth),
+            "nominal_asa_fit_mm": {
+                "asa_clearance_each_side": float(p.asa_shell_clearance_mm),
+                "expected_radial_gap_each_side": float(
+                    p.asa_shell_clearance_mm - p.device_clearance_mm - p.shell_thickness_mm
+                ),
+                "expected_axial_gap_each_end": float(p.asa_shell_clearance_mm - p.end_clearance_mm),
+                "expected_cap_budget_each_end": float(
+                    p.asa_shell_clearance_mm - p.end_clearance_mm - p.asa_cap_plug_depth_mm
+                ),
+                "expected_cap_budget_total_two_caps": float(
+                    2.0 * (p.asa_shell_clearance_mm - p.end_clearance_mm - p.asa_cap_plug_depth_mm)
+                ),
+            },
             "edge_wrap_depth_mm": float(edge_wrap_depth),
             "edge_wrap_radial_mm": float(edge_wrap_radial),
             "corner_radius_mm": {

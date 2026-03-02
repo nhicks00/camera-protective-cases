@@ -17,7 +17,6 @@
     "device_clearance_mm": 0.2,
     "end_clearance_mm": 0.2,
     "shell_to_asa_gap_mm": 0.1,
-    "asa_cap_plug_depth_mm": 1.8,
     "desired_shell_thickness_mm": 2.0,
     "min_printable_shell_thickness_mm": 1.2,
     "edge_wrap_depth_mm": 2.5,
@@ -52,9 +51,7 @@
         "radial_w_each_side": 0.10000000000000142,
         "radial_h_each_side": 0.09999999999999432,
         "axial_total": 4.199999999999989,
-        "axial_each_end": 2.0999999999999943,
-        "axial_cap_budget_each_end": 0.29999999999999427,
-        "axial_cap_budget_total_two_caps": 0.5999999999999885
+        "axial_each_end": 2.0999999999999943
       },
       "openings_alignment_mm": {
         "tripod_slot_center_z": 71.448,

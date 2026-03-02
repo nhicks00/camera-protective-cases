@@ -47,7 +47,7 @@ class MevoTpuLinerParams:
 
     # ASA shell internals this liner must fit into.
     asa_clearance_mm: float = 2.3
-    asa_front_wall_mm: float = 2.5
+    asa_front_wall_mm: float = 0.0
     tripod_zone_z_ratio: float = 0.78
     tripod_slot_w_mm: float = 14.0
     tripod_slot_l_mm: float = 12.0
@@ -63,6 +63,7 @@ class MevoTpuLinerParams:
     device_clearance_mm: float = 0.20
     end_clearance_mm: float = 0.20
     shell_to_asa_gap_mm: float = 0.10
+    asa_cap_plug_depth_mm: float = 1.80
     desired_shell_thickness_mm: float = 2.00
     min_printable_shell_thickness_mm: float = 1.20
     edge_wrap_depth_mm: float = 2.5
@@ -151,7 +152,11 @@ def _load_asa_defaults(p: MevoTpuLinerParams) -> None:
     p.device_height_mm = float(params.get("device_height_mm", p.device_height_mm))
     p.device_width_mm = float(params.get("device_width_mm", p.device_width_mm))
     p.asa_clearance_mm = float(params.get("clearance_mm", p.asa_clearance_mm))
-    p.asa_front_wall_mm = float(params.get("front_wall_mm", p.asa_front_wall_mm))
+    open_through = bool(params.get("open_through_sleeve", False))
+    if open_through:
+        p.asa_front_wall_mm = 0.0
+    else:
+        p.asa_front_wall_mm = float(params.get("front_wall_mm", p.asa_front_wall_mm))
     p.tripod_zone_z_ratio = float(params.get("tripod_zone_z_ratio", p.tripod_zone_z_ratio))
     p.tripod_slot_w_mm = float(params.get("tripod_slot_w_mm", p.tripod_slot_w_mm))
     p.tripod_slot_l_mm = float(params.get("tripod_slot_l_mm", p.tripod_slot_l_mm))
@@ -190,6 +195,7 @@ def build_liner(p: MevoTpuLinerParams):
     radial_margin_w = 0.5 * (asa_inner_w - outer_w)
     radial_margin_h = 0.5 * (asa_inner_h - outer_h)
     axial_margin = asa_inner_depth - liner_depth
+    axial_margin_each_end = 0.5 * axial_margin
 
     # Alignment of openings to the existing ASA shell coordinate frame.
     tripod_z = (p.asa_front_wall_mm + asa_inner_depth) * p.tripod_zone_z_ratio - p.asa_front_wall_mm
@@ -282,6 +288,9 @@ def build_liner(p: MevoTpuLinerParams):
                 "radial_w_each_side": float(radial_margin_w),
                 "radial_h_each_side": float(radial_margin_h),
                 "axial_total": float(axial_margin),
+                "axial_each_end": float(axial_margin_each_end),
+                "axial_cap_budget_each_end": float(axial_margin_each_end - p.asa_cap_plug_depth_mm),
+                "axial_cap_budget_total_two_caps": float(axial_margin - 2.0 * p.asa_cap_plug_depth_mm),
             },
             "openings_alignment_mm": {
                 "tripod_slot_center_z": float(tripod_z),

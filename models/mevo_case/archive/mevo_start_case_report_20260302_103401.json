@@ -9,9 +9,8 @@
     "enforce_nominal_dimensions": true,
     "strict_symmetric_profile": true,
     "clearance_mm": 2.3,
-    "wall_mm": 3.0,
-    "front_wall_mm": 3.0,
-    "open_through_sleeve": true,
+    "wall_mm": 2.5,
+    "front_wall_mm": 2.5,
     "use_inner_pill_profile": true,
     "enforce_capsule_profile": true,
     "use_reference_lens_hole": false,
@@ -59,33 +58,22 @@
       "scale_y": 1.2797512900567427
     },
     "profile_bounds_mm": {
-      "min_x": -22.3,
-      "max_x": 22.3,
-      "min_y": -43.049692117191995,
-      "max_y": 43.049692117191995
+      "min_x": -21.8,
+      "max_x": 21.8,
+      "min_y": -42.549692117191995,
+      "max_y": 42.549692117191995
     },
     "derived": {
       "inner_depth_mm": 91.6,
-      "shell_depth_mm": 91.6,
-      "cavity_front_z_mm": 0.0,
-      "inner_w_mm": 38.6,
-      "inner_h_mm": 80.09938423438399,
-      "outer_w_mm": 44.6,
-      "outer_h_mm": 86.09938423438399,
-      "end_clearance_each_mm": 2.3,
-      "tripod_armor_mm": {
-        "pad_w": 28.0,
-        "pad_l": 18.0,
-        "pad_h": 2.2
-      },
+      "shell_depth_mm": 94.1,
       "corner_radius_mm": {
         "inner": 19.1,
-        "outer": 22.1,
+        "outer": 21.6,
         "rear_plug": 18.85
       },
       "machined_finish_mm": {
-        "body_axis_x_fillet": 0.0,
-        "body_axis_y_fillet": 0.4,
+        "body_axis_x_fillet": 0.3,
+        "body_axis_y_fillet": 0.0,
         "rear_plate_global_fillet": 0.8
       },
       "lens_reference_center_mm": [
@@ -98,8 +86,7 @@
         0.0,
         16.5
       ],
-      "lens_cut_radius_mm": 19.4,
-      "open_through_sleeve": true
+      "lens_cut_radius_mm": 19.4
     }
   },
   "outputs": {

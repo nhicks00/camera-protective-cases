@@ -5,9 +5,9 @@
     "device_height_mm": 75.5,
     "device_width_mm": 34.0,
     "sleeve_clearance_mm": 2.3,
-    "sleeve_wall_mm": 3.0,
+    "sleeve_wall_mm": 2.5,
     "cap_thickness_mm": 3.0,
-    "plug_depth_mm": 1.8,
+    "plug_depth_mm": 4.6,
     "plug_clearance_mm": 0.25,
     "cap_plate_extra_mm": 0.0,
     "edge_fillet_mm": 0.5,
@@ -36,10 +36,10 @@
     "derived": {
       "inner_w_mm": 38.6,
       "inner_h_mm": 80.1,
-      "sleeve_outer_w_mm": 44.6,
-      "sleeve_outer_h_mm": 86.1,
-      "plate_w_mm": 44.6,
-      "plate_h_mm": 86.1,
+      "sleeve_outer_w_mm": 43.6,
+      "sleeve_outer_h_mm": 85.1,
+      "plate_w_mm": 43.6,
+      "plate_h_mm": 85.1,
       "plug_w_mm": 38.1,
       "plug_h_mm": 79.6
     },
@@ -56,7 +56,7 @@
         {
           "shape": "rect",
           "x": 0.0,
-          "y": -37.849999999999994,
+          "y": -37.349999999999994,
           "w": 16.0,
           "h": 9.5
         }

@@ -24,19 +24,21 @@ Use these as the current default stack unless user explicitly overrides.
 
 Mevo Start:
 - Device envelope: `87.0 x 75.5 x 34.0 mm` (L x H x W)
-- ASA shell wall: `2.5 mm`
+- ASA shell wall: `3.0 mm`
 - ASA radial clearance to device: `2.3 mm`
 - TPU sleeve wall: `2.0 mm`
 - TPU radial device clearance: `0.2 mm`
 - TPU-to-ASA radial air gap: `0.1 mm`
+- ASA cap plug depth: `1.8 mm`
 
 BirdDog MAKI Live:
 - Device envelope: `120.32 x 56.99 x 56.99 mm` (L x W x H)
-- ASA shell wall: `2.5 mm`
+- ASA shell wall: `3.0 mm`
 - ASA radial clearance to device: `2.3 mm`
 - TPU sleeve wall: `2.0 mm`
 - TPU radial device clearance: `0.2 mm`
 - TPU-to-ASA radial air gap: `0.1 mm`
+- ASA cap plug depth: `1.8 mm`
 
 Slicer baseline (ASA):
 - 4 wall loops/perimeters minimum.
@@ -65,6 +67,7 @@ Active hard-shell and TPU workflows:
     - 8 on each adjacent panel
     - 24 total on that side
   - Through-cut depth increased so vents fully penetrate.
+  - Tripod side includes local armor boss thickening around the mount opening.
 - ASA caps:
   - `models/maki_case/maki_live_front_cap.step`
   - `models/maki_case/maki_live_rear_cap.step`
@@ -82,7 +85,7 @@ Active hard-shell and TPU workflows:
 
 ### Mevo Start
 Current preferred workflow:
-- Use front + rear cap path (single rear closure via rear cap).
+- Use open-through sleeve + front/rear cap path.
 - Main outputs:
   - `models/mevo_case/mevo_start_front_cap.step`
   - `models/mevo_case/mevo_start_rear_cap.step`
@@ -90,6 +93,8 @@ Current preferred workflow:
 - Mevo body:
   - `models/mevo_case/mevo_start_case_body.step`
   - Generator: `scripts/generate_mevo_case.py`
+- Sleeve defaults to open-through mode (`open_through_sleeve=True`) for cap compatibility.
+- Tripod zone includes external armor pad reinforcement on the sleeve body.
 - Back-plate duplication resolved:
   - `mevo_start_case_back_plate.step` is now opt-in only (`--include-back-plate`).
   - Default generation does not export back plate.

@@ -24,7 +24,7 @@ Archive policy:
 - Tight, one-piece sleeve
 - Fully open-through shell (no front plate and no rear plate)
 - Default ASA internal clearance: `2.3 mm`
-- Default ASA wall thickness: `2.5 mm`
+- Default ASA wall thickness: `3.0 mm`
 - TPU sleeve defaults:
   - internal camera clearance: `0.2 mm`
   - TPU wall thickness: `2.0 mm`
@@ -32,6 +32,7 @@ Archive policy:
   - edge-wrap depth: `2.5 mm`
   - edge-wrap radial hold: `2.0 mm`
 - Tripod-side access opening around detected `1/4"-20` region
+- Tripod region reinforcement via local external armor boss
 - Side vent slots extracted from STEP across flat + corner side panels
 - Enforced vent layout on tripod side: `3` adjacent panels x `8` slots each (`24` total), with through-cuts
 - Built with `build123d` (OpenCascade B-Rep), exported as STEP only
@@ -75,6 +76,7 @@ Legacy note:
   - raised outer rim,
   - recessed center panel,
   - rear-side plug (instead of front-side center protrusion).
+- ASA cap plug depth default is `1.8 mm` (tuned to clear the TPU sleeve end-stack).
 
 Generate ASA caps:
 ```bash
@@ -101,7 +103,7 @@ Useful tuning flags:
 ```bash
 python scripts/generate_maki_live_case.py \
   --clearance 2.3 \
-  --wall 2.5 \
+  --wall 3.0 \
   --lens-d 30 \
   --tripod-z 48
 ```

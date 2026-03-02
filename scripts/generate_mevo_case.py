@@ -63,8 +63,9 @@ class CaseParams:
     enforce_nominal_dimensions: bool = True
     strict_symmetric_profile: bool = True
     clearance_mm: float = 2.3
-    wall_mm: float = 2.5
-    front_wall_mm: float = 2.5
+    wall_mm: float = 3.0
+    front_wall_mm: float = 3.0
+    open_through_sleeve: bool = True
     use_inner_pill_profile: bool = True
     enforce_capsule_profile: bool = True
 
@@ -352,7 +353,12 @@ def build_case(p: CaseParams):
     )
 
     inner_depth = p.device_length_mm + 2.0 * p.clearance_mm
-    shell_depth = p.front_wall_mm + inner_depth
+    if p.open_through_sleeve:
+        cavity_front_z = 0.0
+        shell_depth = inner_depth
+    else:
+        cavity_front_z = p.front_wall_mm
+        shell_depth = p.front_wall_mm + inner_depth
 
     out_min_x, out_min_y, out_max_x, out_max_y = outer_poly.bounds
     in_min_x, in_min_y, in_max_x, in_max_y = inner_poly.bounds
@@ -382,26 +388,27 @@ def build_case(p: CaseParams):
     max_x = 0.5 * outer_w
     min_y = -0.5 * outer_h
     max_y = 0.5 * outer_h
-    vent_z = p.front_wall_mm + inner_depth * p.vent_z_ratio
+    vent_z = cavity_front_z + inner_depth * p.vent_z_ratio
     with BuildPart() as body_bp:
         with BuildSketch(Plane.XY):
             _add_rounded_rectangle(outer_w, outer_h, outer_corner_r)
         extrude(amount=shell_depth)
 
-        with BuildSketch(Plane.XY.offset(p.front_wall_mm)):
+        with BuildSketch(Plane.XY.offset(cavity_front_z)):
             _add_rounded_rectangle(inner_w, inner_h, inner_corner_r)
         extrude(amount=inner_depth + 0.2, mode=Mode.SUBTRACT)
 
-        with BuildSketch(Plane.XY.offset(-1.0)):
-            with Locations((lens_x, lens_y)):
-                Circle(lens_r)
-        extrude(amount=p.front_wall_mm + 2.0, mode=Mode.SUBTRACT)
+        if not p.open_through_sleeve:
+            with BuildSketch(Plane.XY.offset(-1.0)):
+                with Locations((lens_x, lens_y)):
+                    Circle(lens_r)
+            extrude(amount=p.front_wall_mm + 2.0, mode=Mode.SUBTRACT)
 
-        with BuildSketch(Plane.XY):
-            with Locations((lens_x, lens_y)):
-                Circle(lens_r + p.front_bezel_extra_mm)
-                Circle(lens_r, mode=Mode.SUBTRACT)
-        extrude(amount=p.front_bezel_height_mm)
+            with BuildSketch(Plane.XY):
+                with Locations((lens_x, lens_y)):
+                    Circle(lens_r + p.front_bezel_extra_mm)
+                    Circle(lens_r, mode=Mode.SUBTRACT)
+            extrude(amount=p.front_bezel_height_mm)
 
         for side in (-1.0, 1.0):
             x = side * (max_x - p.wall_mm * 0.55)
@@ -411,7 +418,17 @@ def build_case(p: CaseParams):
                     Box(p.wall_mm * 2.5, p.vent_h_mm, p.vent_len_mm, mode=Mode.SUBTRACT)
 
         # Bottom tripod opening on rear zone.
-        tripod_z = shell_depth * p.tripod_zone_z_ratio
+        tripod_z = cavity_front_z + inner_depth * p.tripod_zone_z_ratio
+
+        # External armor pad around the tripod relief to spread impact loads.
+        with Locations((0.0, min_y, tripod_z)):
+            Box(
+                p.tripod_pad_w_mm,
+                p.tripod_pad_h_mm,
+                p.tripod_pad_l_mm,
+                align=(Align.CENTER, Align.MAX, Align.CENTER),
+            )
+
         slot_depth = p.wall_mm + 2.0
         with Locations((0.0, min_y + 0.2, tripod_z)):
             Box(
@@ -473,6 +490,17 @@ def build_case(p: CaseParams):
         "derived": {
             "inner_depth_mm": inner_depth,
             "shell_depth_mm": shell_depth,
+            "cavity_front_z_mm": cavity_front_z,
+            "inner_w_mm": inner_w,
+            "inner_h_mm": inner_h,
+            "outer_w_mm": outer_w,
+            "outer_h_mm": outer_h,
+            "end_clearance_each_mm": p.clearance_mm,
+            "tripod_armor_mm": {
+                "pad_w": p.tripod_pad_w_mm,
+                "pad_l": p.tripod_pad_l_mm,
+                "pad_h": p.tripod_pad_h_mm,
+            },
             "corner_radius_mm": {
                 "inner": float(inner_corner_r),
                 "outer": float(outer_corner_r),
@@ -488,6 +516,7 @@ def build_case(p: CaseParams):
             "lens_mode": "reference" if p.use_reference_lens_hole else "manual",
             "lens_center_mm": [lens_x, lens_y],
             "lens_cut_radius_mm": lens_r,
+            "open_through_sleeve": bool(p.open_through_sleeve),
         },
     }
 
@@ -503,6 +532,11 @@ def main():
     )
     parser.add_argument("--clearance", type=float, default=None, help="Internal clearance (mm)")
     parser.add_argument("--wall", type=float, default=None, help="Main wall thickness (mm)")
+    parser.add_argument(
+        "--closed-front",
+        action="store_true",
+        help="Generate a closed-front sleeve with lens cutout/bezel (legacy mode)",
+    )
     parser.add_argument("--device-depth", type=float, default=None, help="Legacy alias for camera length/depth (mm)")
     parser.add_argument("--length-mm", type=float, default=None, help="Camera length (mm)")
     parser.add_argument("--height-mm", type=float, default=None, help="Camera front-profile major axis (mm)")
@@ -529,6 +563,7 @@ def main():
         params.clearance_mm = args.clearance
     if args.wall is not None:
         params.wall_mm = args.wall
+    params.open_through_sleeve = not args.closed_front
     if args.length_mm is not None:
         params.device_length_mm = args.length_mm
     if args.height_mm is not None:

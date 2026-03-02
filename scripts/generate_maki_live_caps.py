@@ -45,11 +45,11 @@ class MakiCapParams:
     nominal_height_mm: float = 56.99
     nominal_length_mm: float = 120.32
     sleeve_clearance_mm: float = 2.3
-    sleeve_wall_mm: float = 2.5
+    sleeve_wall_mm: float = 3.0
 
     # Cap geometry
     cap_thickness_mm: float = 3.0
-    plug_depth_mm: float = 4.0
+    plug_depth_mm: float = 1.8
     plug_clearance_mm: float = 0.28
     cap_plate_extra_mm: float = 0.0
     cutout_extra_mm: float = 0.25

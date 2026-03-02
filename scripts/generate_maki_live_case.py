@@ -59,8 +59,8 @@ class MakiCaseParams:
 
     # Fit and shell
     clearance_mm: float = 2.3
-    wall_mm: float = 2.5
-    front_wall_mm: float = 4.0
+    wall_mm: float = 3.0
+    front_wall_mm: float = 3.0
 
     # Front optics opening
     lens_center_y_mm: float = 4.5
@@ -73,6 +73,8 @@ class MakiCaseParams:
     tripod_open_w_mm: float = 20.0
     tripod_open_h_mm: float = 18.0
     tripod_hole_diameter_mm: float = 10.0
+    tripod_armor_extra_mm: float = 1.4
+    tripod_armor_margin_mm: float = 4.5
     use_step_side_features: bool = True
 
     # Vent slots (optional)
@@ -335,7 +337,10 @@ def _derive_tripanel_vents(step_vents, map_x, map_z, sx: float, sz: float, outer
 
     # Fallback pattern if extraction is sparse.
     if not neg_side:
-        z_centers = [p.vent_start_from_front_mm + i * p.vent_pitch_mm for i in range(p.vent_rows_per_panel)]
+        z_centers = [
+            p.clearance_mm + p.vent_start_from_front_mm + i * p.vent_pitch_mm
+            for i in range(p.vent_rows_per_panel)
+        ]
         x_off = p.tripanel_fallback_x_offset_mm
         return {
             "x_centers": [-x_off, 0.0, x_off],
@@ -358,7 +363,7 @@ def _derive_tripanel_vents(step_vents, map_x, map_z, sx: float, sz: float, outer
             pitch = float(np.median(np.diff(sorted(z_vals))))
         else:
             pitch = p.vent_pitch_mm
-        z0 = z_vals[0] if z_vals else p.vent_start_from_front_mm
+        z0 = z_vals[0] if z_vals else (p.clearance_mm + p.vent_start_from_front_mm)
         z_centers = [z0 + i * pitch for i in range(p.vent_rows_per_panel)]
 
     # Build 3 panel x centers: center + 2 adjacent panels.
@@ -439,8 +444,8 @@ def build_case(p: MakiCaseParams):
     inner_corner_r = min(base_corner_r + p.clearance_mm, 0.5 * min(inner_w, inner_h) - 0.2)
     outer_corner_r = min(inner_corner_r + p.wall_mm, 0.5 * min(outer_w, outer_h) - 0.2)
 
-    # Fully open sleeve (no front/back plates).
-    inner_depth = p.nominal_length_mm + p.clearance_mm
+    # Fully open sleeve (no front/back plates), with equal end clearance.
+    inner_depth = p.nominal_length_mm + 2.0 * p.clearance_mm
     shell_depth = inner_depth
 
     min_x = -0.5 * outer_w
@@ -455,7 +460,8 @@ def build_case(p: MakiCaseParams):
 
     def map_z(z_dev: float) -> float:
         # Device front is at zmax (~0), case front opening starts at z=0.
-        return float((zmax - z_dev) * sz)
+        # Keep equal clearance at both front/back sleeve ends.
+        return float((zmax - z_dev) * sz + p.clearance_mm)
 
     vents_used = []
     tripod_used = None
@@ -547,6 +553,25 @@ def build_case(p: MakiCaseParams):
                 d = max(2.0 * t["r"] * sx + p.side_feature_clearance_mm, 2.0)
                 on_neg = t["side"] == "neg"
                 y_face = min_y + 0.15 if on_neg else max_y - 0.15
+
+                # Local armor boss to distribute impact around tripod region.
+                if on_neg:
+                    with Locations((x_c, min_y, z_c)):
+                        Box(
+                            d + 2.0 * p.tripod_armor_margin_mm,
+                            p.tripod_armor_extra_mm,
+                            d + 2.0 * p.tripod_armor_margin_mm,
+                            align=(Align.CENTER, Align.MAX, Align.CENTER),
+                        )
+                else:
+                    with Locations((x_c, max_y, z_c)):
+                        Box(
+                            d + 2.0 * p.tripod_armor_margin_mm,
+                            p.tripod_armor_extra_mm,
+                            d + 2.0 * p.tripod_armor_margin_mm,
+                            align=(Align.CENTER, Align.MIN, Align.CENTER),
+                        )
+
                 cut_depth = p.wall_mm + 3.0
                 with BuildSketch(Plane.XZ.offset(y_face)):
                     with Locations((x_c, z_c)):
@@ -556,7 +581,7 @@ def build_case(p: MakiCaseParams):
 
         # Fallback if STEP-derived features were unavailable.
         if not vents_used:
-            vent_z0 = p.vent_start_from_front_mm
+            vent_z0 = p.clearance_mm + p.vent_start_from_front_mm
             for i in range(p.vent_count):
                 z = vent_z0 + i * p.vent_pitch_mm
                 with BuildSketch(Plane.XZ.offset(min_y + 0.2)):
@@ -565,7 +590,16 @@ def build_case(p: MakiCaseParams):
                 extrude(amount=-(p.wall_mm + 2.5), mode=Mode.SUBTRACT)
 
         if tripod_used is None:
-            tripod_z = p.tripod_center_from_front_mm
+            tripod_z = p.clearance_mm + p.tripod_center_from_front_mm
+
+            with Locations((0.0, min_y, tripod_z)):
+                Box(
+                    p.tripod_hole_diameter_mm + 2.0 * p.tripod_armor_margin_mm,
+                    p.tripod_armor_extra_mm,
+                    p.tripod_hole_diameter_mm + 2.0 * p.tripod_armor_margin_mm,
+                    align=(Align.CENTER, Align.MAX, Align.CENTER),
+                )
+
             with BuildSketch(Plane.XZ.offset(min_y + 0.2)):
                 with Locations((0.0, tripod_z)):
                     Circle(p.tripod_hole_diameter_mm * 0.5)
@@ -594,6 +628,15 @@ def build_case(p: MakiCaseParams):
             "inner_depth_mm": float(inner_depth),
             "shell_depth_mm": float(shell_depth),
             "open_sleeve": True,
+            "inner_w_mm": float(inner_w),
+            "inner_h_mm": float(inner_h),
+            "outer_w_mm": float(outer_w),
+            "outer_h_mm": float(outer_h),
+            "end_clearance_each_mm": float(p.clearance_mm),
+            "tripod_armor_mm": {
+                "extra_thickness": float(p.tripod_armor_extra_mm),
+                "margin": float(p.tripod_armor_margin_mm),
+            },
             "corner_radius_mm": {
                 "base_section": float(base_corner_r),
                 "inner": float(inner_corner_r),

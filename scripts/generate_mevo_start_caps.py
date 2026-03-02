@@ -48,11 +48,11 @@ class MevoCapParams:
 
     # Sleeve geometry that caps mate to
     sleeve_clearance_mm: float = 2.3
-    sleeve_wall_mm: float = 2.5
+    sleeve_wall_mm: float = 3.0
 
     # Cap geometry
     cap_thickness_mm: float = 3.0
-    plug_depth_mm: float = 4.6
+    plug_depth_mm: float = 1.8
     plug_clearance_mm: float = 0.25
     cap_plate_extra_mm: float = 0.0
     edge_fillet_mm: float = 0.5
