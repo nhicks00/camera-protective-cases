@@ -2,6 +2,24 @@
 
 ## 2026-03-02
 
+### Mevo Upper Rear Window + Front Lens Lift + Duck-Bill Hood Update
+- Updated Mevo upper manual rear cutout (button/headphone area) to be wider and shifted closer to the top while extending lower:
+  - side margins changed to `3.0 mm` (from `6.35 mm`)
+  - top offset changed to `3.0 mm` (from `6.0 mm`)
+  - bottom offset from top changed to `28.0 mm` (from `25.4 mm`)
+  - resulting upper domed cutout width now `28.0 mm`
+- Updated Mevo front lens opening vertical placement:
+  - `lens_center_y_mm` changed from `18.0` to `20.0`
+- Added integrated Mevo front duck-bill visor:
+  - enabled by default (`include_front_duckbill_hood=true`)
+  - depth `16.0 mm`, drop `9.0 mm`, span ratio `0.90`
+  - built as a curved top-band extension of the front profile for stronger attachment.
+- Regenerated:
+  - `models/mevo_case/mevo_start_body_dual_material.step`
+  - `models/mevo_case/mevo_start_back_cap_dual_material.step`
+  - `models/mevo_case/mevo_start_back_cap_asa.step`
+  - `models/mevo_case/reports/mevo_start_dual_material_report.json`
+
 ### MAKI Vent/Tripod/Duck-Bill/Rear-Cap TPU Coverage Update
 - Updated MAKI `24`-bank vent cuts in both ASA and TPU generators to true rounded-slot geometry:
   - `scripts/generate_maki_live_case.py`

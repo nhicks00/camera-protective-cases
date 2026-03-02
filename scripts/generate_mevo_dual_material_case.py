@@ -75,9 +75,13 @@ class DualMaterialParams:
     sun_hood_depth_mm: float = 3.0
     lens_cutout_d_mm: float = 29.5
     lens_center_x_mm: float = 0.0
-    lens_center_y_mm: float = 18.0
+    lens_center_y_mm: float = 20.0
     led_hole_d_mm: float = 3.0
     led_hole_offset_from_lens_y_mm: float = 12.0
+    include_front_duckbill_hood: bool = True
+    duckbill_depth_mm: float = 16.0
+    duckbill_drop_mm: float = 9.0
+    duckbill_span_ratio: float = 0.90
     tpu_front_edge_wrap_depth_mm: float = 2.5
     tpu_front_edge_wrap_radial_mm: float = 2.0
     include_tpu_front_edge_wrap: bool = True
@@ -116,9 +120,9 @@ class DualMaterialParams:
     lower_cutout_side_margin_mm: float = 10.0
     lower_cutout_bottom_offset_mm: float = 7.0
     lower_cutout_height_mm: float = 8.0
-    upper_cutout_side_margin_mm: float = 6.35  # 0.25 in
-    upper_cutout_top_offset_mm: float = 6.0
-    upper_cutout_bottom_offset_from_top_mm: float = 25.4  # 1 in
+    upper_cutout_side_margin_mm: float = 3.0
+    upper_cutout_top_offset_mm: float = 3.0
+    upper_cutout_bottom_offset_from_top_mm: float = 28.0
 
     # Single utility slot on back cap
     include_back_utility_slot: bool = False
@@ -288,6 +292,7 @@ def build_dual_material_body(p: DualMaterialParams):
     d = _derived(p)
 
     min_y_asa = -0.5 * d["asa_outer_h_mm"]
+    max_y_asa = 0.5 * d["asa_outer_h_mm"]
     max_x_asa = 0.5 * d["asa_outer_w_mm"]
     min_y_tpu = -0.5 * d["tpu_outer_h_mm"]
 
@@ -324,6 +329,16 @@ def build_dual_material_body(p: DualMaterialParams):
                 with Locations((p.lens_center_x_mm, p.lens_center_y_mm + p.led_hole_offset_from_lens_y_mm)):
                     Circle(0.5 * p.led_hole_d_mm)
             extrude(amount=p.sun_hood_depth_mm + 0.6, mode=Mode.SUBTRACT)
+
+        # Integrated curved duck-bill hood on top-front perimeter.
+        if (not p.open_front_ovular) and p.include_front_duckbill_hood and p.duckbill_depth_mm > 0.0 and p.duckbill_drop_mm > 0.0:
+            hood_drop = min(max(p.duckbill_drop_mm, 1.0), 0.5 * d["asa_outer_h_mm"])
+            hood_span = max(min(d["asa_outer_w_mm"] * p.duckbill_span_ratio, d["asa_outer_w_mm"] + 0.2), 8.0)
+            with BuildSketch(Plane.XY):
+                _add_profile(d["asa_outer_w_mm"], d["asa_outer_h_mm"], p.enforce_capsule_profile)
+                with Locations((0.0, max_y_asa - 0.5 * hood_drop)):
+                    Rectangle(hood_span, hood_drop, mode=Mode.INTERSECT)
+            extrude(amount=-p.duckbill_depth_mm)
 
         # Optional side vents.
         if p.include_side_vents:
@@ -398,6 +413,12 @@ def build_dual_material_body(p: DualMaterialParams):
             "led_hole_d": float(p.led_hole_d_mm),
             "led_hole_offset_from_lens_y": float(p.led_hole_offset_from_lens_y_mm),
             "sun_hood_depth": float(p.sun_hood_depth_mm),
+            "duckbill_hood": {
+                "enabled": bool((not p.open_front_ovular) and p.include_front_duckbill_hood),
+                "depth": float(max(p.duckbill_depth_mm, 0.0)),
+                "drop": float(max(p.duckbill_drop_mm, 0.0)),
+                "span_ratio": float(p.duckbill_span_ratio),
+            },
             "tripod_hole_d": float(p.tripod_hole_d_mm),
             "tripod_center_from_front": float(p.tripod_center_from_front_mm),
             "tpu_edge_wrap_depth": float(wrap_depth),

@@ -138,16 +138,17 @@ Current preferred workflow:
   - front-integrated body by default (front wall fused to sleeve),
   - TPU body uses front edge wrap only (rear wrap disabled) to keep insertion path open,
   - front lens/LED cutouts enabled by default in closed-front mode,
-  - lens opening defaults updated to `29.5 mm` at `Y=18.0` for improved framing,
+  - lens opening defaults updated to `29.5 mm` at `Y=20.0` for improved framing,
+  - integrated curved duck-bill front visor is enabled by default (`depth=16 mm`, `drop=9 mm`, `span_ratio=0.90`),
   - separate back-cap assembly with TPU gasket (ASA-only cap exported for compatibility),
   - manual two-cutout rear-cap layout is default-enabled (`include_manual_back_cutouts=true`):
     - lower slot from Mevo edge offsets (10 mm side margins, 7 mm bottom offset),
-    - upper domed cutout using top offsets (6.0 mm and 25.4 mm from top, 6.35 mm side margins),
+    - upper domed cutout using top offsets (3.0 mm and 28.0 mm from top, 3.0 mm side margins),
   - TPU-aware back-cap fit clearance default: `0.28 mm` total undersize,
   - two-stage tongue engagement with matching rear body groove seat,
   - bottom tripod hole cuts through ASA and TPU so mount contacts camera directly.
 - Mevo back cap utility slot is default-disabled (`include_back_utility_slot=false`) until exact rear port map is confirmed.
-- Mevo lens opening uses offset center (`lens_center_y_mm=16.5`) to avoid centered misalignment.
+- Mevo lens opening uses offset center (`lens_center_y_mm=20.0`) to avoid centered misalignment.
 - Optional flags:
   - `--open-front-ovular` for legacy open-front mode,
   - `--disable-front-lens-led-cutouts` to keep front wall solid.
