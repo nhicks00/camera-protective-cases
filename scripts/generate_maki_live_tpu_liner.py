@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Generate a snug TPU liner for BirdDog MAKI Live to nest inside the ASA sleeve.
+"""Generate a one-piece TPU sleeve for BirdDog MAKI Live to nest inside the ASA sleeve.
 
 Outputs:
-- maki_live_tpu_liner.step
-- maki_live_tpu_liner_report.json
+- maki_live_tpu_sleeve.step
+- maki_live_tpu_sleeve_report.json
 """
 
 from __future__ import annotations
@@ -55,11 +55,10 @@ class MakiTpuLinerParams:
     device_clearance_mm: float = 0.2
     end_clearance_mm: float = 0.2
 
-    # TPU shell and bumper geometry
-    shell_thickness_mm: float = 2.1
-    bumper_extra_mm: float = 0.55
-    bumper_band_depth_mm: float = 12.0
-    bumper_fuse_overlap_mm: float = 0.2
+    # TPU shell geometry
+    shell_thickness_mm: float = 2.0
+    edge_wrap_depth_mm: float = 2.5
+    edge_wrap_radial_mm: float = 2.0
 
     # Keep side vent/tripod regions open through TPU
     use_step_side_features: bool = True
@@ -312,19 +311,15 @@ def build_liner(p: MakiTpuLinerParams):
     inner_h = p.nominal_height_mm + 2.0 * p.device_clearance_mm
     outer_w = inner_w + 2.0 * p.shell_thickness_mm
     outer_h = inner_h + 2.0 * p.shell_thickness_mm
-    bumper_outer_w = outer_w + 2.0 * p.bumper_extra_mm
-    bumper_outer_h = outer_h + 2.0 * p.bumper_extra_mm
 
     inner_corner_r = min(base_corner_r + p.device_clearance_mm, 0.5 * min(inner_w, inner_h) - 0.2)
     outer_corner_r = min(inner_corner_r + p.shell_thickness_mm, 0.5 * min(outer_w, outer_h) - 0.2)
-    bumper_corner_r = min(outer_corner_r + p.bumper_extra_mm, 0.5 * min(bumper_outer_w, bumper_outer_h) - 0.2)
-    bumper_inner_w = max(outer_w - 2.0 * p.bumper_fuse_overlap_mm, 2.0)
-    bumper_inner_h = max(outer_h - 2.0 * p.bumper_fuse_overlap_mm, 2.0)
-    bumper_inner_corner_r = max(outer_corner_r - p.bumper_fuse_overlap_mm, 0.6)
-
     inner_depth = p.nominal_length_mm + 2.0 * p.end_clearance_mm
     shell_depth = inner_depth
-    band_depth = min(p.bumper_band_depth_mm, shell_depth * 0.35)
+    edge_wrap_depth = max(min(p.edge_wrap_depth_mm, 0.35 * shell_depth), 0.6)
+    edge_wrap_radial = max(p.edge_wrap_radial_mm, 0.6)
+    wrap_inner_w = max(inner_w - 2.0 * edge_wrap_radial, 2.0)
+    wrap_inner_h = max(inner_h - 2.0 * edge_wrap_radial, wrap_inner_w + 0.2)
 
     min_y = -0.5 * outer_h
     max_y = 0.5 * outer_h
@@ -343,7 +338,7 @@ def build_liner(p: MakiTpuLinerParams):
     tripod_used = None
 
     with BuildPart() as liner_bp:
-        # Base open-through tube
+        # Base open-through tube (single TPU sleeve)
         with BuildSketch(Plane.XY):
             _add_rounded_rectangle(outer_w, outer_h, outer_corner_r)
         extrude(amount=shell_depth)
@@ -352,22 +347,30 @@ def build_liner(p: MakiTpuLinerParams):
             _add_rounded_rectangle(inner_w, inner_h, inner_corner_r)
         extrude(amount=shell_depth + 0.4, mode=Mode.SUBTRACT)
 
-        # Front bumper ring
+        # Thin front edge-wrap (perimeter only, no full-face cap).
         with BuildSketch(Plane.XY):
-            _add_rounded_rectangle(bumper_outer_w, bumper_outer_h, bumper_corner_r)
-        extrude(amount=band_depth)
+            _add_rounded_rectangle(inner_w, inner_h, inner_corner_r)
+        extrude(amount=edge_wrap_depth)
         with BuildSketch(Plane.XY.offset(-0.2)):
-            _add_rounded_rectangle(bumper_inner_w, bumper_inner_h, bumper_inner_corner_r)
-        extrude(amount=band_depth + 0.4, mode=Mode.SUBTRACT)
+            _add_rounded_rectangle(
+                wrap_inner_w,
+                wrap_inner_h,
+                max(inner_corner_r - edge_wrap_radial, 0.6),
+            )
+        extrude(amount=edge_wrap_depth + 0.4, mode=Mode.SUBTRACT)
 
-        # Rear bumper ring
-        rear_start = shell_depth - band_depth
+        # Thin rear edge-wrap.
+        rear_start = shell_depth - edge_wrap_depth
         with BuildSketch(Plane.XY.offset(rear_start)):
-            _add_rounded_rectangle(bumper_outer_w, bumper_outer_h, bumper_corner_r)
-        extrude(amount=band_depth)
+            _add_rounded_rectangle(inner_w, inner_h, inner_corner_r)
+        extrude(amount=edge_wrap_depth)
         with BuildSketch(Plane.XY.offset(rear_start - 0.2)):
-            _add_rounded_rectangle(bumper_inner_w, bumper_inner_h, bumper_inner_corner_r)
-        extrude(amount=band_depth + 0.4, mode=Mode.SUBTRACT)
+            _add_rounded_rectangle(
+                wrap_inner_w,
+                wrap_inner_h,
+                max(inner_corner_r - edge_wrap_radial, 0.6),
+            )
+        extrude(amount=edge_wrap_depth + 0.4, mode=Mode.SUBTRACT)
 
         if p.use_step_side_features:
             for v in step_features["vents"]:
@@ -380,7 +383,7 @@ def build_liner(p: MakiTpuLinerParams):
                     slot_h = max(min(t_span, z_span) + p.side_feature_clearance_mm, 0.8)
                     on_neg = v["side"] == "neg"
                     y_face = min_y + 0.12 if on_neg else max_y - 0.12
-                    cut_depth = p.shell_thickness_mm + p.bumper_extra_mm + 2.0
+                    cut_depth = p.shell_thickness_mm + 2.0
                     with BuildSketch(Plane.XZ.offset(y_face)):
                         with Locations((x_c, z_c)):
                             SlotOverall(slot_w, slot_h)
@@ -393,7 +396,7 @@ def build_liner(p: MakiTpuLinerParams):
                     slot_h = max(min(t_span, z_span) + p.side_feature_clearance_mm, 0.8)
                     on_neg = v["side"] == "neg"
                     x_face = -0.5 * outer_w + 0.12 if on_neg else 0.5 * outer_w - 0.12
-                    cut_depth = p.shell_thickness_mm + p.bumper_extra_mm + 2.0
+                    cut_depth = p.shell_thickness_mm + 2.0
                     with BuildSketch(Plane.YZ.offset(x_face)):
                         with Locations((y_c, z_c)):
                             SlotOverall(slot_w, slot_h)
@@ -417,7 +420,7 @@ def build_liner(p: MakiTpuLinerParams):
                 d = max(2.0 * t["r"] * sx + p.side_feature_clearance_mm, 2.0)
                 on_neg = t["side"] == "neg"
                 y_face = min_y + 0.12 if on_neg else max_y - 0.12
-                cut_depth = p.shell_thickness_mm + p.bumper_extra_mm + 2.5
+                cut_depth = p.shell_thickness_mm + 2.5
                 with BuildSketch(Plane.XZ.offset(y_face)):
                     with Locations((x_c, z_c)):
                         Circle(d * 0.5)
@@ -430,13 +433,13 @@ def build_liner(p: MakiTpuLinerParams):
                 with BuildSketch(Plane.XZ.offset(min_y + 0.12)):
                     with Locations((0.0, z)):
                         SlotOverall(p.vent_slot_w_mm, p.vent_slot_h_mm)
-                extrude(amount=-(p.shell_thickness_mm + p.bumper_extra_mm + 2.0), mode=Mode.SUBTRACT)
+                extrude(amount=-(p.shell_thickness_mm + 2.0), mode=Mode.SUBTRACT)
 
         if tripod_used is None:
             with BuildSketch(Plane.XZ.offset(min_y + 0.12)):
                 with Locations((0.0, p.tripod_center_from_front_mm)):
                     Circle(p.tripod_hole_diameter_mm * 0.5)
-            extrude(amount=-(p.shell_thickness_mm + p.bumper_extra_mm + 2.5), mode=Mode.SUBTRACT)
+            extrude(amount=-(p.shell_thickness_mm + 2.5), mode=Mode.SUBTRACT)
             tripod_used = {
                 "side": "neg",
                 "x": 0.0,
@@ -465,20 +468,20 @@ def build_liner(p: MakiTpuLinerParams):
             "open_sleeve": True,
             "inner_depth_mm": float(inner_depth),
             "shell_depth_mm": float(shell_depth),
-            "band_depth_mm": float(band_depth),
+            "edge_wrap_depth_mm": float(edge_wrap_depth),
+            "edge_wrap_radial_mm": float(edge_wrap_radial),
             "corner_radius_mm": {
                 "base_section": float(base_corner_r),
                 "inner": float(inner_corner_r),
                 "outer": float(outer_corner_r),
-                "bumper_outer": float(bumper_corner_r),
             },
             "dimensions_mm": {
                 "inner_w": float(inner_w),
                 "inner_h": float(inner_h),
                 "outer_w": float(outer_w),
                 "outer_h": float(outer_h),
-                "bumper_outer_w": float(bumper_outer_w),
-                "bumper_outer_h": float(bumper_outer_h),
+                "edge_wrap_inner_opening_w": float(wrap_inner_w),
+                "edge_wrap_inner_opening_h": float(wrap_inner_h),
             },
             "machined_finish_mm": {
                 "liner_axis_y_fillet": liner_fillet_y,
@@ -490,7 +493,7 @@ def build_liner(p: MakiTpuLinerParams):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate MAKI Live TPU liner")
+    parser = argparse.ArgumentParser(description="Generate MAKI Live TPU sleeve")
     parser.add_argument("--out", type=Path, default=Path("models/maki_case"), help="Output directory")
     parser.add_argument(
         "--step",
@@ -500,8 +503,8 @@ def main():
     )
     parser.add_argument("--clearance", type=float, default=None, help="Inner clearance to camera body (mm)")
     parser.add_argument("--thickness", type=float, default=None, help="Base TPU shell thickness (mm)")
-    parser.add_argument("--bumper-extra", type=float, default=None, help="Extra radial bumper thickness at ends (mm)")
-    parser.add_argument("--band-depth", type=float, default=None, help="Bumper band depth from each end (mm)")
+    parser.add_argument("--edge-wrap-depth", type=float, default=None, help="Front/rear edge wrap depth (mm)")
+    parser.add_argument("--edge-wrap-radial", type=float, default=None, help="Edge wrap radial hold on face perimeter (mm)")
     parser.add_argument("--end-clearance", type=float, default=None, help="Front/rear clearance to camera (mm each end)")
     parser.add_argument("--no-step-side-features", action="store_true", help="Disable STEP-derived side vents/tripod")
     args = parser.parse_args()
@@ -511,10 +514,10 @@ def main():
         params.device_clearance_mm = args.clearance
     if args.thickness is not None:
         params.shell_thickness_mm = args.thickness
-    if args.bumper_extra is not None:
-        params.bumper_extra_mm = args.bumper_extra
-    if args.band_depth is not None:
-        params.bumper_band_depth_mm = args.band_depth
+    if args.edge_wrap_depth is not None:
+        params.edge_wrap_depth_mm = args.edge_wrap_depth
+    if args.edge_wrap_radial is not None:
+        params.edge_wrap_radial_mm = args.edge_wrap_radial
     if args.end_clearance is not None:
         params.end_clearance_mm = args.end_clearance
     if args.no_step_side_features:
@@ -523,9 +526,22 @@ def main():
     liner, report = build_liner(params)
 
     args.out.mkdir(parents=True, exist_ok=True)
-    out_step = args.out / "maki_live_tpu_liner.step"
-    out_json = args.out / "maki_live_tpu_liner_report.json"
-    archived = _archive_existing([out_step, out_json], args.out)
+    out_step = args.out / "maki_live_tpu_sleeve.step"
+    out_json = args.out / "maki_live_tpu_sleeve_report.json"
+    archived = _archive_existing(
+        [
+            out_step,
+            out_json,
+            args.out / "maki_live_tpu_unibody.step",
+            args.out / "maki_live_tpu_unibody_report.json",
+            args.out / "maki_live_tpu_liner.step",
+            args.out / "maki_live_tpu_liner_report.json",
+            args.out / "maki_live_tpu_front_cap.step",
+            args.out / "maki_live_tpu_rear_cap.step",
+            args.out / "maki_live_tpu_caps_report.json",
+        ],
+        args.out,
+    )
 
     export_step(liner, str(out_step))
 

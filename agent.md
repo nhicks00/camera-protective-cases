@@ -19,6 +19,28 @@ Primary goals:
 - Keep curves smooth; avoid tiny rectangular facet chains for curved surfaces.
 - Keep generated outputs organized by camera and archive prior versions.
 
+## Confirmed Dimension Baseline
+Use these as the current default stack unless user explicitly overrides.
+
+Mevo Start:
+- Device envelope: `87.0 x 75.5 x 34.0 mm` (L x H x W)
+- ASA shell wall: `2.5 mm`
+- ASA radial clearance to device: `2.3 mm`
+- TPU sleeve wall: `2.0 mm`
+- TPU radial device clearance: `0.2 mm`
+- TPU-to-ASA radial air gap: `0.1 mm`
+
+BirdDog MAKI Live:
+- Device envelope: `120.32 x 56.99 x 56.99 mm` (L x W x H)
+- ASA shell wall: `2.5 mm`
+- ASA radial clearance to device: `2.3 mm`
+- TPU sleeve wall: `2.0 mm`
+- TPU radial device clearance: `0.2 mm`
+- TPU-to-ASA radial air gap: `0.1 mm`
+
+Slicer baseline (ASA):
+- 4 wall loops/perimeters minimum.
+
 ## Output Organization Policy
 - Current outputs:
   - `models/mevo_case/`
@@ -48,11 +70,12 @@ Active hard-shell and TPU workflows:
     - raised outer rim
     - recessed center panel
     - plug on rear side
-- TPU one-piece unit (preferred TPU output):
-  - `models/maki_case/maki_live_tpu_unibody.step`
-  - Generator: `scripts/generate_maki_live_tpu_unibody.py`
-  - This fuses liner + front + rear TPU structures into one connected part.
-  - Legacy separate TPU liner/caps are archived by default when unibody is generated.
+- TPU one-piece sleeve (preferred TPU output):
+  - `models/maki_case/maki_live_tpu_sleeve.step`
+  - Generator: `scripts/generate_maki_live_tpu_liner.py`
+  - Single connected TPU sleeve with thin front/rear edge wraps.
+  - Does not use full TPU face caps.
+  - Legacy separate TPU liner/caps and unibody files are archived automatically.
 
 ### Mevo Start
 Current preferred workflow:
@@ -69,14 +92,15 @@ Current preferred workflow:
   - Default generation does not export back plate.
 
 Optional/secondary Mevo TPU:
-- `models/mevo_case/mevo_start_tpu_liner.step`
+- `models/mevo_case/mevo_start_tpu_sleeve.step`
 - Generator: `scripts/generate_mevo_start_tpu_liner.py`
 - Auto-clamps thickness to fit existing ASA shell clearance.
+- Includes thin front/rear edge wraps (perimeter-only hold on face edges).
 
 ## Terminology Mapping (Important for user shorthand)
 User shorthand often means:
 - “Maki sleeve” = ASA outer sleeve (`maki_live_case_sleeve.step`)
-- “TPU sleeve for Maki” = one-piece TPU unibody now (not 3 separate pieces)
+- “TPU sleeve for Maki” = `maki_live_tpu_sleeve.step` (single part)
 - “Maki caps” = ASA front/rear caps
 - “Mevo rear closure” = `mevo_start_rear_cap.step` (single rear piece)
 - “Mevo case back plate” = legacy/optional only
@@ -99,7 +123,7 @@ MAKI:
 ```bash
 python scripts/generate_maki_live_case.py
 python scripts/generate_maki_live_caps.py --profile asa
-python scripts/generate_maki_live_tpu_unibody.py
+python scripts/generate_maki_live_tpu_liner.py
 ```
 
 Mevo:
@@ -107,6 +131,7 @@ Mevo:
 python scripts/generate_mevo_case.py
 python scripts/generate_mevo_start_caps.py --profile asa
 python scripts/generate_mevo_start_caps.py --profile tpu
+python scripts/generate_mevo_start_tpu_liner.py
 ```
 
 Legacy Mevo back plate (only when explicitly requested):
@@ -116,7 +141,7 @@ python scripts/generate_mevo_case.py --include-back-plate
 
 ## Session Continuity Guidance
 When the user gives brief or “random” update requests, assume they refer to this context and default behaviors unless they explicitly override:
-- Keep MAKI TPU as one connected unit.
+- Keep MAKI TPU as one connected sleeve (`maki_live_tpu_sleeve.step`).
 - Keep Mevo with single rear closure (rear cap path).
 - Maintain archive hygiene policy.
 - Preserve smooth B-REP output quality.

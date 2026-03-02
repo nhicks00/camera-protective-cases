@@ -58,8 +58,8 @@ class MakiCaseParams:
     nominal_length_mm: float = 120.32
 
     # Fit and shell
-    clearance_mm: float = 2.65
-    wall_mm: float = 3.2
+    clearance_mm: float = 2.3
+    wall_mm: float = 2.5
     front_wall_mm: float = 4.0
 
     # Front optics opening

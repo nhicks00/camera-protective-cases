@@ -2,6 +2,20 @@
 
 ## 2026-03-02
 
+### Unified Wall-Stack Update (Both Cameras)
+- Updated baseline defaults to:
+  - ASA wall thickness: `2.5 mm`
+  - TPU wall thickness: `2.0 mm`
+  - TPU internal clearance to camera: `0.2 mm`
+  - TPU-to-ASA radial gap target: `0.1 mm`
+- Applied defaults in both Mevo and MAKI generators so reports now reflect this stack.
+
+### TPU Sleeve Workflow Update
+- Mevo TPU output switched from `mevo_start_tpu_liner.*` to `mevo_start_tpu_sleeve.*`.
+- MAKI TPU output switched from `maki_live_tpu_liner.*`/unibody preference to `maki_live_tpu_sleeve.*`.
+- Added thin front/rear edge-wrap geometry for TPU sleeves (perimeter hold only, not full-face TPU caps).
+- Legacy TPU outputs are archived automatically and no longer shown at case-folder top level.
+
 ### Model Output Organization
 - Reorganized model outputs into:
   - `models/mevo_case/`

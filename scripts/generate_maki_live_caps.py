@@ -44,8 +44,8 @@ class MakiCapParams:
     nominal_width_mm: float = 56.99
     nominal_height_mm: float = 56.99
     nominal_length_mm: float = 120.32
-    sleeve_clearance_mm: float = 2.65
-    sleeve_wall_mm: float = 3.2
+    sleeve_clearance_mm: float = 2.3
+    sleeve_wall_mm: float = 2.5
 
     # Cap geometry
     cap_thickness_mm: float = 3.0
@@ -451,7 +451,7 @@ def main():
     if args.profile == "tpu":
         # TPU liner-matched defaults.
         params.sleeve_clearance_mm = 0.2
-        params.sleeve_wall_mm = 2.1
+        params.sleeve_wall_mm = 2.0
         params.cap_plate_extra_mm = 0.55
         params.cap_thickness_mm = 2.4
         params.plug_depth_mm = 3.4

@@ -4,8 +4,8 @@
     "nominal_width_mm": 56.99,
     "nominal_height_mm": 56.99,
     "nominal_length_mm": 120.32,
-    "clearance_mm": 2.3,
-    "wall_mm": 2.5,
+    "clearance_mm": 2.65,
+    "wall_mm": 3.2,
     "front_wall_mm": 4.0,
     "lens_center_y_mm": 4.5,
     "lens_diameter_mm": 30.0,
@@ -70,22 +70,22 @@
       }
     },
     "derived": {
-      "inner_depth_mm": 122.61999999999999,
-      "shell_depth_mm": 122.61999999999999,
+      "inner_depth_mm": 122.97,
+      "shell_depth_mm": 122.97,
       "open_sleeve": true,
       "corner_radius_mm": {
         "base_section": 16.7871568579467,
-        "inner": 19.087156857946702,
-        "outer": 21.587156857946702
+        "inner": 19.4371568579467,
+        "outer": 22.6371568579467
       },
       "machined_finish_mm": {
         "sleeve_axis_y_fillet": 0.8
       },
       "outer_bounds_xy_mm": {
-        "min_x": -33.295,
-        "max_x": 33.295,
-        "min_y": -33.295,
-        "max_y": 33.295
+        "min_x": -34.345,
+        "max_x": 34.345,
+        "min_y": -34.345,
+        "max_y": 34.345
       }
     }
   }

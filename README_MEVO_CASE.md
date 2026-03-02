@@ -15,22 +15,26 @@ Current focus option:
 - `models/mevo_case/mevo_start_tpu_front_cap.step`
 - `models/mevo_case/mevo_start_tpu_rear_cap.step`
 - `models/mevo_case/mevo_start_tpu_caps_report.json`
-- `models/mevo_case/mevo_start_tpu_liner.step`
-- `models/mevo_case/mevo_start_tpu_liner_report.json`
+- `models/mevo_case/mevo_start_tpu_sleeve.step`
+- `models/mevo_case/mevo_start_tpu_sleeve_report.json`
 
 Archive policy:
 - Previous versions are auto-moved to `models/mevo_case/archive/` before new files are written.
 
 ## Design Summary
-- Tight-fitting **two-piece** architecture (impact sleeve + rear closure plate)
+- Tight-fitting architecture with body + cap options
 - Front profile extracted from `refs/Mevo_Start_lens_cover_corrected.stl` (default)
 - Dimension-locked to Mevo Start nominal envelope by default:
   - `87.0 mm` length (front-to-back)
   - `75.5 mm` front-profile major axis
   - `34.0 mm` front-profile minor axis
-- Internal clearance default: `0.65 mm`
-- Main wall default: `3.4 mm`
-- Front wall default: `4.0 mm`
+- Internal ASA clearance default: `2.3 mm`
+- Main ASA wall default: `2.5 mm`
+- Front wall default: `2.5 mm`
+- TPU sleeve defaults:
+  - internal camera clearance: `0.2 mm`
+  - TPU wall thickness: `2.0 mm`
+  - TPU-to-ASA radial gap: `0.1 mm`
 - Required access implemented:
   - Front lens opening (manual default or reference-derived)
   - Rear power button slot
@@ -64,17 +68,19 @@ Generate Mevo caps (TPU profile):
 python scripts/generate_mevo_start_caps.py --profile tpu
 ```
 
-Generate Mevo TPU inner liner matched to the current ASA shell:
+Generate Mevo TPU inner sleeve matched to the current ASA shell:
 ```bash
 python scripts/generate_mevo_start_tpu_liner.py
 ```
 
-Tune TPU liner fit stack (example):
+Tune TPU sleeve fit stack (example):
 ```bash
 python scripts/generate_mevo_start_tpu_liner.py \
-  --device-clearance 0.15 \
+  --device-clearance 0.2 \
   --shell-gap 0.10 \
-  --thickness 0.90
+  --thickness 2.0 \
+  --edge-wrap-depth 2.5 \
+  --edge-wrap-radial 2.0
 ```
 
 Enable rear Mevo I/O cutouts on caps (optional):
@@ -96,8 +102,8 @@ The cap generator defaults to:
 - Front cap lens opening enabled
 - Rear Mevo I/O cutouts disabled (until exact Mevo rear port mapping is confirmed)
 
-The TPU liner generator auto-clamps shell thickness so the liner fits inside the ASA shell.
-Actual applied thickness and remaining fit margins are written to `models/mevo_case/mevo_start_tpu_liner_report.json`.
+The TPU sleeve generator auto-clamps shell thickness so the sleeve fits inside the ASA shell.
+Actual applied thickness and remaining fit margins are written to `models/mevo_case/mevo_start_tpu_sleeve_report.json`.
 
 ## Important Fit Note
 Port and button positions are parameterized defaults in `scripts/generate_mevo_case.py` and may need small tuning to your exact camera revision and print shrink behavior (ASA + printer profile).
@@ -112,7 +118,7 @@ The key tunables are in `CaseParams`:
 ## Suggested Print Setup (ASA)
 - 0.4 mm nozzle
 - 0.2 mm layer height
-- 5+ perimeters in high-stress zones
+- 4 perimeters (wall loops) minimum
 - 35–45% gyroid infill (body)
 - 100% infill optional around rear plug region
 - Anneal/cool slowly to reduce warp

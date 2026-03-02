@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Generate a Mevo Start TPU liner that is guaranteed to fit inside the ASA shell.
+"""Generate a Mevo Start TPU sleeve that fits inside the ASA shell.
 
 The script reads ASA shell parameters from models/mevo_start_case_report.json by default,
 then computes the maximum TPU shell thickness that still nests with a target assembly gap.
 
 Outputs:
-- mevo_start_tpu_liner.step
-- mevo_start_tpu_liner_report.json
+- mevo_start_tpu_sleeve.step
+- mevo_start_tpu_sleeve_report.json
 """
 
 from __future__ import annotations
@@ -46,8 +46,8 @@ class MevoTpuLinerParams:
     device_width_mm: float = 34.0
 
     # ASA shell internals this liner must fit into.
-    asa_clearance_mm: float = 0.65
-    asa_front_wall_mm: float = 4.0
+    asa_clearance_mm: float = 2.3
+    asa_front_wall_mm: float = 2.5
     tripod_zone_z_ratio: float = 0.78
     tripod_slot_w_mm: float = 14.0
     tripod_slot_l_mm: float = 12.0
@@ -60,11 +60,13 @@ class MevoTpuLinerParams:
     vent_z_ratio: float = 0.57
 
     # TPU fit targets
-    device_clearance_mm: float = 0.15
+    device_clearance_mm: float = 0.20
     end_clearance_mm: float = 0.20
     shell_to_asa_gap_mm: float = 0.10
-    desired_shell_thickness_mm: float = 0.90
-    min_printable_shell_thickness_mm: float = 0.35
+    desired_shell_thickness_mm: float = 2.00
+    min_printable_shell_thickness_mm: float = 1.20
+    edge_wrap_depth_mm: float = 2.5
+    edge_wrap_radial_mm: float = 2.0
 
     # Optional openings in TPU for tripod/vents
     enable_tripod_opening: bool = True
@@ -185,8 +187,13 @@ def build_liner(p: MevoTpuLinerParams):
     min_y = -0.5 * outer_h
     max_x = 0.5 * outer_w
 
+    edge_wrap_depth = max(min(p.edge_wrap_depth_mm, 0.45 * liner_depth), 0.6)
+    edge_wrap_radial = max(p.edge_wrap_radial_mm, 0.6)
+    wrap_inner_w = max(inner_w - 2.0 * edge_wrap_radial, 2.0)
+    wrap_inner_h = max(inner_h - 2.0 * edge_wrap_radial, wrap_inner_w + 0.2)
+
     with BuildPart() as liner_bp:
-        # Open-through capsule tube.
+        # Open-through capsule tube (single TPU sleeve).
         with BuildSketch(Plane.XY):
             _add_capsule(outer_w, outer_h)
         extrude(amount=liner_depth)
@@ -194,6 +201,23 @@ def build_liner(p: MevoTpuLinerParams):
         with BuildSketch(Plane.XY.offset(-0.2)):
             _add_capsule(inner_w, inner_h)
         extrude(amount=liner_depth + 0.4, mode=Mode.SUBTRACT)
+
+        # Thin edge wraps around front/back face perimeter only.
+        # This avoids full-face caps while still protecting impact-prone edges.
+        with BuildSketch(Plane.XY):
+            _add_capsule(inner_w, inner_h)
+        extrude(amount=edge_wrap_depth)
+        with BuildSketch(Plane.XY.offset(-0.1)):
+            _add_capsule(wrap_inner_w, wrap_inner_h)
+        extrude(amount=edge_wrap_depth + 0.2, mode=Mode.SUBTRACT)
+
+        rear_start = liner_depth - edge_wrap_depth
+        with BuildSketch(Plane.XY.offset(rear_start)):
+            _add_capsule(inner_w, inner_h)
+        extrude(amount=edge_wrap_depth)
+        with BuildSketch(Plane.XY.offset(rear_start - 0.1)):
+            _add_capsule(wrap_inner_w, wrap_inner_h)
+        extrude(amount=edge_wrap_depth + 0.2, mode=Mode.SUBTRACT)
 
         if p.enable_side_vents:
             for side in (-1.0, 1.0):
@@ -240,6 +264,8 @@ def build_liner(p: MevoTpuLinerParams):
                 "inner_width": float(inner_w),
                 "outer_height": float(outer_h),
                 "outer_width": float(outer_w),
+                "edge_wrap_depth": float(edge_wrap_depth),
+                "edge_wrap_radial": float(edge_wrap_radial),
             },
             "fit_margins_mm": {
                 "radial_w_each_side": float(radial_margin_w),
@@ -267,7 +293,7 @@ def build_liner(p: MevoTpuLinerParams):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate Mevo Start TPU liner")
+    parser = argparse.ArgumentParser(description="Generate Mevo Start TPU sleeve")
     parser.add_argument("--out", type=Path, default=Path("models/mevo_case"), help="Output directory")
     parser.add_argument(
         "--asa-report",
@@ -279,6 +305,8 @@ def main():
     parser.add_argument("--end-clearance", type=float, default=None, help="TPU front/rear end clearance (mm)")
     parser.add_argument("--shell-gap", type=float, default=None, help="Target radial gap between TPU and ASA shell (mm)")
     parser.add_argument("--thickness", type=float, default=None, help="Desired TPU shell thickness (mm)")
+    parser.add_argument("--edge-wrap-depth", type=float, default=None, help="Front/rear edge wrap depth (mm)")
+    parser.add_argument("--edge-wrap-radial", type=float, default=None, help="How far edge wrap extends onto face from perimeter (mm)")
     parser.add_argument("--no-tripod-opening", action="store_true", help="Disable TPU tripod opening")
     parser.add_argument("--no-side-vents", action="store_true", help="Disable TPU side vent openings")
     args = parser.parse_args()
@@ -293,6 +321,10 @@ def main():
         params.shell_to_asa_gap_mm = args.shell_gap
     if args.thickness is not None:
         params.desired_shell_thickness_mm = args.thickness
+    if args.edge_wrap_depth is not None:
+        params.edge_wrap_depth_mm = args.edge_wrap_depth
+    if args.edge_wrap_radial is not None:
+        params.edge_wrap_radial_mm = args.edge_wrap_radial
     if args.no_tripod_opening:
         params.enable_tripod_opening = False
     if args.no_side_vents:
@@ -301,9 +333,17 @@ def main():
     liner, report = build_liner(params)
 
     args.out.mkdir(parents=True, exist_ok=True)
-    out_step = args.out / "mevo_start_tpu_liner.step"
-    out_json = args.out / "mevo_start_tpu_liner_report.json"
-    archived = _archive_existing([out_step, out_json], args.out)
+    out_step = args.out / "mevo_start_tpu_sleeve.step"
+    out_json = args.out / "mevo_start_tpu_sleeve_report.json"
+    archived = _archive_existing(
+        [
+            out_step,
+            out_json,
+            args.out / "mevo_start_tpu_liner.step",
+            args.out / "mevo_start_tpu_liner_report.json",
+        ],
+        args.out,
+    )
 
     export_step(liner, str(out_step))
     payload = {"params": asdict(params), "report": report}

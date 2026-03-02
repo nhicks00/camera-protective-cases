@@ -8,9 +8,9 @@
     "device_width_mm": 34.0,
     "enforce_nominal_dimensions": true,
     "strict_symmetric_profile": true,
-    "clearance_mm": 2.3,
-    "wall_mm": 2.5,
-    "front_wall_mm": 2.5,
+    "clearance_mm": 0.65,
+    "wall_mm": 3.4,
+    "front_wall_mm": 4.0,
     "use_inner_pill_profile": true,
     "enforce_capsule_profile": true,
     "use_reference_lens_hole": false,
@@ -58,22 +58,22 @@
       "scale_y": 1.2797512900567427
     },
     "profile_bounds_mm": {
-      "min_x": -21.8,
-      "max_x": 21.8,
-      "min_y": -42.549692117191995,
-      "max_y": 42.549692117191995
+      "min_x": -21.049999999999997,
+      "max_x": 21.049999999999997,
+      "min_y": -41.799912989641214,
+      "max_y": 41.799912989641214
     },
     "derived": {
-      "inner_depth_mm": 91.6,
-      "shell_depth_mm": 94.1,
+      "inner_depth_mm": 88.3,
+      "shell_depth_mm": 92.3,
       "corner_radius_mm": {
-        "inner": 19.1,
-        "outer": 21.6,
-        "rear_plug": 18.85
+        "inner": 17.45,
+        "outer": 20.849999999999998,
+        "rear_plug": 17.2
       },
       "machined_finish_mm": {
-        "body_axis_x_fillet": 0.3,
-        "body_axis_y_fillet": 0.0,
+        "body_axis_x_fillet": 0.8,
+        "body_axis_y_fillet": 0.4,
         "rear_plate_global_fillet": 0.8
       },
       "lens_reference_center_mm": [

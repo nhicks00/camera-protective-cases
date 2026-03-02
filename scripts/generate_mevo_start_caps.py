@@ -47,8 +47,8 @@ class MevoCapParams:
     device_width_mm: float = 34.0
 
     # Sleeve geometry that caps mate to
-    sleeve_clearance_mm: float = 0.65
-    sleeve_wall_mm: float = 3.4
+    sleeve_clearance_mm: float = 2.3
+    sleeve_wall_mm: float = 2.5
 
     # Cap geometry
     cap_thickness_mm: float = 3.0

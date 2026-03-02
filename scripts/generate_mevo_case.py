@@ -61,9 +61,9 @@ class CaseParams:
     device_width_mm: float = 34.0
     enforce_nominal_dimensions: bool = True
     strict_symmetric_profile: bool = True
-    clearance_mm: float = 0.65
-    wall_mm: float = 3.4
-    front_wall_mm: float = 4.0
+    clearance_mm: float = 2.3
+    wall_mm: float = 2.5
+    front_wall_mm: float = 2.5
     use_inner_pill_profile: bool = True
     enforce_capsule_profile: bool = True
 

@@ -14,6 +14,8 @@ This project now includes a printable protective sleeve generated from the MAKI 
 ## Generated Outputs
 - `models/maki_case/maki_live_case_sleeve.step`
 - `models/maki_case/maki_live_case_report.json`
+- `models/maki_case/maki_live_tpu_sleeve.step`
+- `models/maki_case/maki_live_tpu_sleeve_report.json`
 
 Archive policy:
 - Previous versions are auto-moved to `models/maki_case/archive/` before new files are written.
@@ -21,8 +23,14 @@ Archive policy:
 ## Design Characteristics
 - Tight, one-piece sleeve
 - Fully open-through shell (no front plate and no rear plate)
-- Default internal clearance: `2.65 mm`
-- Default wall thickness: `3.2 mm`
+- Default ASA internal clearance: `2.3 mm`
+- Default ASA wall thickness: `2.5 mm`
+- TPU sleeve defaults:
+  - internal camera clearance: `0.2 mm`
+  - TPU wall thickness: `2.0 mm`
+  - TPU-to-ASA radial gap: `0.1 mm`
+  - edge-wrap depth: `2.5 mm`
+  - edge-wrap radial hold: `2.0 mm`
 - Tripod-side access opening around detected `1/4"-20` region
 - Side vent slots extracted from STEP across flat + corner side panels
 - Enforced vent layout on tripod side: `3` adjacent panels x `8` slots each (`24` total), with through-cuts
@@ -31,29 +39,30 @@ Archive policy:
 ## Generator Script
 - `scripts/generate_maki_live_case.py`
 
-## TPU Unibody (Single Print)
-- `scripts/generate_maki_live_tpu_unibody.py`
-- Output: `models/maki_case/maki_live_tpu_unibody.step`
-- Output report: `models/maki_case/maki_live_tpu_unibody_report.json`
-- Purpose: one connected TPU unit (liner + front + rear end structures fused).
+## TPU Sleeve (Single Print)
+- `scripts/generate_maki_live_tpu_liner.py`
+- Output: `models/maki_case/maki_live_tpu_sleeve.step`
+- Output report: `models/maki_case/maki_live_tpu_sleeve_report.json`
+- Purpose: one connected TPU sleeve with thin front/rear edge wraps (not full face caps).
 
-Generate one-piece TPU unit:
+Generate one-piece TPU sleeve:
 ```bash
 source .venv311/bin/activate
-python scripts/generate_maki_live_tpu_unibody.py
+python scripts/generate_maki_live_tpu_liner.py
 ```
 
-Useful TPU unibody tuning:
+Useful TPU sleeve tuning:
 ```bash
-python scripts/generate_maki_live_tpu_unibody.py \
+python scripts/generate_maki_live_tpu_liner.py \
   --clearance 0.2 \
-  --thickness 2.1 \
-  --bumper-extra 0.55 \
-  --band-depth 12.0 \
+  --thickness 2.0 \
+  --edge-wrap-depth 2.5 \
+  --edge-wrap-radial 2.0 \
   --end-clearance 0.2
 ```
 
-By default, this command archives legacy separate TPU files (`maki_live_tpu_liner.*`, `maki_live_tpu_front_cap.*`, `maki_live_tpu_rear_cap.*`) into `models/maki_case/archive/`.
+Legacy note:
+- `scripts/generate_maki_live_tpu_unibody.py` still exists for older full fused-cap style, but current preferred TPU workflow is `maki_live_tpu_sleeve.step`.
 
 ## Front/Rear Caps
 - `scripts/generate_maki_live_caps.py`
@@ -91,15 +100,15 @@ python scripts/generate_maki_live_case.py
 Useful tuning flags:
 ```bash
 python scripts/generate_maki_live_case.py \
-  --clearance 2.65 \
-  --wall 3.2 \
+  --clearance 2.3 \
+  --wall 2.5 \
   --lens-d 30 \
   --tripod-z 48
 ```
 
 ## Print Notes (ASA/PETG)
 - 0.2 mm layers
-- 4-5 perimeters
+- 4 perimeters (wall loops) minimum
 - 25-40% gyroid infill
 - Print with rear opening up to keep supports low
 - If fit is still too tight, increase `--clearance` to `2.9` or `3.1`
