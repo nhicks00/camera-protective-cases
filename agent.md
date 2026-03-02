@@ -81,6 +81,7 @@ Active hard-shell and TPU workflows:
     - 8 on each adjacent panel
     - 24 total on that side
   - Through-cut depth increased so vents fully penetrate.
+  - Vent row clustering now locks to the STEP-derived rear vent bank (8 rows) and ignores front outlier slots.
   - Tripod side includes local armor boss thickening around the mount opening.
   - Vent pass-through validated (`24/24` through by ray-check) and vent coordinates emitted in report under `step_side_features.vents_applied_entries`.
 - ASA caps:
@@ -88,6 +89,7 @@ Active hard-shell and TPU workflows:
   - Generator: `scripts/generate_maki_live_caps.py --profile asa`
   - Default is rear-cap-only export (front cap is legacy optional via `--include-front-cap`).
   - Rear cutouts are extracted from all STEP solids with tiny-hole filtering to preserve port access cutouts over corner fastener holes.
+  - Rear cap port cutouts include default oversize clearance (`cutout_extra_mm=1.5`) for cable boot/plastic strain-relief fit.
 - TPU one-piece sleeve (preferred TPU output):
   - `models/maki_case/maki_live_tpu_sleeve.step`
   - Generator: `scripts/generate_maki_live_tpu_liner.py`

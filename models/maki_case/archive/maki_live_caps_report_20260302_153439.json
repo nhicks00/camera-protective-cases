@@ -19,7 +19,7 @@
     "end_plane_tol_mm": 3.0,
     "max_cutout_ratio_xy": 0.8,
     "include_major_front_aperture": true,
-    "rear_min_cutout_dim_mm": 4.0,
+    "rear_min_cutout_dim_mm": 3.0,
     "rear_min_cutout_area_mm2": 8.0,
     "section_z_ratio": 0.5,
     "offset_resolution": 64
@@ -78,7 +78,7 @@
         "end_plane_tol_mm": 3.0
       },
       "front_count": 17,
-      "rear_count": 5,
+      "rear_count": 9,
       "front": [
         {
           "x": -7.811514384424715e-11,
@@ -219,6 +219,30 @@
           "shape": "slot",
           "w": 17.188907939858467,
           "h": 7.685436971003212
+        },
+        {
+          "x": -20.36146782899021,
+          "y": 21.37954134086833,
+          "shape": "circle",
+          "d": 3.5439749410672716
+        },
+        {
+          "x": 20.36146782899021,
+          "y": 21.37954134086833,
+          "shape": "circle",
+          "d": 3.5439749410672716
+        },
+        {
+          "x": -17.816284350366434,
+          "y": -23.212073455799903,
+          "shape": "circle",
+          "d": 3.5439749410672716
+        },
+        {
+          "x": 17.816284350366434,
+          "y": -23.212073455799903,
+          "shape": "circle",
+          "d": 3.5439749410672716
         }
       ]
     }

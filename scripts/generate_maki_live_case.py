@@ -65,6 +65,8 @@ class MakiCaseParams:
     include_front_cutouts: bool = True
     front_window_mm: float = 16.0
     cutout_extra_mm: float = 0.25
+    front_min_cutout_dim_mm: float = 3.0
+    front_min_cutout_area_mm2: float = 8.0
     max_cutout_ratio_xy: float = 0.80
     include_major_front_aperture: bool = True
 
@@ -79,6 +81,7 @@ class MakiCaseParams:
     tripod_open_w_mm: float = 20.0
     tripod_open_h_mm: float = 18.0
     tripod_hole_diameter_mm: float = 10.0
+    tripod_cutout_extra_mm: float = 1.5
     tripod_armor_extra_mm: float = 1.4
     tripod_armor_margin_mm: float = 4.5
     use_step_side_features: bool = True
@@ -435,9 +438,15 @@ def _extract_front_cutouts(housing, p: MakiCaseParams, sx: float, sy: float, zma
             entry = {"x": xmid * sx, "y": ymid * sy, "shape": shape["shape"]}
             if shape["shape"] == "circle":
                 entry["d"] = shape["d"] * (sx + sy) * 0.5 + p.cutout_extra_mm
+                max_dim = entry["d"]
+                area = math.pi * (0.5 * entry["d"]) ** 2
             else:
                 entry["w"] = max(shape["w"] * sx + p.cutout_extra_mm, 0.8)
                 entry["h"] = max(shape["h"] * sy + p.cutout_extra_mm, 0.8)
+                max_dim = max(entry["w"], entry["h"])
+                area = entry["w"] * entry["h"]
+            if max_dim < p.front_min_cutout_dim_mm or area < p.front_min_cutout_area_mm2:
+                continue
             cutouts.append(entry)
 
     out = []
@@ -469,27 +478,22 @@ def _collapse_close(values: list[float], tol: float) -> list[float]:
 
 def _derive_tripanel_vents(step_vents, map_x, map_z, sx: float, sz: float, outer_w: float, p: MakiCaseParams):
     """Derive a 3-panel x/z vent pattern (8 rows each) from STEP side vents."""
-    neg_side = []
+    # Primary vent-bank candidates: large elongated side slots on tripod side,
+    # excluding tiny front-region decorative/fastener loops.
+    neg_primary = []
     for v in step_vents:
         if v["axis"] != "y" or v["side"] != "neg":
             continue
-        t_span = v["slot_t"] * sx
-        z_span = v["slot_z"] * sz
-        slot_w = max(t_span, z_span) + p.side_feature_clearance_mm
-        slot_h = max(min(t_span, z_span) + p.side_feature_clearance_mm, 0.8)
-        neg_side.append(
-            {
-                "x": float(map_x(v["x"])),
-                "z": float(map_z(v["z"])),
-                "slot_w": float(slot_w),
-                "slot_h": float(slot_h),
-            }
-        )
+        if v["z"] > -20.0:
+            continue
+        if v["slot_t"] < 8.0 or v["slot_z"] < 1.6:
+            continue
+        neg_primary.append(v)
 
     # Fallback pattern if extraction is sparse.
-    if not neg_side:
+    if not neg_primary:
         z_centers = [
-            p.clearance_mm + p.vent_start_from_front_mm + i * p.vent_pitch_mm
+            p.clearance_mm + p.front_wall_mm + p.vent_start_from_front_mm + i * p.vent_pitch_mm
             for i in range(p.vent_rows_per_panel)
         ]
         x_off = p.tripanel_fallback_x_offset_mm
@@ -502,42 +506,58 @@ def _derive_tripanel_vents(step_vents, map_x, map_z, sx: float, sz: float, outer
         }
 
     # Use median slot size for consistency across the 3 panels.
-    slot_w = float(np.median([v["slot_w"] for v in neg_side]))
-    slot_h = float(np.median([v["slot_h"] for v in neg_side]))
+    slot_w = float(
+        np.median([max(v["slot_t"] * sx, v["slot_z"] * sz) + p.side_feature_clearance_mm for v in neg_primary])
+    )
+    slot_h = float(
+        np.median([max(min(v["slot_t"] * sx, v["slot_z"] * sz) + p.side_feature_clearance_mm, 0.8) for v in neg_primary])
+    )
 
-    # Build z row centers (8 vents per panel).
-    z_vals = _collapse_close([v["z"] for v in neg_side], tol=0.9)
+    # Build z row centers (8 vents per panel) from primary bank only.
+    z_vals_raw = _collapse_close([v["z"] for v in neg_primary], tol=0.7)
+    z_vals = sorted(z_vals_raw)
     if len(z_vals) >= p.vent_rows_per_panel:
-        z_centers = z_vals[: p.vent_rows_per_panel]
+        # Prefer the longest contiguous run with near-constant pitch.
+        best = None
+        for i in range(0, len(z_vals) - p.vent_rows_per_panel + 1):
+            chunk = z_vals[i : i + p.vent_rows_per_panel]
+            diffs = np.diff(chunk)
+            pitch = float(np.median(diffs))
+            spread = float(np.max(np.abs(diffs - pitch))) if len(diffs) else 0.0
+            score = (spread, abs(pitch - p.vent_pitch_mm), -chunk[0])
+            if best is None or score < best[0]:
+                best = (score, chunk)
+        z_centers = [float(map_z(z)) for z in best[1]]
     else:
         if len(z_vals) >= 2:
             pitch = float(np.median(np.diff(sorted(z_vals))))
         else:
             pitch = p.vent_pitch_mm
         z0 = z_vals[0] if z_vals else (p.clearance_mm + p.vent_start_from_front_mm)
-        z_centers = [z0 + i * pitch for i in range(p.vent_rows_per_panel)]
+        z_centers = [float(map_z(z0 + i * pitch)) for i in range(p.vent_rows_per_panel)]
 
     # Build 3 panel x centers: center + 2 adjacent panels.
-    x_vals = _collapse_close([v["x"] for v in neg_side], tol=2.0)
-    if len(x_vals) >= 3:
-        mid = min(x_vals, key=lambda x: abs(x))
-        left = min([x for x in x_vals if x < mid], default=mid - p.tripanel_fallback_x_offset_mm)
-        right = max([x for x in x_vals if x > mid], default=mid + p.tripanel_fallback_x_offset_mm)
+    mid = float(np.median([map_x(v["x"]) for v in neg_primary]))
+    side_x_raw = [
+        map_x(v["x"])
+        for v in step_vents
+        if v["axis"] == "x" and abs(v["x"]) > 10.0 and v["slot_t"] >= 8.0 and v["z"] < -20.0
+    ]
+    side_x = _collapse_close(side_x_raw, tol=2.0)
+    if len(side_x) >= 2:
+        left = float(min(side_x))
+        right = float(max(side_x))
         x_centers = [left, mid, right]
-    elif len(x_vals) == 2:
-        mid = 0.5 * (x_vals[0] + x_vals[1])
-        x_off = max(abs(x_vals[0] - mid), p.tripanel_fallback_x_offset_mm * 0.7)
-        x_centers = [mid - x_off, mid, mid + x_off]
     else:
-        x_off = max(0.23 * outer_w, p.tripanel_fallback_x_offset_mm)
-        x_centers = [x_vals[0] - x_off, x_vals[0], x_vals[0] + x_off]
+        x_off = max(0.33 * outer_w, p.tripanel_fallback_x_offset_mm)
+        x_centers = [mid - x_off, mid, mid + x_off]
 
     return {
         "x_centers": [float(x) for x in x_centers],
         "z_centers": [float(z) for z in z_centers],
         "slot_w": slot_w,
         "slot_h": slot_h,
-        "source": "step_neg_y",
+        "source": "step_tripanel_cluster",
     }
 
 
@@ -740,7 +760,7 @@ def build_case(p: MakiCaseParams):
             if t is not None:
                 x_c = map_x(t["x"])
                 z_c = map_z(t["z"])
-                d = max(2.0 * t["r"] * sx + p.side_feature_clearance_mm, 2.0)
+                d = max(2.0 * t["r"] * sx + p.tripod_cutout_extra_mm, 2.0)
                 on_neg = t["side"] == "neg"
                 y_face = min_y + 0.15 if on_neg else max_y - 0.15
                 tripod_from_step_front_mm = float(zmax - float(t["z"]))

@@ -52,7 +52,7 @@ class MakiCapParams:
     plug_depth_mm: float = 1.8
     plug_clearance_mm: float = 0.28
     cap_plate_extra_mm: float = 0.0
-    cutout_extra_mm: float = 0.25
+    cutout_extra_mm: float = 1.5
     front_recess_depth_mm: float = 1.2
     front_recess_inset_mm: float = 3.0
 
@@ -64,7 +64,7 @@ class MakiCapParams:
     # Ignore very large loops that would remove almost entire cap
     max_cutout_ratio_xy: float = 0.80
     include_major_front_aperture: bool = True
-    rear_min_cutout_dim_mm: float = 3.0
+    rear_min_cutout_dim_mm: float = 4.0
     rear_min_cutout_area_mm2: float = 8.0
 
     # Processing

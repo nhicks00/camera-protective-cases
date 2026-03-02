@@ -18,6 +18,20 @@
   - `models/mevo_case/mevo_start_back_cap_asa.step`
   - `models/mevo_case/reports/mevo_start_dual_material_report.json`
 
+### MAKI Port Oversize + Sleeve Vent/Tripod Alignment Pass
+- Updated `generate_maki_live_caps.py`:
+  - Increased default port cutout oversize to `1.5 mm` (`cutout_extra_mm=1.5`) to accommodate cable boot width, not just metal connector geometry.
+  - Raised rear cutout minimum-size filter to remove corner fastener-hole artifacts from rear-cap port cutouts.
+- Updated `generate_maki_live_case.py`:
+  - Reworked tripanel vent clustering to lock onto the true 8-row rear vent bank from STEP geometry and avoid front outlier slots.
+  - Vent panel centers now derive from STEP side-panel vent families (`x≈left/center/right`) so sleeve vent cuts align with three-panel vent layout.
+  - Increased tripod sleeve cutout oversize via dedicated parameter (`tripod_cutout_extra_mm`) for better mounting access.
+- Regenerated:
+  - `models/maki_case/maki_live_case_sleeve.step`
+  - `models/maki_case/maki_live_rear_cap.step`
+  - `models/maki_case/reports/maki_live_case_report.json`
+  - `models/maki_case/reports/maki_live_caps_report.json`
+
 ### Mevo Dual-Material Height/Depth Fit Correction
 - Corrected Mevo dual-material default fit envelope to match Mevo Start dimensions:
   - camera nominal: `34.0 x 75.5 x 87.0 mm` (W x H x D)
