@@ -2,6 +2,23 @@
 
 ## 2026-03-02
 
+### Mevo Dual-Body Ovular Profile Regression Fix
+- Updated `scripts/generate_mevo_dual_material_case.py` to remove rounded-rectangle default shell generation for the dual body.
+- Dual-body defaults now use a true vertical capsule/ovular cross-section for:
+  - ASA outer shell profile
+  - ASA inner cavity profile
+  - TPU outer profile
+  - TPU inner cavity profile
+- Changed dual-body default front behavior to open ovular front (`open_front_ovular=true`) to match the style of `mevo_start_case_body` and avoid the previous front circular-cutout appearance.
+- Added optional CLI controls:
+  - `--closed-front`
+  - `--enable-front-lens-led-cutouts`
+  - `--disable-capsule-profile` (fallback only)
+- Regenerated:
+  - `models/mevo_case/mevo_start_body_dual_material.step`
+  - `models/mevo_case/mevo_start_back_cap_asa.step`
+  - `models/mevo_case/reports/mevo_start_dual_material_report.json`
+
 ### Mevo Review-Spec Alignment (Dual-Material Bucket + Back Cap)
 - Updated `scripts/generate_mevo_dual_material_case.py` to match the latest reviewed Mevo spec exactly:
   - TPU inner cavity: `34.3 x 50.3 x 85.0 mm`

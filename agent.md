@@ -99,9 +99,13 @@ Current preferred workflow:
   - Generator: `scripts/generate_mevo_dual_material_case.py`
   - Body STEP contains named solids: `TPU_Sleeve`, `ASA_Shell`.
 - Geometry intent:
-  - front-closed ASA bucket integrated with main sleeve (sun-hood protection),
+  - ovular/capsule-profile sleeve geometry (not rounded-rectangle profile),
+  - open ovular front by default (matches `mevo_start_case_body` opening style),
   - separate pure-ASA back cap,
   - bottom tripod hole cuts through ASA and TPU so mount contacts camera directly.
+- Optional flags:
+  - `--closed-front` to restore a front wall,
+  - `--enable-front-lens-led-cutouts` to add front lens/LED holes when closed-front mode is enabled.
 - Active review-spec values are recorded in `models/mevo_case/reports/mevo_start_dual_material_report.json`.
 - Legacy open-through/cap workflows remain in repo for fallback only and are not the active default path.
 
