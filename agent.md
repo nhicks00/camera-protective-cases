@@ -1,0 +1,128 @@
+# Agent Context: Camera Protective Cases (Mevo Start + BirdDog MAKI Live)
+
+This file is the persistent handoff context for future sessions.
+
+## Scope
+This repo builds parametric, 3D-printable protective case components for:
+- Mevo Start
+- BirdDog MAKI Live
+
+Primary goals:
+- Tight fit
+- Outdoor durability
+- Impact resistance
+- Clean, smooth CAD geometry (not faceted mesh-style approximations)
+
+## Core Modeling Rules
+- Use `build123d` (OpenCascade B-REP).
+- Export STEP files for deliverables.
+- Keep curves smooth; avoid tiny rectangular facet chains for curved surfaces.
+- Keep generated outputs organized by camera and archive prior versions.
+
+## Output Organization Policy
+- Current outputs:
+  - `models/mevo_case/`
+  - `models/maki_case/`
+- Each generator archives old versions into:
+  - `models/mevo_case/archive/`
+  - `models/maki_case/archive/`
+- Top-level in each case folder should show only the latest files for that case.
+
+## Current Project State
+
+### MAKI Live (BirdDog)
+Active hard-shell and TPU workflows:
+- ASA sleeve:
+  - `models/maki_case/maki_live_case_sleeve.step`
+  - Generator: `scripts/generate_maki_live_case.py`
+  - Vent behavior updated to enforced tripod-side 3-panel layout:
+    - 8 vent slots on center panel
+    - 8 on each adjacent panel
+    - 24 total on that side
+  - Through-cut depth increased so vents fully penetrate.
+- ASA caps:
+  - `models/maki_case/maki_live_front_cap.step`
+  - `models/maki_case/maki_live_rear_cap.step`
+  - Generator: `scripts/generate_maki_live_caps.py --profile asa`
+  - Front cap is intentionally inverted-bezel style:
+    - raised outer rim
+    - recessed center panel
+    - plug on rear side
+- TPU one-piece unit (preferred TPU output):
+  - `models/maki_case/maki_live_tpu_unibody.step`
+  - Generator: `scripts/generate_maki_live_tpu_unibody.py`
+  - This fuses liner + front + rear TPU structures into one connected part.
+  - Legacy separate TPU liner/caps are archived by default when unibody is generated.
+
+### Mevo Start
+Current preferred workflow:
+- Use front + rear cap path (single rear closure via rear cap).
+- Main outputs:
+  - `models/mevo_case/mevo_start_front_cap.step`
+  - `models/mevo_case/mevo_start_rear_cap.step`
+  - `models/mevo_case/mevo_start_caps_report.json`
+- Mevo body:
+  - `models/mevo_case/mevo_start_case_body.step`
+  - Generator: `scripts/generate_mevo_case.py`
+- Back-plate duplication resolved:
+  - `mevo_start_case_back_plate.step` is now opt-in only (`--include-back-plate`).
+  - Default generation does not export back plate.
+
+Optional/secondary Mevo TPU:
+- `models/mevo_case/mevo_start_tpu_liner.step`
+- Generator: `scripts/generate_mevo_start_tpu_liner.py`
+- Auto-clamps thickness to fit existing ASA shell clearance.
+
+## Terminology Mapping (Important for user shorthand)
+User shorthand often means:
+- “Maki sleeve” = ASA outer sleeve (`maki_live_case_sleeve.step`)
+- “TPU sleeve for Maki” = one-piece TPU unibody now (not 3 separate pieces)
+- “Maki caps” = ASA front/rear caps
+- “Mevo rear closure” = `mevo_start_rear_cap.step` (single rear piece)
+- “Mevo case back plate” = legacy/optional only
+
+## Key References
+- MAKI references:
+  - `refs/BirdDog_MAKI-Live_3D-file.step`
+  - `refs/MAKI-Live_drawing.pdf`
+- Mevo references:
+  - `refs/Mevo_Start_lens_cover_corrected.stl`
+  - Additional Mevo legacy refs are present in `refs/`.
+
+## Common Commands
+Activate environment:
+```bash
+source .venv311/bin/activate
+```
+
+MAKI:
+```bash
+python scripts/generate_maki_live_case.py
+python scripts/generate_maki_live_caps.py --profile asa
+python scripts/generate_maki_live_tpu_unibody.py
+```
+
+Mevo:
+```bash
+python scripts/generate_mevo_case.py
+python scripts/generate_mevo_start_caps.py --profile asa
+python scripts/generate_mevo_start_caps.py --profile tpu
+```
+
+Legacy Mevo back plate (only when explicitly requested):
+```bash
+python scripts/generate_mevo_case.py --include-back-plate
+```
+
+## Session Continuity Guidance
+When the user gives brief or “random” update requests, assume they refer to this context and default behaviors unless they explicitly override:
+- Keep MAKI TPU as one connected unit.
+- Keep Mevo with single rear closure (rear cap path).
+- Maintain archive hygiene policy.
+- Preserve smooth B-REP output quality.
+
+If the user asks for changes that affect fit/alignment:
+- Regenerate relevant model(s).
+- Check the JSON report in the same folder.
+- Verify outputs are single-solid STEP where applicable.
+- Keep latest at top level and auto-archive previous versions.
