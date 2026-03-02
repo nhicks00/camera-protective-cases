@@ -31,27 +31,29 @@ Archive policy:
 ## Generator Script
 - `scripts/generate_maki_live_case.py`
 
-## TPU Liner (Second Print)
-- `scripts/generate_maki_live_tpu_liner.py`
-- Output: `models/maki_case/maki_live_tpu_liner.step`
-- Output report: `models/maki_case/maki_live_tpu_liner_report.json`
-- Purpose: snug TPU sleeve around the camera body with extra end bumper bands that fill space inside the ASA sleeve.
+## TPU Unibody (Single Print)
+- `scripts/generate_maki_live_tpu_unibody.py`
+- Output: `models/maki_case/maki_live_tpu_unibody.step`
+- Output report: `models/maki_case/maki_live_tpu_unibody_report.json`
+- Purpose: one connected TPU unit (liner + front + rear end structures fused).
 
-Generate TPU liner:
+Generate one-piece TPU unit:
 ```bash
 source .venv311/bin/activate
-python scripts/generate_maki_live_tpu_liner.py
+python scripts/generate_maki_live_tpu_unibody.py
 ```
 
-Useful TPU tuning:
+Useful TPU unibody tuning:
 ```bash
-python scripts/generate_maki_live_tpu_liner.py \
+python scripts/generate_maki_live_tpu_unibody.py \
   --clearance 0.2 \
   --thickness 2.1 \
   --bumper-extra 0.55 \
   --band-depth 12.0 \
   --end-clearance 0.2
 ```
+
+By default, this command archives legacy separate TPU files (`maki_live_tpu_liner.*`, `maki_live_tpu_front_cap.*`, `maki_live_tpu_rear_cap.*`) into `models/maki_case/archive/`.
 
 ## Front/Rear Caps
 - `scripts/generate_maki_live_caps.py`
@@ -70,7 +72,7 @@ Generate ASA caps:
 python scripts/generate_maki_live_caps.py --profile asa
 ```
 
-Generate TPU caps:
+Generate TPU caps (legacy separate parts):
 ```bash
 python scripts/generate_maki_live_caps.py --profile tpu
 ```

@@ -2,6 +2,9 @@
 
 This workspace now includes a parametric two-piece, print-ready enclosure derived from your reference front-cap STL.
 
+Current focus option:
+- front and rear cap workflow (`mevo_start_front_cap.step` + `mevo_start_rear_cap.step`)
+
 ## Generated Outputs
 - `models/mevo_case/mevo_start_case_body.step`
 - `models/mevo_case/mevo_start_case_back_plate.step`

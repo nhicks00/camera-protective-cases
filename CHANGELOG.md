@@ -43,6 +43,13 @@
   - `--front-recess-depth`
   - `--front-recess-inset`
 
+### MAKI TPU One-Piece Unibody
+- Added `scripts/generate_maki_live_tpu_unibody.py` to create a single connected TPU unit (liner + front + rear fused).
+- New outputs:
+  - `models/maki_case/maki_live_tpu_unibody.step`
+  - `models/maki_case/maki_live_tpu_unibody_report.json`
+- Default behavior archives legacy separate TPU parts into `models/maki_case/archive/` so top-level shows only the current unibody TPU output.
+
 ### Project Baseline and Repository Packaging
 - Organized the workspace for Git version control with:
   - root `README.md` (project-wide overview),
