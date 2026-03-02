@@ -476,7 +476,7 @@ def build_case(p: MakiCaseParams):
 
 def main():
     parser = argparse.ArgumentParser(description="Generate MAKI Live protective sleeve")
-    parser.add_argument("--out", type=Path, default=Path("models"), help="Output directory")
+    parser.add_argument("--out", type=Path, default=Path("models/maki_case"), help="Output directory")
     parser.add_argument(
         "--step",
         type=Path,

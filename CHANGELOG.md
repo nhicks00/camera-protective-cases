@@ -2,6 +2,16 @@
 
 ## 2026-03-02
 
+### Model Output Organization
+- Reorganized model outputs into:
+  - `models/mevo_case/`
+  - `models/maki_case/`
+- Moved existing Mevo and MAKI STEP/JSON outputs into their respective subfolders.
+- Updated script default output paths to keep future generations organized:
+  - Mevo scripts now default to `models/mevo_case/`
+  - MAKI scripts now default to `models/maki_case/`
+- Updated README documentation paths to match the new folder layout.
+
 ### Mevo TPU Nesting Compatibility
 - Added `scripts/generate_mevo_start_tpu_liner.py` to generate a TPU inner sleeve that is dimensioned to fit inside the existing Mevo ASA shell.
 - Added auto-fit thickness budgeting:

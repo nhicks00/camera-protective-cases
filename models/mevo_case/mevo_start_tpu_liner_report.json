@@ -1,6 +1,6 @@
 {
   "params": {
-    "asa_report_json": "models/mevo_start_case_report.json",
+    "asa_report_json": "models/mevo_case/mevo_start_case_report.json",
     "device_length_mm": 87.0,
     "device_height_mm": 75.5,
     "device_width_mm": 34.0,

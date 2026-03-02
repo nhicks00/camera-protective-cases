@@ -351,7 +351,7 @@ def main():
         default="asa",
         help="Material profile presets: asa outer shell caps, or tpu liner caps",
     )
-    parser.add_argument("--out", type=Path, default=Path("models"), help="Output directory")
+    parser.add_argument("--out", type=Path, default=Path("models/maki_case"), help="Output directory")
     parser.add_argument(
         "--step",
         type=Path,

@@ -471,7 +471,7 @@ def build_liner(p: MakiTpuLinerParams):
 
 def main():
     parser = argparse.ArgumentParser(description="Generate MAKI Live TPU liner")
-    parser.add_argument("--out", type=Path, default=Path("models"), help="Output directory")
+    parser.add_argument("--out", type=Path, default=Path("models/maki_case"), help="Output directory")
     parser.add_argument(
         "--step",
         type=Path,

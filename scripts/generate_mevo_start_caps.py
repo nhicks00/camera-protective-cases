@@ -268,7 +268,7 @@ def main():
         default="asa",
         help="Material profile: asa hard-shell caps or tpu caps",
     )
-    parser.add_argument("--out", type=Path, default=Path("models"), help="Output directory")
+    parser.add_argument("--out", type=Path, default=Path("models/mevo_case"), help="Output directory")
     parser.add_argument("--length-mm", type=float, default=None, help="Device length (mm)")
     parser.add_argument("--height-mm", type=float, default=None, help="Device height (mm)")
     parser.add_argument("--width-mm", type=float, default=None, help="Device width (mm)")

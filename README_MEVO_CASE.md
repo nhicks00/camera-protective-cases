@@ -3,17 +3,17 @@
 This workspace now includes a parametric two-piece, print-ready enclosure derived from your reference front-cap STL.
 
 ## Generated Outputs
-- `models/mevo_start_case_body.step`
-- `models/mevo_start_case_back_plate.step`
-- `models/mevo_start_case_report.json`
-- `models/mevo_start_front_cap.step`
-- `models/mevo_start_rear_cap.step`
-- `models/mevo_start_caps_report.json`
-- `models/mevo_start_tpu_front_cap.step`
-- `models/mevo_start_tpu_rear_cap.step`
-- `models/mevo_start_tpu_caps_report.json`
-- `models/mevo_start_tpu_liner.step`
-- `models/mevo_start_tpu_liner_report.json`
+- `models/mevo_case/mevo_start_case_body.step`
+- `models/mevo_case/mevo_start_case_back_plate.step`
+- `models/mevo_case/mevo_start_case_report.json`
+- `models/mevo_case/mevo_start_front_cap.step`
+- `models/mevo_case/mevo_start_rear_cap.step`
+- `models/mevo_case/mevo_start_caps_report.json`
+- `models/mevo_case/mevo_start_tpu_front_cap.step`
+- `models/mevo_case/mevo_start_tpu_rear_cap.step`
+- `models/mevo_case/mevo_start_tpu_caps_report.json`
+- `models/mevo_case/mevo_start_tpu_liner.step`
+- `models/mevo_case/mevo_start_tpu_liner_report.json`
 
 ## Design Summary
 - Tight-fitting **two-piece** architecture (impact sleeve + rear closure plate)
@@ -86,7 +86,7 @@ The cap generator defaults to:
 - Rear Mevo I/O cutouts disabled (until exact Mevo rear port mapping is confirmed)
 
 The TPU liner generator auto-clamps shell thickness so the liner fits inside the ASA shell.
-Actual applied thickness and remaining fit margins are written to `mevo_start_tpu_liner_report.json`.
+Actual applied thickness and remaining fit margins are written to `models/mevo_case/mevo_start_tpu_liner_report.json`.
 
 ## Important Fit Note
 Port and button positions are parameterized defaults in `scripts/generate_mevo_case.py` and may need small tuning to your exact camera revision and print shrink behavior (ASA + printer profile).

@@ -15,7 +15,8 @@ All geometry generation is built with `build123d` (OpenCascade B-REP) and export
 
 ## Repository Structure
 - `scripts/`: parametric generators for sleeves, liners, and caps
-- `models/`: generated STEP outputs and JSON reports
+- `models/mevo_case/`: generated Mevo STEP outputs and JSON reports
+- `models/maki_case/`: generated MAKI STEP outputs and JSON reports
 - `refs/`: source reference CAD/STL/PDF assets used for extraction and alignment
 - `README_MEVO_CASE.md`: Mevo-specific generator details
 - `README_MAKI_CASE.md`: MAKI-specific generator details

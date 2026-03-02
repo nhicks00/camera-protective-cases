@@ -473,7 +473,7 @@ def build_case(p: CaseParams):
 
 def main():
     parser = argparse.ArgumentParser(description="Generate Mevo Start protective case")
-    parser.add_argument("--out", type=Path, default=Path("models"), help="Output directory")
+    parser.add_argument("--out", type=Path, default=Path("models/mevo_case"), help="Output directory")
     parser.add_argument(
         "--reference",
         type=Path,

@@ -12,8 +12,8 @@ This project now includes a printable protective sleeve generated from the MAKI 
 - Length: `120.32 mm`
 
 ## Generated Outputs
-- `models/maki_live_case_sleeve.step`
-- `models/maki_live_case_report.json`
+- `models/maki_case/maki_live_case_sleeve.step`
+- `models/maki_case/maki_live_case_report.json`
 
 ## Design Characteristics
 - Tight, one-piece sleeve
@@ -29,8 +29,8 @@ This project now includes a printable protective sleeve generated from the MAKI 
 
 ## TPU Liner (Second Print)
 - `scripts/generate_maki_live_tpu_liner.py`
-- Output: `models/maki_live_tpu_liner.step`
-- Output report: `models/maki_live_tpu_liner_report.json`
+- Output: `models/maki_case/maki_live_tpu_liner.step`
+- Output report: `models/maki_case/maki_live_tpu_liner_report.json`
 - Purpose: snug TPU sleeve around the camera body with extra end bumper bands that fill space inside the ASA sleeve.
 
 Generate TPU liner:
@@ -52,9 +52,9 @@ python scripts/generate_maki_live_tpu_liner.py \
 ## Front/Rear Caps
 - `scripts/generate_maki_live_caps.py`
 - Outputs:
-  - `models/maki_live_front_cap.step`
-  - `models/maki_live_rear_cap.step`
-  - `models/maki_live_caps_report.json`
+  - `models/maki_case/maki_live_front_cap.step`
+  - `models/maki_case/maki_live_rear_cap.step`
+  - `models/maki_case/maki_live_caps_report.json`
 - Cap cutouts are extracted from front/rear end-face loop geometry in the original STEP model.
 
 Generate ASA caps:
@@ -68,9 +68,9 @@ python scripts/generate_maki_live_caps.py --profile tpu
 ```
 
 TPU cap outputs:
-- `models/maki_live_tpu_front_cap.step`
-- `models/maki_live_tpu_rear_cap.step`
-- `models/maki_live_tpu_caps_report.json`
+- `models/maki_case/maki_live_tpu_front_cap.step`
+- `models/maki_case/maki_live_tpu_rear_cap.step`
+- `models/maki_case/maki_live_tpu_caps_report.json`
 
 Regenerate:
 ```bash

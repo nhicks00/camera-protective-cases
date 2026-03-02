@@ -36,7 +36,7 @@ from build123d import (
 @dataclass
 class MevoTpuLinerParams:
     # Source ASA case report to inherit device and shell alignment defaults.
-    asa_report_json: Path = Path("models/mevo_start_case_report.json")
+    asa_report_json: Path = Path("models/mevo_case/mevo_start_case_report.json")
 
     # Device dimensions (mm)
     device_length_mm: float = 87.0
@@ -248,11 +248,11 @@ def build_liner(p: MevoTpuLinerParams):
 
 def main():
     parser = argparse.ArgumentParser(description="Generate Mevo Start TPU liner")
-    parser.add_argument("--out", type=Path, default=Path("models"), help="Output directory")
+    parser.add_argument("--out", type=Path, default=Path("models/mevo_case"), help="Output directory")
     parser.add_argument(
         "--asa-report",
         type=Path,
-        default=Path("models/mevo_start_case_report.json"),
+        default=Path("models/mevo_case/mevo_start_case_report.json"),
         help="ASA case report JSON used for alignment and fit budget",
     )
     parser.add_argument("--device-clearance", type=float, default=None, help="TPU-to-device radial clearance (mm)")
