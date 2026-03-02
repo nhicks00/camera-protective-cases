@@ -2,6 +2,23 @@
 
 ## 2026-03-02
 
+### MAKI Through-Cut Validation + Regeneration (STEP-Driven)
+- Fixed MAKI tripod opening generation in both sleeve generators:
+  - `scripts/generate_maki_live_case.py`
+  - `scripts/generate_maki_live_tpu_liner.py`
+- Root cause was side-hole subtraction orientation/placement on XZ/ZX planes; this caused non-through tripod cuts.
+- Updated cut generation so tripod openings are true circular through-cuts in both:
+  - ASA sleeve (`maki_live_case_sleeve.step`)
+  - TPU sleeve (`maki_live_tpu_sleeve.step`)
+- Regenerated and verified:
+  - MAKI ASA sleeve vents: `24/24` open (8 center `Y` + 16 side `X`)
+  - MAKI TPU sleeve vents: `24/24` open
+  - MAKI ASA + TPU tripod openings: through-cut and open
+  - MAKI rear cap cutouts: `5/5` center-open
+- Added validation summary outputs:
+  - `models/maki_case/reports/maki_validation_summary.json`
+  - `models/mevo_case/reports/mevo_validation_summary.json`
+
 ### Cutout Alignment Corrections (MAKI + Mevo)
 - MAKI rear-cap extraction fix:
   - `generate_maki_live_caps.py` now interrogates all STEP solids (not just largest solid) when extracting end-face cutouts.

@@ -319,7 +319,8 @@ def _build_cap(
                     if c["shape"] == "circle":
                         Circle(c["d"] * 0.5)
                     elif c["shape"] == "slot":
-                        SlotOverall(c["w"], c["h"])
+                        # Rear I/O connectors are generally rectilinear; use hard-edged openings.
+                        Rectangle(c["w"], c["h"])
                     else:
                         Rectangle(c["w"], c["h"])
         extrude(amount=cut_depth, mode=Mode.SUBTRACT)

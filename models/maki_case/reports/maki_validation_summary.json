@@ -1,0 +1,65 @@
+{
+  "timestamp": "2026-03-02",
+  "checks": {
+    "asa": {
+      "vents": {
+        "y_open": 8,
+        "y_total": 8,
+        "x_open": 16,
+        "x_total": 16
+      },
+      "tripod": {
+        "open": true,
+        "first_hit_mm": 99.59000007629395
+      }
+    },
+    "tpu": {
+      "vents": {
+        "y_open": 24,
+        "y_total": 24,
+        "x_open": 0,
+        "x_total": 0
+      },
+      "tripod": {
+        "open": true,
+        "first_hit_mm": 94.38999969482421
+      }
+    },
+    "rear_cap": {
+      "center_open_count": 5,
+      "total": 5,
+      "samples": [
+        {
+          "index": 0,
+          "shape": "slot",
+          "first_hit_mm": null,
+          "center_open": true
+        },
+        {
+          "index": 1,
+          "shape": "circle",
+          "first_hit_mm": null,
+          "center_open": true
+        },
+        {
+          "index": 2,
+          "shape": "rect",
+          "first_hit_mm": null,
+          "center_open": true
+        },
+        {
+          "index": 3,
+          "shape": "circle",
+          "first_hit_mm": null,
+          "center_open": true
+        },
+        {
+          "index": 4,
+          "shape": "slot",
+          "first_hit_mm": null,
+          "center_open": true
+        }
+      ]
+    }
+  }
+}

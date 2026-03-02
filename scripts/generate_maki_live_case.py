@@ -476,8 +476,8 @@ def _collapse_close(values: list[float], tol: float) -> list[float]:
     return out
 
 
-def _derive_tripanel_vents(step_vents, map_x, map_z, sx: float, sz: float, outer_w: float, p: MakiCaseParams):
-    """Derive a 3-panel x/z vent pattern (8 rows each) from STEP side vents."""
+def _derive_tripanel_vents(step_vents, map_x, map_y, map_z, sx: float, sz: float, outer_w: float, p: MakiCaseParams):
+    """Derive a 3-panel vent pattern (8 rows each) from STEP side vents."""
     # Primary vent-bank candidates: large elongated side slots on tripod side,
     # excluding tiny front-region decorative/fastener loops.
     neg_primary = []
@@ -536,24 +536,38 @@ def _derive_tripanel_vents(step_vents, map_x, map_z, sx: float, sz: float, outer
         z0 = z_vals[0] if z_vals else (p.clearance_mm + p.vent_start_from_front_mm)
         z_centers = [float(map_z(z0 + i * pitch)) for i in range(p.vent_rows_per_panel)]
 
-    # Build 3 panel x centers: center + 2 adjacent panels.
-    mid = float(np.median([map_x(v["x"]) for v in neg_primary]))
-    side_x_raw = [
-        map_x(v["x"])
-        for v in step_vents
-        if v["axis"] == "x" and abs(v["x"]) > 10.0 and v["slot_t"] >= 8.0 and v["z"] < -20.0
+    # Build 3 panel descriptors:
+    # - center panel: negative-Y wall
+    # - adjacent panels: negative-X and positive-X side walls (corner/adjacent panels)
+    center_x = float(np.median([map_x(v["x"]) for v in neg_primary]))
+    x_neg_candidates = [
+        v for v in step_vents
+        if v["axis"] == "x" and v["side"] == "neg" and v["z"] < -20.0 and v["slot_t"] >= 8.0
     ]
-    side_x = _collapse_close(side_x_raw, tol=2.0)
-    if len(side_x) >= 2:
-        left = float(min(side_x))
-        right = float(max(side_x))
-        x_centers = [left, mid, right]
+    x_pos_candidates = [
+        v for v in step_vents
+        if v["axis"] == "x" and v["side"] == "pos" and v["z"] < -20.0 and v["slot_t"] >= 8.0
+    ]
+    if x_neg_candidates and x_pos_candidates:
+        x_neg = float(np.median([map_x(v["x"]) for v in x_neg_candidates]))
+        x_pos = float(np.median([map_x(v["x"]) for v in x_pos_candidates]))
+        y_neg = float(np.median([map_y(v["y"]) for v in x_neg_candidates]))
+        y_pos = float(np.median([map_y(v["y"]) for v in x_pos_candidates]))
     else:
         x_off = max(0.33 * outer_w, p.tripanel_fallback_x_offset_mm)
-        x_centers = [mid - x_off, mid, mid + x_off]
+        x_neg = center_x - x_off
+        x_pos = center_x + x_off
+        y_neg = 0.0
+        y_pos = 0.0
+
+    panels = [
+        {"axis": "x", "side": "neg", "x": x_neg, "y": y_neg},
+        {"axis": "y", "side": "neg", "x": center_x, "y": 0.0},
+        {"axis": "x", "side": "pos", "x": x_pos, "y": y_pos},
+    ]
 
     return {
-        "x_centers": [float(x) for x in x_centers],
+        "panels": panels,
         "z_centers": [float(z) for z in z_centers],
         "slot_w": slot_w,
         "slot_h": slot_h,
@@ -676,33 +690,58 @@ def build_case(p: MakiCaseParams):
 
         if p.use_step_side_features:
             if p.enforce_tripanel_vent_layout:
-                vent_pattern = _derive_tripanel_vents(step_features["vents"], map_x, map_z, sx, sz, outer_w, p)
-                y_face = min_y - 0.2
+                vent_pattern = _derive_tripanel_vents(step_features["vents"], map_x, map_y, map_z, sx, sz, outer_w, p)
                 cut_depth = max(p.vent_cut_depth_mm, p.wall_mm + p.tripod_armor_extra_mm + 3.0)
-                for panel_idx, x_c in enumerate(vent_pattern["x_centers"]):
+                for panel_idx, panel in enumerate(vent_pattern["panels"]):
                     for z_c in vent_pattern["z_centers"]:
-                        # Start from outer face and cut inward to guarantee through-wall opening.
-                        with Locations((x_c, y_face, z_c)):
-                            Box(
-                                vent_pattern["slot_h"],
-                                cut_depth,
-                                vent_pattern["slot_w"],
-                                align=(Align.CENTER, Align.MIN, Align.CENTER),
-                                mode=Mode.SUBTRACT,
+                        if panel["axis"] == "y":
+                            y_face = min_y - 0.2
+                            # Center panel: cut from -Y side inward.
+                            with Locations((panel["x"], y_face, z_c)):
+                                Box(
+                                    vent_pattern["slot_h"],
+                                    cut_depth,
+                                    vent_pattern["slot_w"],
+                                    align=(Align.CENTER, Align.MIN, Align.CENTER),
+                                    mode=Mode.SUBTRACT,
+                                )
+                            vents_used.append(
+                                {
+                                    "axis": "y",
+                                    "side": "neg",
+                                    "x": float(panel["x"]),
+                                    "y": float(y_face),
+                                    "z": float(z_c),
+                                    "slot_w": float(vent_pattern["slot_w"]),
+                                    "slot_h": float(vent_pattern["slot_h"]),
+                                    "panel_index": panel_idx,
+                                    "pattern_source": vent_pattern["source"],
+                                }
                             )
-                        vents_used.append(
-                            {
-                                "axis": "y",
-                                "side": "neg",
-                                "x": float(x_c),
-                                "y": float(y_face),
-                                "z": float(z_c),
-                                "slot_w": float(vent_pattern["slot_w"]),
-                                "slot_h": float(vent_pattern["slot_h"]),
-                                "panel_index": panel_idx,
-                                "pattern_source": vent_pattern["source"],
-                            }
-                        )
+                        else:
+                            # Adjacent side panels: center cuts on extracted side-panel location.
+                            on_neg = panel["side"] == "neg"
+                            with Locations((panel["x"], panel["y"], z_c)):
+                                Box(
+                                    cut_depth,
+                                    vent_pattern["slot_h"],
+                                    vent_pattern["slot_w"],
+                                    align=(Align.CENTER, Align.CENTER, Align.CENTER),
+                                    mode=Mode.SUBTRACT,
+                                )
+                            vents_used.append(
+                                {
+                                    "axis": "x",
+                                    "side": panel["side"],
+                                    "x": float(panel["x"]),
+                                    "y": float(panel["y"]),
+                                    "z": float(z_c),
+                                    "slot_w": float(vent_pattern["slot_w"]),
+                                    "slot_h": float(vent_pattern["slot_h"]),
+                                    "panel_index": panel_idx,
+                                    "pattern_source": vent_pattern["source"],
+                                }
+                            )
             else:
                 for v in step_features["vents"]:
                     z_c = map_z(v["z"])
@@ -762,7 +801,11 @@ def build_case(p: MakiCaseParams):
                 z_c = map_z(t["z"])
                 d = max(2.0 * t["r"] * sx + p.tripod_cutout_extra_mm, 2.0)
                 on_neg = t["side"] == "neg"
-                y_face = min_y + 0.15 if on_neg else max_y - 0.15
+                y_face = (
+                    min_y - p.tripod_armor_extra_mm - 0.2
+                    if on_neg
+                    else max_y + p.tripod_armor_extra_mm + 0.2
+                )
                 tripod_from_step_front_mm = float(zmax - float(t["z"]))
 
                 # Local armor boss to distribute impact around tripod region.
@@ -784,10 +827,16 @@ def build_case(p: MakiCaseParams):
                         )
 
                 cut_depth = p.wall_mm + 3.0
-                with BuildSketch(Plane.XZ.offset(y_face)):
-                    with Locations((x_c, z_c)):
+                if on_neg:
+                    cut_plane = Plane.ZX.offset(y_face)
+                    cut_loc = (z_c, x_c)
+                else:
+                    cut_plane = Plane.XZ.offset(y_face)
+                    cut_loc = (x_c, z_c)
+                with BuildSketch(cut_plane):
+                    with Locations(cut_loc):
                         Circle(d * 0.5)
-                extrude(amount=(-cut_depth if on_neg else cut_depth), mode=Mode.SUBTRACT)
+                extrude(amount=cut_depth, mode=Mode.SUBTRACT)
                 tripod_used = {
                     "side": t["side"],
                     "x": x_c,
@@ -826,10 +875,10 @@ def build_case(p: MakiCaseParams):
                     align=(Align.CENTER, Align.MAX, Align.CENTER),
                 )
 
-            with BuildSketch(Plane.XZ.offset(min_y + 0.2)):
-                with Locations((0.0, tripod_z)):
+            with BuildSketch(Plane.ZX.offset(min_y - p.tripod_armor_extra_mm - 0.2)):
+                with Locations((tripod_z, 0.0)):
                     Circle(p.tripod_hole_diameter_mm * 0.5)
-            extrude(amount=-(p.wall_mm + 3.0), mode=Mode.SUBTRACT)
+            extrude(amount=(p.wall_mm + p.tripod_armor_extra_mm + 3.0), mode=Mode.SUBTRACT)
             tripod_used = {"side": "neg", "x": 0.0, "z": tripod_z, "diameter": p.tripod_hole_diameter_mm}
 
     sleeve = _largest_solid(sleeve_bp.part)

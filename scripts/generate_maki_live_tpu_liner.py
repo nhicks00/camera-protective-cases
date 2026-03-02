@@ -549,12 +549,18 @@ def build_liner(p: MakiTpuLinerParams):
                 z_c = map_z(t["z"])
                 d = max(2.0 * t["r"] * sx + p.side_feature_clearance_mm, 2.0)
                 on_neg = t["side"] == "neg"
-                y_face = min_y + 0.12 if on_neg else max_y - 0.12
+                y_face = min_y - 0.2 if on_neg else max_y + 0.2
                 cut_depth = p.shell_thickness_mm + 2.5
-                with BuildSketch(Plane.XZ.offset(y_face)):
-                    with Locations((x_c, z_c)):
+                if on_neg:
+                    cut_plane = Plane.ZX.offset(y_face)
+                    cut_loc = (z_c, x_c)
+                else:
+                    cut_plane = Plane.XZ.offset(y_face)
+                    cut_loc = (x_c, z_c)
+                with BuildSketch(cut_plane):
+                    with Locations(cut_loc):
                         Circle(d * 0.5)
-                extrude(amount=(-cut_depth if on_neg else cut_depth), mode=Mode.SUBTRACT)
+                extrude(amount=cut_depth, mode=Mode.SUBTRACT)
                 tripod_used = {"side": t["side"], "x": x_c, "z": z_c, "diameter": d}
 
         if not vents_used:
@@ -572,10 +578,10 @@ def build_liner(p: MakiTpuLinerParams):
                     )
 
         if tripod_used is None:
-            with BuildSketch(Plane.XZ.offset(min_y + 0.12)):
-                with Locations((0.0, p.end_clearance_mm + p.tripod_center_from_front_mm)):
+            with BuildSketch(Plane.ZX.offset(min_y - 0.2)):
+                with Locations((p.end_clearance_mm + p.tripod_center_from_front_mm, 0.0)):
                     Circle(p.tripod_hole_diameter_mm * 0.5)
-            extrude(amount=-(p.shell_thickness_mm + 2.5), mode=Mode.SUBTRACT)
+            extrude(amount=(p.shell_thickness_mm + 2.5), mode=Mode.SUBTRACT)
             tripod_used = {
                 "side": "neg",
                 "x": 0.0,
