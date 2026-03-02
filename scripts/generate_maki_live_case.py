@@ -107,6 +107,10 @@ class MakiCaseParams:
     side_trio_per_side: int = 3
     side_trio_z_threshold_mm: float = -20.0
     side_trio_flip_end: bool = True
+    side_trio_scale_t: float = 1.6
+    side_trio_scale_z: float = 1.5
+    side_trio_min_t_mm: float = 6.4
+    side_trio_min_z_mm: float = 2.2
 
     # Shape processing
     section_z_ratio: float = 0.50
@@ -584,8 +588,10 @@ def _derive_side_trio_vents(step_vents, map_y, map_z, sy: float, sz: float, p: M
     z_center = float(np.median([map_z(v["z"]) for v in family]))
     y_abs = [abs(map_y(v["y"])) for v in family if abs(v["y"]) > 0.25]
     y_off = float(np.median(y_abs)) if y_abs else 12.0
-    slot_t = float(np.median([max(v["slot_t"] * sy + p.side_feature_clearance_mm, 1.2) for v in family]))
-    slot_z = float(np.median([max(v["slot_z"] * sz + p.side_feature_clearance_mm, 0.8) for v in family]))
+    slot_t_raw = float(np.median([max(v["slot_t"] * sy + p.side_feature_clearance_mm, 1.2) for v in family]))
+    slot_z_raw = float(np.median([max(v["slot_z"] * sz + p.side_feature_clearance_mm, 0.8) for v in family]))
+    slot_t = max(slot_t_raw * p.side_trio_scale_t, p.side_trio_min_t_mm)
+    slot_z = max(slot_z_raw * p.side_trio_scale_z, p.side_trio_min_z_mm)
 
     if p.side_trio_per_side <= 1:
         y_centers = [0.0]

@@ -13,15 +13,10 @@
           "y": 24,
           "x": 6
         },
-        "tripanel_x_lanes": [
-          -16.0,
-          -0.0,
-          16.0
-        ]
-      },
-      "tripod": {
-        "open": true,
-        "first_hit_mm": 99.59000007629395
+        "side_trio_size": {
+          "slot_t_mm": 6.9956697419789196,
+          "slot_z_mm": 2.253297190724088
+        }
       }
     },
     "tpu": {
@@ -36,15 +31,10 @@
           "y": 24,
           "x": 6
         },
-        "tripanel_x_lanes": [
-          -16.0,
-          -0.0,
-          16.0
-        ]
-      },
-      "tripod": {
-        "open": true,
-        "first_hit_mm": 94.38999969482421
+        "side_trio_size": {
+          "slot_t_mm": 7.07566974197892,
+          "slot_z_mm": 2.3282971907240873
+        }
       }
     }
   }

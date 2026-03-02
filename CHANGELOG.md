@@ -17,6 +17,18 @@
   - radial gap: `~0.1 mm` each side,
   - axial front/back gap: `~2.1 mm` each end.
 
+### MAKI Side-Trio Vent Size Correction
+- Increased side `3 + 3` vent cutout dimensions (kept location and count unchanged):
+  - previous side trio size was about `4.37 x 1.50 mm` (ASA) and `4.42 x 1.55 mm` (TPU),
+  - updated side trio size now about `7.00 x 2.25 mm` (ASA) and `7.08 x 2.33 mm` (TPU).
+- The 24-vent bottom-connected bank (`8 x 3`) was intentionally left unchanged.
+- Applied in:
+  - `scripts/generate_maki_live_case.py`
+  - `scripts/generate_maki_live_tpu_liner.py`
+- Regenerated and validated through-cuts:
+  - ASA vents open: `30/30`
+  - TPU vents open: `30/30`
+
 ### Mevo Production Assembly Upgrade (Dual-Material Back Cap + TPU-Aware Fit)
 - Updated `scripts/generate_mevo_dual_material_case.py` for a production-oriented two-part assembly workflow:
   - Main body remains dual-material (`TPU_Sleeve` + `ASA_Shell`).
