@@ -85,6 +85,7 @@ class MakiTpuLinerParams:
     side_trio_scale_z: float = 1.5
     side_trio_min_t_mm: float = 6.4
     side_trio_min_z_mm: float = 2.2
+    side_trio_match_tripanel_size: bool = True
     tripod_center_from_front_mm: float = 48.0
     tripod_hole_diameter_mm: float = 10.2
 
@@ -359,7 +360,15 @@ def _derive_tripanel_vents(step_vents, map_x, map_y, map_z, sx: float, sz: float
     }
 
 
-def _derive_side_trio_vents(step_vents, map_y, map_z, sy: float, sz: float, p: MakiTpuLinerParams):
+def _derive_side_trio_vents(
+    step_vents,
+    map_y,
+    map_z,
+    sy: float,
+    sz: float,
+    p: MakiTpuLinerParams,
+    size_override: tuple[float, float] | None = None,
+):
     family = []
     for v in step_vents:
         if v["axis"] != "x":
@@ -386,6 +395,9 @@ def _derive_side_trio_vents(step_vents, map_y, map_z, sy: float, sz: float, p: M
     slot_z_raw = float(np.median([max(v["slot_z"] * sz + p.side_feature_clearance_mm, 0.8) for v in family]))
     slot_t = max(slot_t_raw * p.side_trio_scale_t, p.side_trio_min_t_mm)
     slot_z = max(slot_z_raw * p.side_trio_scale_z, p.side_trio_min_z_mm)
+    if size_override is not None and p.side_trio_match_tripanel_size:
+        slot_t = max(slot_t, float(size_override[0]))
+        slot_z = max(slot_z, float(size_override[1]))
     y_centers = [-y_off, 0.0, y_off] if p.side_trio_per_side >= 3 else ([-y_off, y_off] if p.side_trio_per_side == 2 else [0.0])
 
     return {
@@ -563,7 +575,15 @@ def build_liner(p: MakiTpuLinerParams):
                                 }
                             )
                 if p.include_side_trio_vents:
-                    trio = _derive_side_trio_vents(step_features["vents"], map_y, map_z, sy, sz, p)
+                    trio = _derive_side_trio_vents(
+                        step_features["vents"],
+                        map_y,
+                        map_z,
+                        sy,
+                        sz,
+                        p,
+                        size_override=(vent_pattern["slot_t"], vent_pattern["slot_z"]),
+                    )
                     side_trio_z = shell_depth - trio["z_center"] if p.side_trio_flip_end else trio["z_center"]
                     for side in ("neg", "pos"):
                         x_face = min_x - 0.2 if side == "neg" else max_x + 0.2

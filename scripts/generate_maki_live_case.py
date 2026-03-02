@@ -69,6 +69,7 @@ class MakiCaseParams:
     front_min_cutout_area_mm2: float = 8.0
     max_cutout_ratio_xy: float = 0.80
     include_major_front_aperture: bool = True
+    front_major_aperture_shrink_mm: float = 2.0
 
     # Front optics opening
     lens_center_y_mm: float = 4.5
@@ -111,6 +112,7 @@ class MakiCaseParams:
     side_trio_scale_z: float = 1.5
     side_trio_min_t_mm: float = 6.4
     side_trio_min_z_mm: float = 2.2
+    side_trio_match_tripanel_size: bool = True
 
     # Shape processing
     section_z_ratio: float = 0.50
@@ -436,7 +438,12 @@ def _extract_front_cutouts(housing, p: MakiCaseParams, sx: float, sy: float, zma
                 continue
 
             if too_large:
-                d_maj = (xlen + ylen) * 0.5 * (sx + sy) * 0.5 + p.cutout_extra_mm
+                d_maj = (
+                    (xlen + ylen) * 0.5 * (sx + sy) * 0.5
+                    + p.cutout_extra_mm
+                    - p.front_major_aperture_shrink_mm
+                )
+                d_maj = max(d_maj, p.front_min_cutout_dim_mm)
                 cutouts.append({"x": xmid * sx, "y": ymid * sy, "shape": "circle", "d": d_maj})
                 continue
 
@@ -564,7 +571,15 @@ def _derive_tripanel_vents(step_vents, map_x, map_y, map_z, sx: float, sz: float
     }
 
 
-def _derive_side_trio_vents(step_vents, map_y, map_z, sy: float, sz: float, p: MakiCaseParams):
+def _derive_side_trio_vents(
+    step_vents,
+    map_y,
+    map_z,
+    sy: float,
+    sz: float,
+    p: MakiCaseParams,
+    size_override: tuple[float, float] | None = None,
+):
     """Derive 3-per-side vents from the front-side small vent family in STEP."""
     family = []
     for v in step_vents:
@@ -592,6 +607,9 @@ def _derive_side_trio_vents(step_vents, map_y, map_z, sy: float, sz: float, p: M
     slot_z_raw = float(np.median([max(v["slot_z"] * sz + p.side_feature_clearance_mm, 0.8) for v in family]))
     slot_t = max(slot_t_raw * p.side_trio_scale_t, p.side_trio_min_t_mm)
     slot_z = max(slot_z_raw * p.side_trio_scale_z, p.side_trio_min_z_mm)
+    if size_override is not None and p.side_trio_match_tripanel_size:
+        slot_t = max(slot_t, float(size_override[0]))
+        slot_z = max(slot_z, float(size_override[1]))
 
     if p.side_trio_per_side <= 1:
         y_centers = [0.0]
@@ -781,7 +799,15 @@ def build_case(p: MakiCaseParams):
                                 }
                             )
                 if p.include_side_trio_vents:
-                    trio = _derive_side_trio_vents(step_features["vents"], map_y, map_z, sy, sz, p)
+                    trio = _derive_side_trio_vents(
+                        step_features["vents"],
+                        map_y,
+                        map_z,
+                        sy,
+                        sz,
+                        p,
+                        size_override=(vent_pattern["slot_t"], vent_pattern["slot_z"]),
+                    )
                     side_trio_z = shell_depth - trio["z_center"] if p.side_trio_flip_end else trio["z_center"]
                     for side in ("neg", "pos"):
                         x_face = min_x - 0.2 if side == "neg" else max_x + 0.2

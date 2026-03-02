@@ -84,6 +84,8 @@ Active hard-shell and TPU workflows:
     - total applied vents on sleeve: 30
   - The 24-vent bank is constrained to bottom-connected panels (not direct side walls).
   - Side 3+3 vent group is placed on the opposite end from the tripod-side vent bank.
+  - Side 3+3 vent dimensions are matched to the main tripanel vent style size.
+  - Front camera aperture in integrated front wall is trimmed by `2.0 mm` vs prior extraction.
   - Through-cut depth increased so vents fully penetrate.
   - Vent row clustering now locks to the STEP-derived rear vent bank (8 rows) and ignores front outlier slots.
   - Tripod side includes local armor boss thickening around the mount opening.

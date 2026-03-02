@@ -29,6 +29,19 @@
   - ASA vents open: `30/30`
   - TPU vents open: `30/30`
 
+### MAKI Side-Trio Exact-Style Sizing + Front Camera Aperture Trim
+- Updated side `3 + 3` vents again to match the full vent style size from the main vent bank:
+  - side trio now matches tripanel slot dimensions (ASA and TPU), rather than using reduced scaled values.
+- Reduced MAKI front camera aperture opening by `2.0 mm`:
+  - applied to integrated-front sleeve extraction (`generate_maki_live_case.py`)
+  - applied to front-cap extraction logic (`generate_maki_live_caps.py`) for consistency.
+- Regenerated:
+  - `models/maki_case/maki_live_case_sleeve.step`
+  - `models/maki_case/maki_live_tpu_sleeve.step`
+  - `models/maki_case/maki_live_body_dual_material.step`
+  - `models/maki_case/maki_live_rear_cap.step`
+  - reports updated under `models/maki_case/reports/`
+
 ### Mevo Production Assembly Upgrade (Dual-Material Back Cap + TPU-Aware Fit)
 - Updated `scripts/generate_mevo_dual_material_case.py` for a production-oriented two-part assembly workflow:
   - Main body remains dual-material (`TPU_Sleeve` + `ASA_Shell`).

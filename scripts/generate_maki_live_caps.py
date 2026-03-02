@@ -64,6 +64,7 @@ class MakiCapParams:
     # Ignore very large loops that would remove almost entire cap
     max_cutout_ratio_xy: float = 0.80
     include_major_front_aperture: bool = True
+    front_major_aperture_shrink_mm: float = 2.0
     rear_min_cutout_dim_mm: float = 4.0
     rear_min_cutout_area_mm2: float = 8.0
 
@@ -238,7 +239,12 @@ def _extract_end_cutouts(solids, p: MakiCapParams, sx: float, sy: float, zmin: f
                     if not (p.include_major_front_aperture and n.Z > 0 and zmid > (zmax - p.front_window_mm)):
                         continue
                     # Major aperture behaves like a large circular opening.
-                    d_maj = (xlen + ylen) * 0.5 * (sx + sy) * 0.5 + p.cutout_extra_mm
+                    d_maj = (
+                        (xlen + ylen) * 0.5 * (sx + sy) * 0.5
+                        + p.cutout_extra_mm
+                        - p.front_major_aperture_shrink_mm
+                    )
+                    d_maj = max(d_maj, 1.0)
                     entry = {
                         "x": xmid * sx,
                         "y": ymid * sy,
