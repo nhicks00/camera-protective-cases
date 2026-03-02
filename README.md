@@ -54,4 +54,7 @@ python scripts/generate_maki_live_caps.py --profile tpu
 ## Notes
 - STEP-only workflow is used for production models.
 - Temporary meshes/renders are excluded from version control.
+- Output rollover policy:
+  - each generator archives existing outputs into `models/mevo_case/archive/` or `models/maki_case/archive/` before writing new files,
+  - top-level case folders always keep only the latest generated files.
 - See `CHANGELOG.md` for latest engineering status and open alignment tasks.

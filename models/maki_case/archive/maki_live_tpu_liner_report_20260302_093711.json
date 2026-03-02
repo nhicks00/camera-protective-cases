@@ -1,0 +1,88 @@
+{
+  "params": {
+    "step_path": "refs/BirdDog_MAKI-Live_3D-file.step",
+    "nominal_width_mm": 56.99,
+    "nominal_height_mm": 56.99,
+    "nominal_length_mm": 120.32,
+    "device_clearance_mm": 0.2,
+    "end_clearance_mm": 0.2,
+    "shell_thickness_mm": 2.1,
+    "bumper_extra_mm": 0.55,
+    "bumper_band_depth_mm": 12.0,
+    "bumper_fuse_overlap_mm": 0.2,
+    "use_step_side_features": true,
+    "side_feature_clearance_mm": 0.35,
+    "vent_count": 8,
+    "vent_slot_w_mm": 15.5,
+    "vent_slot_h_mm": 2.6,
+    "vent_pitch_mm": 5.8,
+    "vent_start_from_front_mm": 66.0,
+    "tripod_center_from_front_mm": 48.0,
+    "tripod_hole_diameter_mm": 10.2,
+    "section_z_ratio": 0.5,
+    "profile_simplify_tol_mm": 0.08,
+    "offset_resolution": 64
+  },
+  "report": {
+    "mesh_bounds_mm": {
+      "min": [
+        -28.496482849121094,
+        -28.496482849121094,
+        -120.0999984741211
+      ],
+      "max": [
+        28.496482849121094,
+        28.496482849121094,
+        5.626166512229247e-06
+      ],
+      "extents": [
+        56.99296569824219,
+        56.99296569824219,
+        120.1000041002876
+      ]
+    },
+    "profile_raw_mm": {
+      "width": 55.978282586149206,
+      "height": 55.978282270829695
+    },
+    "profile_scale": {
+      "sx": 1.0180733914495106,
+      "sy": 1.0180733971842062,
+      "sz": 1.001831772624493
+    },
+    "step_side_features": {
+      "vents_detected": 30,
+      "vents_applied": 30,
+      "tripod_detected": true,
+      "tripod_applied": {
+        "side": "neg",
+        "x": 0.34221829986430846,
+        "z": 52.70126909246757,
+        "diameter": 9.751206546731504
+      }
+    },
+    "derived": {
+      "open_sleeve": true,
+      "inner_depth_mm": 120.72,
+      "shell_depth_mm": 120.72,
+      "band_depth_mm": 12.0,
+      "corner_radius_mm": {
+        "base_section": 16.7871568579467,
+        "inner": 16.9871568579467,
+        "outer": 19.087156857946702,
+        "bumper_outer": 19.637156857946703
+      },
+      "dimensions_mm": {
+        "inner_w": 57.39,
+        "inner_h": 57.39,
+        "outer_w": 61.59,
+        "outer_h": 61.59,
+        "bumper_outer_w": 62.690000000000005,
+        "bumper_outer_h": 62.690000000000005
+      },
+      "machined_finish_mm": {
+        "liner_axis_y_fillet": 0.0
+      }
+    }
+  }
+}

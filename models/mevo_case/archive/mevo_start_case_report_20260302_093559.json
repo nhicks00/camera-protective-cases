@@ -1,0 +1,92 @@
+{
+  "params": {
+    "reference_stl": "refs/Mevo_Start_lens_cover_corrected.stl",
+    "profile_slice_y_mm": 5.0,
+    "lens_slice_y_mm": 0.1,
+    "device_length_mm": 87.0,
+    "device_height_mm": 75.5,
+    "device_width_mm": 34.0,
+    "enforce_nominal_dimensions": true,
+    "strict_symmetric_profile": true,
+    "clearance_mm": 0.65,
+    "wall_mm": 3.4,
+    "front_wall_mm": 4.0,
+    "use_inner_pill_profile": true,
+    "enforce_capsule_profile": true,
+    "use_reference_lens_hole": false,
+    "lens_center_x_mm": 0.0,
+    "lens_center_y_mm": 16.5,
+    "lens_cut_radius_mm": 19.4,
+    "lens_extra_clearance_mm": 0.9,
+    "front_bezel_extra_mm": 1.2,
+    "front_bezel_height_mm": 1.1,
+    "tripod_slot_w_mm": 14.0,
+    "tripod_slot_l_mm": 12.0,
+    "tripod_pad_w_mm": 28.0,
+    "tripod_pad_l_mm": 18.0,
+    "tripod_pad_h_mm": 2.2,
+    "tripod_zone_z_ratio": 0.78,
+    "rear_plate_t_mm": 3.0,
+    "rear_plug_depth_mm": 4.6,
+    "rear_plug_clearance_mm": 0.25,
+    "power_y_mm": 15.0,
+    "power_w_mm": 9.0,
+    "power_h_mm": 4.0,
+    "audio_y_mm": 6.8,
+    "audio_d_mm": 6.7,
+    "usb_y_mm": -2.8,
+    "usb_w_mm": 12.8,
+    "usb_h_mm": 6.4,
+    "vent_count": 3,
+    "vent_h_mm": 2.2,
+    "vent_len_mm": 12.0,
+    "vent_pitch_mm": 4.8,
+    "vent_z_ratio": 0.57,
+    "profile_simplify_tol_mm": 0.15,
+    "offset_resolution": 48
+  },
+  "extraction": {
+    "raw_profile_mm": {
+      "width": 34.0,
+      "height": 58.9958381652832
+    },
+    "orientation": {
+      "rotated_90_deg_for_normalization": true
+    },
+    "profile_scaling": {
+      "scale_x": 1.0,
+      "scale_y": 1.2797512900567427
+    },
+    "profile_bounds_mm": {
+      "min_x": -21.049999999999997,
+      "max_x": 21.049999999999997,
+      "min_y": -41.799912989641214,
+      "max_y": 41.799912989641214
+    },
+    "derived": {
+      "inner_depth_mm": 88.3,
+      "shell_depth_mm": 92.3,
+      "corner_radius_mm": {
+        "inner": 17.45,
+        "outer": 20.849999999999998,
+        "rear_plug": 17.2
+      },
+      "machined_finish_mm": {
+        "body_axis_x_fillet": 0.8,
+        "body_axis_y_fillet": 0.4,
+        "rear_plate_global_fillet": 0.8
+      },
+      "lens_reference_center_mm": [
+        -0.0,
+        0.0
+      ],
+      "lens_reference_radius_mm": 13.564520175837618,
+      "lens_mode": "manual",
+      "lens_center_mm": [
+        0.0,
+        16.5
+      ],
+      "lens_cut_radius_mm": 19.4
+    }
+  }
+}

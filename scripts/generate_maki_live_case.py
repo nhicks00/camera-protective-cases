@@ -15,7 +15,9 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import shutil
 from dataclasses import asdict, dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 
@@ -147,6 +149,24 @@ def _apply_axis_fillet(shape, axis: Axis, radii: tuple[float, ...]):
         except Exception:
             continue
     return shape, 0.0
+
+
+def _archive_existing(paths: list[Path], out_dir: Path) -> list[tuple[str, str]]:
+    archive_dir = out_dir / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    moved = []
+    for path in paths:
+        if not path.exists():
+            continue
+        target = archive_dir / f"{path.stem}_{stamp}{path.suffix}"
+        i = 1
+        while target.exists():
+            target = archive_dir / f"{path.stem}_{stamp}_{i}{path.suffix}"
+            i += 1
+        shutil.move(str(path), str(target))
+        moved.append((str(path), str(target)))
+    return moved
 
 
 def _load_step_as_mesh(step_path: Path, tmp_stl: Path):
@@ -507,6 +527,7 @@ def main():
     args.out.mkdir(parents=True, exist_ok=True)
     out_step = args.out / "maki_live_case_sleeve.step"
     out_json = args.out / "maki_live_case_report.json"
+    archived = _archive_existing([out_step, out_json], args.out)
 
     export_step(sleeve, str(out_step))
 
@@ -514,6 +535,8 @@ def main():
     payload["params"]["step_path"] = str(params.step_path)
     out_json.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
+    if archived:
+        print(f"Archived {len(archived)} previous file(s) to {args.out / 'archive'}")
     print(f"Wrote {out_step}")
     print(f"Wrote {out_json}")
 

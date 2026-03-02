@@ -13,7 +13,9 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import shutil
 from dataclasses import asdict, dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Tuple
 
@@ -185,6 +187,24 @@ def _apply_all_edge_fillet(shape, radii: tuple[float, ...]):
         except Exception:
             continue
     return shape, 0.0
+
+
+def _archive_existing(paths: list[Path], out_dir: Path) -> list[tuple[str, str]]:
+    archive_dir = out_dir / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    moved = []
+    for path in paths:
+        if not path.exists():
+            continue
+        target = archive_dir / f"{path.stem}_{stamp}{path.suffix}"
+        i = 1
+        while target.exists():
+            target = archive_dir / f"{path.stem}_{stamp}_{i}{path.suffix}"
+            i += 1
+        shutil.move(str(path), str(target))
+        moved.append((str(path), str(target)))
+    return moved
 
 
 def _make_capsule_profile(minor_mm: float, major_mm: float, resolution: int) -> Polygon:
@@ -530,6 +550,7 @@ def main():
     body_step = args.out / "mevo_start_case_body.step"
     plate_step = args.out / "mevo_start_case_back_plate.step"
     report_json = args.out / "mevo_start_case_report.json"
+    archived = _archive_existing([body_step, plate_step, report_json], args.out)
 
     export_step(body, str(body_step))
     export_step(rear_plate, str(plate_step))
@@ -538,6 +559,8 @@ def main():
     report_payload["params"]["reference_stl"] = str(params.reference_stl)
     report_json.write_text(json.dumps(report_payload, indent=2), encoding="utf-8")
 
+    if archived:
+        print(f"Archived {len(archived)} previous file(s) to {args.out / 'archive'}")
     print(f"Wrote {body_step}")
     print(f"Wrote {plate_step}")
     print(f"Wrote {report_json}")

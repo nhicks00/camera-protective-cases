@@ -15,6 +15,9 @@ This workspace now includes a parametric two-piece, print-ready enclosure derive
 - `models/mevo_case/mevo_start_tpu_liner.step`
 - `models/mevo_case/mevo_start_tpu_liner_report.json`
 
+Archive policy:
+- Previous versions are auto-moved to `models/mevo_case/archive/` before new files are written.
+
 ## Design Summary
 - Tight-fitting **two-piece** architecture (impact sleeve + rear closure plate)
 - Front profile extracted from `refs/Mevo_Start_lens_cover_corrected.stl` (default)

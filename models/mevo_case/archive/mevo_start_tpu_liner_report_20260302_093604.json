@@ -1,0 +1,65 @@
+{
+  "params": {
+    "asa_report_json": "models/mevo_case/mevo_start_case_report.json",
+    "device_length_mm": 87.0,
+    "device_height_mm": 75.5,
+    "device_width_mm": 34.0,
+    "asa_clearance_mm": 0.65,
+    "asa_front_wall_mm": 4.0,
+    "tripod_zone_z_ratio": 0.78,
+    "tripod_slot_w_mm": 14.0,
+    "tripod_slot_l_mm": 12.0,
+    "vent_count": 3,
+    "vent_h_mm": 2.2,
+    "vent_len_mm": 12.0,
+    "vent_pitch_mm": 4.8,
+    "vent_z_ratio": 0.57,
+    "device_clearance_mm": 0.15,
+    "end_clearance_mm": 0.2,
+    "shell_to_asa_gap_mm": 0.1,
+    "desired_shell_thickness_mm": 0.9,
+    "min_printable_shell_thickness_mm": 0.35,
+    "enable_tripod_opening": true,
+    "enable_side_vents": true
+  },
+  "report": {
+    "derived": {
+      "device_mm": {
+        "length": 87.0,
+        "height": 75.5,
+        "width": 34.0
+      },
+      "asa_inner_mm": {
+        "depth": 88.3,
+        "height": 76.8,
+        "width": 35.3
+      },
+      "tpu_mm": {
+        "shell_thickness_max_by_fit": 0.4,
+        "shell_thickness_applied": 0.4,
+        "inner_depth": 87.4,
+        "inner_height": 75.8,
+        "inner_width": 34.3,
+        "outer_height": 76.6,
+        "outer_width": 35.099999999999994
+      },
+      "fit_margins_mm": {
+        "radial_w_each_side": 0.10000000000000142,
+        "radial_h_each_side": 0.10000000000000142,
+        "axial_total": 0.8999999999999915
+      },
+      "openings_alignment_mm": {
+        "tripod_slot_center_z": 67.994,
+        "vent_center_z": 50.330999999999996
+      },
+      "machined_finish_mm": {
+        "liner_axis_y_fillet": 0.0,
+        "liner_all_edge_fillet": 0.0
+      },
+      "warnings": {
+        "thin_shell_for_existing_asa": false,
+        "recommended_asa_clearance_for_1p2mm_tpu": 1.45
+      }
+    }
+  }
+}

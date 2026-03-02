@@ -11,6 +11,8 @@
   - Mevo scripts now default to `models/mevo_case/`
   - MAKI scripts now default to `models/maki_case/`
 - Updated README documentation paths to match the new folder layout.
+- Added automatic output archival in all generators:
+  - existing files are moved into each case folder's `archive/` subfolder with timestamped filenames before new files are written.
 
 ### Mevo TPU Nesting Compatibility
 - Added `scripts/generate_mevo_start_tpu_liner.py` to generate a TPU inner sleeve that is dimensioned to fit inside the existing Mevo ASA shell.

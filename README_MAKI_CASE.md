@@ -15,6 +15,9 @@ This project now includes a printable protective sleeve generated from the MAKI 
 - `models/maki_case/maki_live_case_sleeve.step`
 - `models/maki_case/maki_live_case_report.json`
 
+Archive policy:
+- Previous versions are auto-moved to `models/maki_case/archive/` before new files are written.
+
 ## Design Characteristics
 - Tight, one-piece sleeve
 - Fully open-through shell (no front plate and no rear plate)

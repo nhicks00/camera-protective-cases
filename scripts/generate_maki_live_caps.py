@@ -6,7 +6,9 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import shutil
 from dataclasses import asdict, dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 
@@ -103,6 +105,24 @@ def _safe_fillet_radius(width: float, height: float, radius: float) -> float:
 def _add_rounded_rectangle(width: float, height: float, radius: float) -> None:
     Rectangle(width, height)
     fillet(vertices(), _safe_fillet_radius(width, height, radius))
+
+
+def _archive_existing(paths: list[Path], out_dir: Path) -> list[tuple[str, str]]:
+    archive_dir = out_dir / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    moved = []
+    for path in paths:
+        if not path.exists():
+            continue
+        target = archive_dir / f"{path.stem}_{stamp}{path.suffix}"
+        i = 1
+        while target.exists():
+            target = archive_dir / f"{path.stem}_{stamp}_{i}{path.suffix}"
+            i += 1
+        shutil.move(str(path), str(target))
+        moved.append((str(path), str(target)))
+    return moved
 
 
 def _load_step_as_mesh(step_path: Path, tmp_stl: Path):
@@ -396,6 +416,7 @@ def main():
         front_step = args.out / "maki_live_tpu_front_cap.step"
         rear_step = args.out / "maki_live_tpu_rear_cap.step"
         report_json = args.out / "maki_live_tpu_caps_report.json"
+    archived = _archive_existing([front_step, rear_step, report_json], args.out)
 
     export_step(front_cap, str(front_step))
     export_step(rear_cap, str(rear_step))
@@ -403,6 +424,8 @@ def main():
     payload["params"]["step_path"] = str(params.step_path)
     report_json.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
+    if archived:
+        print(f"Archived {len(archived)} previous file(s) to {args.out / 'archive'}")
     print(f"Wrote {front_step}")
     print(f"Wrote {rear_step}")
     print(f"Wrote {report_json}")

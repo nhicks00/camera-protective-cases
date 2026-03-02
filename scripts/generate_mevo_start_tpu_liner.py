@@ -13,7 +13,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 from dataclasses import asdict, dataclass
+from datetime import datetime
 from pathlib import Path
 
 from build123d import (
@@ -101,6 +103,24 @@ def _apply_all_edge_fillet(shape, radii: tuple[float, ...]):
         except Exception:
             continue
     return shape, 0.0
+
+
+def _archive_existing(paths: list[Path], out_dir: Path) -> list[tuple[str, str]]:
+    archive_dir = out_dir / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    moved = []
+    for path in paths:
+        if not path.exists():
+            continue
+        target = archive_dir / f"{path.stem}_{stamp}{path.suffix}"
+        i = 1
+        while target.exists():
+            target = archive_dir / f"{path.stem}_{stamp}_{i}{path.suffix}"
+            i += 1
+        shutil.move(str(path), str(target))
+        moved.append((str(path), str(target)))
+    return moved
 
 
 def _load_asa_defaults(p: MevoTpuLinerParams) -> None:
@@ -283,12 +303,15 @@ def main():
     args.out.mkdir(parents=True, exist_ok=True)
     out_step = args.out / "mevo_start_tpu_liner.step"
     out_json = args.out / "mevo_start_tpu_liner_report.json"
+    archived = _archive_existing([out_step, out_json], args.out)
 
     export_step(liner, str(out_step))
     payload = {"params": asdict(params), "report": report}
     payload["params"]["asa_report_json"] = str(params.asa_report_json)
     out_json.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
+    if archived:
+        print(f"Archived {len(archived)} previous file(s) to {args.out / 'archive'}")
     print(f"Wrote {out_step}")
     print(f"Wrote {out_json}")
 
