@@ -8,7 +8,16 @@
         "family_counts": {
           "tripanel": 24,
           "side_trio": 6
-        }
+        },
+        "axis_counts": {
+          "y": 24,
+          "x": 6
+        },
+        "tripanel_x_lanes": [
+          -16.0,
+          -0.0,
+          16.0
+        ]
       },
       "tripod": {
         "open": true,
@@ -22,7 +31,16 @@
         "family_counts": {
           "tripanel": 24,
           "side_trio": 6
-        }
+        },
+        "axis_counts": {
+          "y": 24,
+          "x": 6
+        },
+        "tripanel_x_lanes": [
+          -16.0,
+          -0.0,
+          16.0
+        ]
       },
       "tripod": {
         "open": true,

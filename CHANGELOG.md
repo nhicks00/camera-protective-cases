@@ -20,6 +20,23 @@
   - updated `models/mevo_case/reports/mevo_start_dual_material_report.json`
   - updated `models/mevo_case/reports/mevo_validation_summary.json`
 
+### MAKI Vent Panel Orientation Correction (Bottom-Connected 24-Bank)
+- Corrected MAKI vent panel placement so the `24`-vent bank sits on the tripod-side bottom-connected 3-panel region:
+  - center lane `8`
+  - adjacent lane left `8`
+  - adjacent lane right `8`
+- Fixed prior misplacement where the adjacent `16` vents were on the direct side walls.
+- Side `3 + 3` vent group was also moved to the opposite end as requested.
+- Applied to both:
+  - `scripts/generate_maki_live_case.py`
+  - `scripts/generate_maki_live_tpu_liner.py`
+- Regenerated and validated:
+  - `models/maki_case/maki_live_case_sleeve.step`
+  - `models/maki_case/maki_live_tpu_sleeve.step`
+  - `models/maki_case/reports/maki_live_case_report.json`
+  - `models/maki_case/reports/maki_live_tpu_sleeve_report.json`
+  - `models/maki_case/reports/maki_validation_summary.json`
+
 ### MAKI Vent Pattern Correction (`24 + 6`)
 - Corrected MAKI vent layout implementation to match requested pattern:
   - `24` vents above tripod area across the 3-panel bank (`8 x 3`).

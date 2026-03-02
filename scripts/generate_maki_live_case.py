@@ -106,6 +106,7 @@ class MakiCaseParams:
     include_side_trio_vents: bool = True
     side_trio_per_side: int = 3
     side_trio_z_threshold_mm: float = -20.0
+    side_trio_flip_end: bool = True
 
     # Shape processing
     section_z_ratio: float = 0.50
@@ -540,34 +541,14 @@ def _derive_tripanel_vents(step_vents, map_x, map_y, map_z, sx: float, sz: float
         z0 = z_vals[0] if z_vals else (p.clearance_mm + p.vent_start_from_front_mm)
         z_centers = [float(map_z(z0 + i * pitch)) for i in range(p.vent_rows_per_panel)]
 
-    # Build 3 panel descriptors:
-    # - center panel: negative-Y wall
-    # - adjacent panels: negative-X and positive-X side walls (corner/adjacent panels)
+    # Keep the 24-vent bank on the tripod-side bottom 3-panel family:
+    # one center lane and two adjacent lanes on the same bottom-facing side.
     center_x = float(np.median([map_x(v["x"]) for v in neg_primary]))
-    x_neg_candidates = [
-        v for v in step_vents
-        if v["axis"] == "x" and v["side"] == "neg" and v["z"] < -20.0 and v["slot_t"] >= 8.0
-    ]
-    x_pos_candidates = [
-        v for v in step_vents
-        if v["axis"] == "x" and v["side"] == "pos" and v["z"] < -20.0 and v["slot_t"] >= 8.0
-    ]
-    if x_neg_candidates and x_pos_candidates:
-        x_neg = float(np.median([map_x(v["x"]) for v in x_neg_candidates]))
-        x_pos = float(np.median([map_x(v["x"]) for v in x_pos_candidates]))
-        y_neg = float(np.median([map_y(v["y"]) for v in x_neg_candidates]))
-        y_pos = float(np.median([map_y(v["y"]) for v in x_pos_candidates]))
-    else:
-        x_off = max(0.33 * outer_w, p.tripanel_fallback_x_offset_mm)
-        x_neg = center_x - x_off
-        x_pos = center_x + x_off
-        y_neg = 0.0
-        y_pos = 0.0
-
+    x_off = min(max(p.tripanel_fallback_x_offset_mm, 8.0), 0.36 * outer_w)
     panels = [
-        {"axis": "x", "side": "neg", "x": x_neg, "y": y_neg},
+        {"axis": "y", "side": "neg", "x": center_x - x_off, "y": 0.0},
         {"axis": "y", "side": "neg", "x": center_x, "y": 0.0},
-        {"axis": "x", "side": "pos", "x": x_pos, "y": y_pos},
+        {"axis": "y", "side": "neg", "x": center_x + x_off, "y": 0.0},
     ]
 
     return {
@@ -795,10 +776,11 @@ def build_case(p: MakiCaseParams):
                             )
                 if p.include_side_trio_vents:
                     trio = _derive_side_trio_vents(step_features["vents"], map_y, map_z, sy, sz, p)
+                    side_trio_z = shell_depth - trio["z_center"] if p.side_trio_flip_end else trio["z_center"]
                     for side in ("neg", "pos"):
                         x_face = min_x - 0.2 if side == "neg" else max_x + 0.2
                         for y_c in trio["y_centers"]:
-                            with Locations((x_face, y_c, trio["z_center"])):
+                            with Locations((x_face, y_c, side_trio_z)):
                                 Box(
                                     cut_depth,
                                     trio["slot_t"],
@@ -814,7 +796,7 @@ def build_case(p: MakiCaseParams):
                                     "side": side,
                                     "x": float(x_face),
                                     "y": float(y_c),
-                                    "z": float(trio["z_center"]),
+                                    "z": float(side_trio_z),
                                     "slot_t": float(trio["slot_t"]),
                                     "slot_z": float(trio["slot_z"]),
                                     "slot_w": float(trio["slot_t"]),
