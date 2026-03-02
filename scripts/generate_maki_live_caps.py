@@ -64,6 +64,8 @@ class MakiCapParams:
     # Ignore very large loops that would remove almost entire cap
     max_cutout_ratio_xy: float = 0.80
     include_major_front_aperture: bool = True
+    rear_min_cutout_dim_mm: float = 3.0
+    rear_min_cutout_area_mm2: float = 8.0
 
     # Processing
     section_z_ratio: float = 0.50
@@ -130,7 +132,7 @@ def _archive_existing(paths: list[Path], out_dir: Path) -> list[tuple[str, str]]
 
 def _load_step_as_mesh(step_path: Path, tmp_stl: Path):
     shape = import_step(str(step_path))
-    housing = max(shape.solids(), key=lambda s: s.volume)
+    solids = list(shape.solids())
     tmp_stl.parent.mkdir(parents=True, exist_ok=True)
     export_stl(shape, str(tmp_stl))
     mesh = trimesh.load(str(tmp_stl), force="mesh")
@@ -138,7 +140,7 @@ def _load_step_as_mesh(step_path: Path, tmp_stl: Path):
         tmp_stl.unlink(missing_ok=True)
     except Exception:
         pass
-    return mesh, housing
+    return mesh, solids
 
 
 def _extract_profile_xy(mesh: trimesh.Trimesh, z_mm: float) -> Polygon:
@@ -174,100 +176,115 @@ def _classify_cutout(xlen: float, ylen: float) -> dict | None:
     return {"shape": "rect", "w": xlen, "h": ylen}
 
 
-def _extract_end_cutouts(housing, p: MakiCapParams, sx: float, sy: float, zmin: float, zmax: float):
+def _cutout_metrics(entry: dict) -> tuple[float, float]:
+    if entry["shape"] == "circle":
+        d = float(entry["d"])
+        return d, math.pi * (0.5 * d) ** 2
+    w = float(entry.get("w", 0.0))
+    h = float(entry.get("h", 0.0))
+    return max(w, h), w * h
+
+
+def _extract_end_cutouts(solids, p: MakiCapParams, sx: float, sy: float, zmin: float, zmax: float):
     front_plane_z = None
     rear_plane_z = None
-    for f in housing.faces():
-        if f.geom_type != GeomType.PLANE:
-            continue
-        try:
-            n = f.normal_at()
-            c = f.center()
-        except Exception:
-            continue
-        if abs(n.Z) < 0.92:
-            continue
-        if n.Z > 0:
-            front_plane_z = c.Z if front_plane_z is None else max(front_plane_z, c.Z)
-        else:
-            rear_plane_z = c.Z if rear_plane_z is None else min(rear_plane_z, c.Z)
+    for solid in solids:
+        for f in solid.faces():
+            if f.geom_type != GeomType.PLANE:
+                continue
+            try:
+                n = f.normal_at()
+                c = f.center()
+            except Exception:
+                continue
+            if abs(n.Z) < 0.92:
+                continue
+            if n.Z > 0:
+                front_plane_z = c.Z if front_plane_z is None else max(front_plane_z, c.Z)
+            else:
+                rear_plane_z = c.Z if rear_plane_z is None else min(rear_plane_z, c.Z)
 
     front = []
     rear = []
-    for f in housing.faces():
-        wires = f.wires()
-        if len(wires) <= 1:
-            continue
-        try:
-            n = f.normal_at()
-        except Exception:
-            continue
-        if abs(n.Z) < 0.92:
-            continue
-        fc = f.center()
-        on_front_plane = front_plane_z is not None and abs(fc.Z - front_plane_z) <= p.end_plane_tol_mm
-        on_rear_plane = rear_plane_z is not None and abs(fc.Z - rear_plane_z) <= p.end_plane_tol_mm
-        for w in wires[1:]:
-            bb = w.bounding_box()
-            xlen = float(bb.size.X)
-            ylen = float(bb.size.Y)
-            zmid = float((bb.min.Z + bb.max.Z) * 0.5)
-            xmid = float((bb.min.X + bb.max.X) * 0.5)
-            ymid = float((bb.min.Y + bb.max.Y) * 0.5)
+    for solid in solids:
+        for f in solid.faces():
+            wires = f.wires()
+            if len(wires) <= 1:
+                continue
+            try:
+                n = f.normal_at()
+            except Exception:
+                continue
+            if abs(n.Z) < 0.92:
+                continue
+            fc = f.center()
+            on_front_plane = front_plane_z is not None and abs(fc.Z - front_plane_z) <= p.end_plane_tol_mm
+            on_rear_plane = rear_plane_z is not None and abs(fc.Z - rear_plane_z) <= p.end_plane_tol_mm
+            for w in wires[1:]:
+                bb = w.bounding_box()
+                xlen = float(bb.size.X)
+                ylen = float(bb.size.Y)
+                zmid = float((bb.min.Z + bb.max.Z) * 0.5)
+                xmid = float((bb.min.X + bb.max.X) * 0.5)
+                ymid = float((bb.min.Y + bb.max.Y) * 0.5)
 
-            too_large = (
-                xlen > p.nominal_width_mm * p.max_cutout_ratio_xy
-                and ylen > p.nominal_height_mm * p.max_cutout_ratio_xy
-            )
+                too_large = (
+                    xlen > p.nominal_width_mm * p.max_cutout_ratio_xy
+                    and ylen > p.nominal_height_mm * p.max_cutout_ratio_xy
+                )
 
-            if too_large:
-                # Keep the main front camera aperture if present, skip other giant loops.
-                if not (p.include_major_front_aperture and n.Z > 0 and zmid > (zmax - p.front_window_mm)):
+                if too_large:
+                    # Keep the main front camera aperture if present, skip other giant loops.
+                    if not (p.include_major_front_aperture and n.Z > 0 and zmid > (zmax - p.front_window_mm)):
+                        continue
+                    # Major aperture behaves like a large circular opening.
+                    d_maj = (xlen + ylen) * 0.5 * (sx + sy) * 0.5 + p.cutout_extra_mm
+                    entry = {
+                        "x": xmid * sx,
+                        "y": ymid * sy,
+                        "shape": "circle",
+                        "d": d_maj,
+                    }
+                    front.append(entry)
                     continue
-                # Major aperture behaves like a large circular opening.
-                d_maj = (xlen + ylen) * 0.5 * (sx + sy) * 0.5 + p.cutout_extra_mm
+
+                shape = _classify_cutout(xlen, ylen)
+                if shape is None:
+                    continue
                 entry = {
                     "x": xmid * sx,
                     "y": ymid * sy,
-                    "shape": "circle",
-                    "d": d_maj,
+                    "shape": shape["shape"],
                 }
-                front.append(entry)
-                continue
+                if shape["shape"] == "circle":
+                    entry["d"] = shape["d"] * (sx + sy) * 0.5 + p.cutout_extra_mm
+                else:
+                    entry["w"] = max(shape["w"] * sx + p.cutout_extra_mm, 0.8)
+                    entry["h"] = max(shape["h"] * sy + p.cutout_extra_mm, 0.8)
 
-            shape = _classify_cutout(xlen, ylen)
-            if shape is None:
-                continue
-            entry = {
-                "x": xmid * sx,
-                "y": ymid * sy,
-                "shape": shape["shape"],
-            }
-            if shape["shape"] == "circle":
-                entry["d"] = shape["d"] * (sx + sy) * 0.5 + p.cutout_extra_mm
-            else:
-                entry["w"] = max(shape["w"] * sx + p.cutout_extra_mm, 0.8)
-                entry["h"] = max(shape["h"] * sy + p.cutout_extra_mm, 0.8)
-
-            if n.Z > 0 and (on_front_plane or zmid > (zmax - p.front_window_mm)):
-                front.append(entry)
-            if n.Z < 0 and (on_rear_plane or zmid < (zmin + p.rear_window_mm)):
-                rear.append(entry)
+                if n.Z > 0 and (on_front_plane or zmid > (zmax - p.front_window_mm)):
+                    front.append(entry)
+                if n.Z < 0 and (on_rear_plane or zmid < (zmin + p.rear_window_mm)):
+                    max_dim, area = _cutout_metrics(entry)
+                    # Filter tiny rear fastener holes so rear cap keeps actual port openings.
+                    if max_dim < p.rear_min_cutout_dim_mm or area < p.rear_min_cutout_area_mm2:
+                        continue
+                    rear.append(entry)
 
     # Deduplicate by rounded center+size
     def dedupe(items):
-        out = []
-        seen = set()
+        kept = {}
         for c in items:
-            if c["shape"] == "circle":
-                key = (c["shape"], round(c["x"], 2), round(c["y"], 2), round(c["d"], 2))
-            else:
-                key = (c["shape"], round(c["x"], 2), round(c["y"], 2), round(c["w"], 2), round(c["h"], 2))
-            if key in seen:
+            key = (c["shape"], round(c["x"], 1), round(c["y"], 1))
+            cur_max_dim, cur_area = _cutout_metrics(c)
+            prev = kept.get(key)
+            if prev is None:
+                kept[key] = c
                 continue
-            seen.add(key)
-            out.append(c)
-        return out
+            _, prev_area = _cutout_metrics(prev)
+            if cur_area > prev_area:
+                kept[key] = c
+        return list(kept.values())
 
     return dedupe(front), dedupe(rear), {
         "front_plane_z_mm": float(front_plane_z) if front_plane_z is not None else None,
@@ -370,7 +387,7 @@ def _build_front_cap_inverted(
 
 def build_caps(p: MakiCapParams):
     tmp_stl = Path("tmp/maki_device_from_step_caps_ref.stl")
-    mesh, housing = _load_step_as_mesh(p.step_path, tmp_stl)
+    mesh, solids = _load_step_as_mesh(p.step_path, tmp_stl)
     zmin, zmax = [float(v) for v in mesh.bounds[:, 2]]
     z_section = zmin + (zmax - zmin) * p.section_z_ratio
     base_profile = _extract_profile_xy(mesh, z_section)
@@ -402,7 +419,7 @@ def build_caps(p: MakiCapParams):
     plug_h = max(inner_h - 2.0 * p.plug_clearance_mm, 2.0)
     plug_corner_r = max(inner_corner_r - p.plug_clearance_mm, 0.6)
 
-    front_cutouts, rear_cutouts, end_plane_meta = _extract_end_cutouts(housing, p, sx, sy, zmin, zmax)
+    front_cutouts, rear_cutouts, end_plane_meta = _extract_end_cutouts(solids, p, sx, sy, zmin, zmax)
 
     front_cap = _build_front_cap_inverted(
         plate_w, plate_h, plate_corner_r, plug_w, plug_h, plug_corner_r, p, front_cutouts

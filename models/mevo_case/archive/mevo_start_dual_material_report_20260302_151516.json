@@ -14,10 +14,8 @@
     "include_front_lens_led_cutouts": true,
     "sun_hood_depth_mm": 3.0,
     "lens_cutout_d_mm": 32.0,
-    "lens_center_x_mm": 0.0,
-    "lens_center_y_mm": 16.5,
     "led_hole_d_mm": 3.0,
-    "led_hole_offset_from_lens_y_mm": 12.0,
+    "led_hole_offset_y_mm": 12.0,
     "tripod_hole_d_mm": 20.5,
     "tripod_center_from_front_mm": 43.2,
     "vent_count": 3,
@@ -30,7 +28,6 @@
     "back_cap_lip_depth_mm": 5.0,
     "back_cap_lip_undersize_total_mm": 0.1,
     "back_cap_edge_fillet_mm": 0.6,
-    "include_back_utility_slot": false,
     "utility_slot_width_mm": 15.0,
     "utility_slot_top_margin_mm": 15.0,
     "utility_slot_bottom_margin_mm": 10.0
@@ -55,10 +52,8 @@
       "open_front_ovular": false,
       "include_front_lens_led_cutouts": true,
       "lens_cutout_d": 32.0,
-      "lens_center_x": 0.0,
-      "lens_center_y": 16.5,
       "led_hole_d": 3.0,
-      "led_hole_offset_from_lens_y": 12.0,
+      "led_hole_offset_y": 12.0,
       "sun_hood_depth": 3.0,
       "tripod_hole_d": 20.5,
       "tripod_center_from_front": 43.2
@@ -80,7 +75,6 @@
       "lip_undersize_total": 0.1
     },
     "utility_slot_mm": {
-      "enabled": false,
       "shape": "stadium",
       "width": 15.0,
       "height": 58.8,

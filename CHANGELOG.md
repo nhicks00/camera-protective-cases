@@ -2,6 +2,22 @@
 
 ## 2026-03-02
 
+### Cutout Alignment Corrections (MAKI + Mevo)
+- MAKI rear-cap extraction fix:
+  - `generate_maki_live_caps.py` now interrogates all STEP solids (not just largest solid) when extracting end-face cutouts.
+  - Added rear tiny-hole filtering so fastener holes are not mistaken for port access cutouts.
+  - Rear-cap report now contains port-sized cutouts (no longer only four corner micro-holes).
+- Mevo dual-material cap/front fixes:
+  - `generate_mevo_dual_material_case.py` front lens opening moved off-center using `lens_center_y_mm=16.5` to avoid centered-misaligned lens hole behavior.
+  - Rear back-cap giant utility slot is now disabled by default (`include_back_utility_slot=false`).
+- Regenerated:
+  - `models/maki_case/maki_live_case_sleeve.step`
+  - `models/maki_case/maki_live_rear_cap.step`
+  - `models/maki_case/reports/maki_live_caps_report.json`
+  - `models/mevo_case/mevo_start_body_dual_material.step`
+  - `models/mevo_case/mevo_start_back_cap_asa.step`
+  - `models/mevo_case/reports/mevo_start_dual_material_report.json`
+
 ### Mevo Dual-Material Height/Depth Fit Correction
 - Corrected Mevo dual-material default fit envelope to match Mevo Start dimensions:
   - camera nominal: `34.0 x 75.5 x 87.0 mm` (W x H x D)

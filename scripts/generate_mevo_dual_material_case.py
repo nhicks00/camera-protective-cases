@@ -14,9 +14,10 @@ the ovular/capsule Mevo cross-section profile:
 - TPU wall: 1.8 mm
 - ASA wall: 2.2 mm
 - Interface gap TPU<->ASA: 0.0 mm
-- Front profile: integrated front wall by default (lens + LED cutouts enabled)
+- Front profile: integrated front wall by default with offset lens opening
 - Bottom tripod hole: 20.5 mm dia, center at Z=43.2 mm from front face
 - Back cap lip depth: 5.0 mm, lip undersize: 0.1 mm vs ASA opening
+- Back utility slot is disabled by default (enable explicitly when port mapping is confirmed)
 """
 
 from __future__ import annotations
@@ -55,8 +56,10 @@ class DualMaterialParams:
     include_front_lens_led_cutouts: bool = True
     sun_hood_depth_mm: float = 3.0
     lens_cutout_d_mm: float = 32.0
+    lens_center_x_mm: float = 0.0
+    lens_center_y_mm: float = 16.5
     led_hole_d_mm: float = 3.0
-    led_hole_offset_y_mm: float = 12.0
+    led_hole_offset_from_lens_y_mm: float = 12.0
 
     # Bottom tripod well
     tripod_hole_d_mm: float = 20.50
@@ -77,6 +80,7 @@ class DualMaterialParams:
     back_cap_edge_fillet_mm: float = 0.6
 
     # Single utility slot on back cap
+    include_back_utility_slot: bool = False
     utility_slot_width_mm: float = 15.0
     utility_slot_top_margin_mm: float = 15.0
     utility_slot_bottom_margin_mm: float = 10.0
@@ -200,9 +204,9 @@ def build_dual_material_body(p: DualMaterialParams):
         # Optional lens/LED openings when a closed front wall is used.
         if (not p.open_front_ovular) and p.include_front_lens_led_cutouts:
             with BuildSketch(Plane.XY.offset(-0.2)):
-                with Locations((0.0, 0.0)):
+                with Locations((p.lens_center_x_mm, p.lens_center_y_mm)):
                     Circle(0.5 * p.lens_cutout_d_mm)
-                with Locations((0.0, p.led_hole_offset_y_mm)):
+                with Locations((p.lens_center_x_mm, p.lens_center_y_mm + p.led_hole_offset_from_lens_y_mm)):
                     Circle(0.5 * p.led_hole_d_mm)
             extrude(amount=p.sun_hood_depth_mm + 0.6, mode=Mode.SUBTRACT)
 
@@ -256,8 +260,10 @@ def build_dual_material_body(p: DualMaterialParams):
             "open_front_ovular": bool(p.open_front_ovular),
             "include_front_lens_led_cutouts": bool(p.include_front_lens_led_cutouts),
             "lens_cutout_d": float(p.lens_cutout_d_mm),
+            "lens_center_x": float(p.lens_center_x_mm),
+            "lens_center_y": float(p.lens_center_y_mm),
             "led_hole_d": float(p.led_hole_d_mm),
-            "led_hole_offset_y": float(p.led_hole_offset_y_mm),
+            "led_hole_offset_from_lens_y": float(p.led_hole_offset_from_lens_y_mm),
             "sun_hood_depth": float(p.sun_hood_depth_mm),
             "tripod_hole_d": float(p.tripod_hole_d_mm),
             "tripod_center_from_front": float(p.tripod_center_from_front_mm),
@@ -288,11 +294,12 @@ def build_back_cap(p: DualMaterialParams):
             _add_profile(lip_w, lip_h, p.enforce_capsule_profile)
         extrude(amount=p.back_cap_lip_depth_mm)
 
-        cut_depth = p.back_cap_thickness_mm + p.back_cap_lip_depth_mm + 1.0
-        with BuildSketch(Plane.XY.offset(-0.2)):
-            with Locations((0.0, slot_center_y)):
-                _add_vertical_stadium(slot_w, slot_h)
-        extrude(amount=cut_depth, mode=Mode.SUBTRACT)
+        if p.include_back_utility_slot:
+            cut_depth = p.back_cap_thickness_mm + p.back_cap_lip_depth_mm + 1.0
+            with BuildSketch(Plane.XY.offset(-0.2)):
+                with Locations((0.0, slot_center_y)):
+                    _add_vertical_stadium(slot_w, slot_h)
+            extrude(amount=cut_depth, mode=Mode.SUBTRACT)
 
     cap = _largest_solid(cap_bp.part)
     try:
@@ -313,6 +320,7 @@ def build_back_cap(p: DualMaterialParams):
             "lip_undersize_total": float(p.back_cap_lip_undersize_total_mm),
         },
         "utility_slot_mm": {
+            "enabled": bool(p.include_back_utility_slot),
             "shape": "stadium",
             "width": float(slot_w),
             "height": float(slot_h),
@@ -340,6 +348,16 @@ def main():
         help="Disable front lens/LED cutouts in closed-front mode.",
     )
     parser.add_argument(
+        "--enable-back-utility-slot",
+        action="store_true",
+        help="Enable the large rear utility slot cutout on the back cap.",
+    )
+    parser.add_argument(
+        "--disable-back-utility-slot",
+        action="store_true",
+        help="Disable rear utility slot cutout on the back cap (default).",
+    )
+    parser.add_argument(
         "--disable-capsule-profile",
         action="store_true",
         help="Use rectangular profile instead of ovular capsule profile.",
@@ -352,6 +370,10 @@ def main():
         p.include_front_lens_led_cutouts = True
     if args.disable_front_lens_led_cutouts:
         p.include_front_lens_led_cutouts = False
+    if args.enable_back_utility_slot:
+        p.include_back_utility_slot = True
+    if args.disable_back_utility_slot:
+        p.include_back_utility_slot = False
     p.enforce_capsule_profile = not bool(args.disable_capsule_profile)
 
     body_asm, body_report = build_dual_material_body(p)

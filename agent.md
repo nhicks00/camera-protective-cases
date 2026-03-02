@@ -87,6 +87,7 @@ Active hard-shell and TPU workflows:
   - Active output: `models/maki_case/maki_live_rear_cap.step`
   - Generator: `scripts/generate_maki_live_caps.py --profile asa`
   - Default is rear-cap-only export (front cap is legacy optional via `--include-front-cap`).
+  - Rear cutouts are extracted from all STEP solids with tiny-hole filtering to preserve port access cutouts over corner fastener holes.
 - TPU one-piece sleeve (preferred TPU output):
   - `models/maki_case/maki_live_tpu_sleeve.step`
   - Generator: `scripts/generate_maki_live_tpu_liner.py`
@@ -108,6 +109,8 @@ Current preferred workflow:
   - front lens/LED cutouts enabled by default in closed-front mode,
   - separate pure-ASA back cap,
   - bottom tripod hole cuts through ASA and TPU so mount contacts camera directly.
+- Mevo back cap utility slot is default-disabled (`include_back_utility_slot=false`) until exact rear port map is confirmed.
+- Mevo lens opening uses offset center (`lens_center_y_mm=16.5`) to avoid centered misalignment.
 - Optional flags:
   - `--open-front-ovular` for legacy open-front mode,
   - `--disable-front-lens-led-cutouts` to keep front wall solid.
