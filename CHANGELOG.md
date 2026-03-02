@@ -2,6 +2,19 @@
 
 ## 2026-03-02
 
+### Vent + Tripod Cutout Corrections
+- Mevo sleeve:
+  - Replaced bottom tripod opening with a centered circular through-hole (`12.7 mm` default diameter).
+  - Disabled Y-axis body filleting by default to keep Mevo vent opening edges sharp/right-angled.
+- MAKI sleeve + TPU sleeve:
+  - Updated vent subtraction strategy to start cuts outside the shell face and cut inward (eliminates non-through “placeholder” vents).
+  - Kept vent rows aligned between ASA and TPU via shared 3-panel/8-row pattern derivation.
+  - Added vent-entry reporting (`vents_applied_entries`) for direct coordinate auditing.
+- Verified with geometric ray checks:
+  - MAKI ASA vents: `24/24` through
+  - MAKI TPU vents: `24/24` through
+  - MAKI ASA/TPU vent alignment in device frame: max delta `0.0 mm` on x and z for corresponding rows.
+
 ### Assembly Fit Hardening + 3.0 mm ASA Wall Update
 - Updated default ASA wall thickness to `3.0 mm` for both Mevo and MAKI sleeve/cap workflows.
 - Mevo sleeve now defaults to open-through mode for front/rear cap assembly compatibility.

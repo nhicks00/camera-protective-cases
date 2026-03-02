@@ -23,7 +23,6 @@
     "front_bezel_height_mm": 1.1,
     "tripod_slot_w_mm": 14.0,
     "tripod_slot_l_mm": 12.0,
-    "tripod_hole_d_mm": 12.7,
     "tripod_pad_w_mm": 28.0,
     "tripod_pad_l_mm": 18.0,
     "tripod_pad_h_mm": 2.2,
@@ -45,8 +44,7 @@
     "vent_pitch_mm": 4.8,
     "vent_z_ratio": 0.57,
     "profile_simplify_tol_mm": 0.15,
-    "offset_resolution": 48,
-    "preserve_sharp_vent_edges": true
+    "offset_resolution": 48
   },
   "extraction": {
     "raw_profile_mm": {
@@ -80,10 +78,6 @@
         "pad_l": 18.0,
         "pad_h": 2.2
       },
-      "tripod_opening_mm": {
-        "shape": "circle",
-        "diameter": 12.7
-      },
       "corner_radius_mm": {
         "inner": 19.1,
         "outer": 22.1,
@@ -91,7 +85,7 @@
       },
       "machined_finish_mm": {
         "body_axis_x_fillet": 0.0,
-        "body_axis_y_fillet": 0.0,
+        "body_axis_y_fillet": 0.4,
         "rear_plate_global_fillet": 0.8
       },
       "lens_reference_center_mm": [

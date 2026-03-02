@@ -35,7 +35,6 @@ from build123d import (
     Mode,
     Plane,
     Rectangle,
-    SlotOverall,
     export_step,
     export_stl,
     extrude,
@@ -479,17 +478,17 @@ def build_case(p: MakiCaseParams):
         if p.use_step_side_features:
             if p.enforce_tripanel_vent_layout:
                 vent_pattern = _derive_tripanel_vents(step_features["vents"], map_x, map_z, sx, sz, outer_w, p)
-                y_face = min_y + 0.15
-                cut_depth = max(p.vent_cut_depth_mm, p.wall_mm + 3.0)
+                y_face = min_y - 0.2
+                cut_depth = max(p.vent_cut_depth_mm, p.wall_mm + p.tripod_armor_extra_mm + 3.0)
                 for panel_idx, x_c in enumerate(vent_pattern["x_centers"]):
                     for z_c in vent_pattern["z_centers"]:
-                        # Box subtraction guarantees full through-cut on flat + adjacent curved panels.
+                        # Start from outer face and cut inward to guarantee through-wall opening.
                         with Locations((x_c, y_face, z_c)):
                             Box(
-                                vent_pattern["slot_w"],
-                                cut_depth,
                                 vent_pattern["slot_h"],
-                                align=(Align.CENTER, Align.CENTER, Align.CENTER),
+                                cut_depth,
+                                vent_pattern["slot_w"],
+                                align=(Align.CENTER, Align.MIN, Align.CENTER),
                                 mode=Mode.SUBTRACT,
                             )
                         vents_used.append(
@@ -515,12 +514,18 @@ def build_case(p: MakiCaseParams):
                         slot_w = max(max(t_span, z_span) + p.side_feature_clearance_mm, 0.8)
                         slot_h = max(min(t_span, z_span) + p.side_feature_clearance_mm, 0.8)
                         on_neg = v["side"] == "neg"
-                        y_face = min_y + 0.15 if on_neg else max_y - 0.15
-                        cut_depth = max(p.vent_cut_depth_mm, p.wall_mm + 3.0)
-                        with BuildSketch(Plane.XZ.offset(y_face)):
-                            with Locations((x_c, z_c)):
-                                SlotOverall(slot_w, slot_h)
-                        extrude(amount=(-cut_depth if on_neg else cut_depth), mode=Mode.SUBTRACT)
+                        y_face = min_y - 0.2 if on_neg else max_y + 0.2
+                        cut_depth = max(p.vent_cut_depth_mm, p.wall_mm + p.tripod_armor_extra_mm + 3.0)
+                        with Locations((x_c, y_face, z_c)):
+                            Box(
+                                slot_h,
+                                cut_depth,
+                                slot_w,
+                                align=(Align.CENTER, Align.MIN, Align.CENTER)
+                                if on_neg
+                                else (Align.CENTER, Align.MAX, Align.CENTER),
+                                mode=Mode.SUBTRACT,
+                            )
                     else:
                         y_c = map_y(v["y"])
                         t_span = v["slot_t"] * sy
@@ -528,12 +533,18 @@ def build_case(p: MakiCaseParams):
                         slot_w = max(max(t_span, z_span) + p.side_feature_clearance_mm, 0.8)
                         slot_h = max(min(t_span, z_span) + p.side_feature_clearance_mm, 0.8)
                         on_neg = v["side"] == "neg"
-                        x_face = min_x + 0.15 if on_neg else max_x - 0.15
-                        cut_depth = max(p.vent_cut_depth_mm, p.wall_mm + 3.0)
-                        with BuildSketch(Plane.YZ.offset(x_face)):
-                            with Locations((y_c, z_c)):
-                                SlotOverall(slot_w, slot_h)
-                        extrude(amount=(cut_depth if on_neg else -cut_depth), mode=Mode.SUBTRACT)
+                        x_face = min_x - 0.2 if on_neg else max_x + 0.2
+                        cut_depth = max(p.vent_cut_depth_mm, p.wall_mm + p.tripod_armor_extra_mm + 3.0)
+                        with Locations((x_face, y_c, z_c)):
+                            Box(
+                                cut_depth,
+                                slot_h,
+                                slot_w,
+                                align=(Align.MIN, Align.CENTER, Align.CENTER)
+                                if on_neg
+                                else (Align.MAX, Align.CENTER, Align.CENTER),
+                                mode=Mode.SUBTRACT,
+                            )
                     vents_used.append(
                         {
                             "axis": v["axis"],
@@ -582,12 +593,18 @@ def build_case(p: MakiCaseParams):
         # Fallback if STEP-derived features were unavailable.
         if not vents_used:
             vent_z0 = p.clearance_mm + p.vent_start_from_front_mm
+            y_face = min_y - 0.2
+            cut_depth = max(p.vent_cut_depth_mm, p.wall_mm + p.tripod_armor_extra_mm + 3.0)
             for i in range(p.vent_count):
                 z = vent_z0 + i * p.vent_pitch_mm
-                with BuildSketch(Plane.XZ.offset(min_y + 0.2)):
-                    with Locations((0.0, z)):
-                        SlotOverall(p.vent_slot_w_mm, p.vent_slot_h_mm)
-                extrude(amount=-(p.wall_mm + 2.5), mode=Mode.SUBTRACT)
+                with Locations((0.0, y_face, z)):
+                    Box(
+                        p.vent_slot_h_mm,
+                        cut_depth,
+                        p.vent_slot_w_mm,
+                        align=(Align.CENTER, Align.MIN, Align.CENTER),
+                        mode=Mode.SUBTRACT,
+                    )
 
         if tripod_used is None:
             tripod_z = p.clearance_mm + p.tripod_center_from_front_mm
@@ -620,6 +637,7 @@ def build_case(p: MakiCaseParams):
         "step_side_features": {
             "vents_detected": len(step_features["vents"]),
             "vents_applied": len(vents_used),
+            "vents_applied_entries": vents_used,
             "tripanel_vent_layout_enforced": p.enforce_tripanel_vent_layout,
             "tripod_detected": step_features["tripod"] is not None,
             "tripod_applied": tripod_used,

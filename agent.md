@@ -68,6 +68,7 @@ Active hard-shell and TPU workflows:
     - 24 total on that side
   - Through-cut depth increased so vents fully penetrate.
   - Tripod side includes local armor boss thickening around the mount opening.
+  - Vent pass-through validated (`24/24` through by ray-check) and vent coordinates emitted in report under `step_side_features.vents_applied_entries`.
 - ASA caps:
   - `models/maki_case/maki_live_front_cap.step`
   - `models/maki_case/maki_live_rear_cap.step`
@@ -81,6 +82,7 @@ Active hard-shell and TPU workflows:
   - Generator: `scripts/generate_maki_live_tpu_liner.py`
   - Single connected TPU sleeve with thin front/rear edge wraps.
   - Does not use full TPU face caps.
+  - Vent pass-through validated (`24/24` through by ray-check) and aligned to ASA vent rows in device frame.
   - Legacy separate TPU liner/caps and unibody files are archived automatically.
 
 ### Mevo Start
@@ -95,6 +97,8 @@ Current preferred workflow:
   - Generator: `scripts/generate_mevo_case.py`
 - Sleeve defaults to open-through mode (`open_through_sleeve=True`) for cap compatibility.
 - Tripod zone includes external armor pad reinforcement on the sleeve body.
+- Bottom tripod opening in sleeve body is a centered circular through-hole (`12.7 mm` default).
+- Mevo vent openings default to sharp/right-angled edges (`preserve_sharp_vent_edges=True`).
 - Back-plate duplication resolved:
   - `mevo_start_case_back_plate.step` is now opt-in only (`--include-back-plate`).
   - Default generation does not export back plate.

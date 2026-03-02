@@ -35,6 +35,7 @@ Archive policy:
 - Tripod region reinforcement via local external armor boss
 - Side vent slots extracted from STEP across flat + corner side panels
 - Enforced vent layout on tripod side: `3` adjacent panels x `8` slots each (`24` total), with through-cuts
+- Vent coordinates are reported (`step_side_features.vents_applied_entries`) for ASA/TPU alignment audits.
 - Built with `build123d` (OpenCascade B-Rep), exported as STEP only
 
 ## Generator Script

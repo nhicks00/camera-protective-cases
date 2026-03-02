@@ -81,6 +81,7 @@ class CaseParams:
     # Tripod mount protection zone
     tripod_slot_w_mm: float = 14.0
     tripod_slot_l_mm: float = 12.0
+    tripod_hole_d_mm: float = 12.7
     tripod_pad_w_mm: float = 28.0
     tripod_pad_l_mm: float = 18.0
     tripod_pad_h_mm: float = 2.2
@@ -113,6 +114,7 @@ class CaseParams:
     # Polygon processing
     profile_simplify_tol_mm: float = 0.15
     offset_resolution: int = 48
+    preserve_sharp_vent_edges: bool = True
 
 
 def _largest_polygon(polys: Iterable[Polygon]) -> Polygon:
@@ -430,18 +432,17 @@ def build_case(p: CaseParams):
             )
 
         slot_depth = p.wall_mm + 2.0
-        with Locations((0.0, min_y + 0.2, tripod_z)):
-            Box(
-                p.tripod_slot_w_mm,
-                slot_depth,
-                p.tripod_slot_l_mm,
-                align=(Align.CENTER, Align.MIN, Align.CENTER),
-                mode=Mode.SUBTRACT,
-            )
+        with BuildSketch(Plane.XZ.offset(min_y + 0.2)):
+            with Locations((0.0, tripod_z)):
+                Circle(0.5 * p.tripod_hole_d_mm)
+        extrude(amount=-slot_depth, mode=Mode.SUBTRACT)
 
     body = _largest_solid(body_bp.part)
     body, body_fillet_x = _apply_axis_fillet(body, Axis.X, (0.8, 0.6, 0.45, 0.3, 0.2))
-    body, body_fillet_y = _apply_axis_fillet(body, Axis.Y, (0.4, 0.3, 0.2, 0.15))
+    if p.preserve_sharp_vent_edges:
+        body_fillet_y = 0.0
+    else:
+        body, body_fillet_y = _apply_axis_fillet(body, Axis.Y, (0.4, 0.3, 0.2, 0.15))
 
     with BuildPart() as rear_plate_bp:
         with BuildSketch(Plane.XY):
@@ -500,6 +501,10 @@ def build_case(p: CaseParams):
                 "pad_w": p.tripod_pad_w_mm,
                 "pad_l": p.tripod_pad_l_mm,
                 "pad_h": p.tripod_pad_h_mm,
+            },
+            "tripod_opening_mm": {
+                "shape": "circle",
+                "diameter": p.tripod_hole_d_mm,
             },
             "corner_radius_mm": {
                 "inner": float(inner_corner_r),

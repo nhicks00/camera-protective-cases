@@ -40,6 +40,8 @@ Archive policy:
   - Bottom tripod access opening
 - Optional side vent slots included
 - Tripod impact zone includes an external armor pad on the sleeve body.
+- Bottom tripod access uses a centered circular through-hole (`12.7 mm` default).
+- Vent openings are kept sharp/right-angled by default (no Y-axis fillet pass on body).
 
 For alternate cap STLs where the inner circular opening is not reliable, the generator still uses the cap for outer curvature and defaults to a manual lens cutout target.
 The current default profile logic uses the cap's **inner pill loop** and enforces a symmetric capsule profile before extending to full length.
