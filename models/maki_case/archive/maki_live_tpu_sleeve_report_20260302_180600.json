@@ -475,7 +475,6 @@
       "tripod_edge_candidate_count": 0,
       "tripod_applied": {
         "side": "neg",
-        "detected_side": "neg",
         "x": 9.600208465045147e-16,
         "z": 44.430878397843735,
         "diameter": 9.339165114161233

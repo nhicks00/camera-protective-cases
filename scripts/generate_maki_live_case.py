@@ -497,11 +497,12 @@ def _collapse_close(values: list[float], tol: float) -> list[float]:
 
 def _derive_tripanel_vents(step_vents, map_x, map_y, map_z, sx: float, sz: float, outer_w: float, p: MakiCaseParams):
     """Derive a 3-panel vent pattern (8 rows each) from STEP side vents."""
+    target_side = p.tripod_expected_side if p.tripod_expected_side in ("neg", "pos") else "neg"
     # Primary vent-bank candidates: large elongated side slots on tripod side,
     # excluding tiny front-region decorative/fastener loops.
     neg_primary = []
     for v in step_vents:
-        if v["axis"] != "y" or v["side"] != "neg":
+        if v["axis"] != "y" or v["side"] != target_side:
             continue
         if v["z"] > -20.0:
             continue
@@ -517,9 +518,9 @@ def _derive_tripanel_vents(step_vents, map_x, map_y, map_z, sx: float, sz: float
         ]
         x_off = p.tripanel_fallback_x_offset_mm
         panels = [
-            {"axis": "x", "side": "neg", "x": -x_off, "y": 0.0},
-            {"axis": "y", "side": "neg", "x": 0.0, "y": 0.0},
-            {"axis": "x", "side": "pos", "x": x_off, "y": 0.0},
+            {"axis": "y", "side": target_side, "x": -x_off, "y": 0.0},
+            {"axis": "y", "side": target_side, "x": 0.0, "y": 0.0},
+            {"axis": "y", "side": target_side, "x": x_off, "y": 0.0},
         ]
         return {
             "panels": panels,
@@ -561,9 +562,9 @@ def _derive_tripanel_vents(step_vents, map_x, map_y, map_z, sx: float, sz: float
     center_x = float(np.median([map_x(v["x"]) for v in neg_primary]))
     x_off = min(max(p.tripanel_fallback_x_offset_mm, 8.0), 0.36 * outer_w)
     panels = [
-        {"axis": "y", "side": "neg", "x": center_x - x_off, "y": 0.0},
-        {"axis": "y", "side": "neg", "x": center_x, "y": 0.0},
-        {"axis": "y", "side": "neg", "x": center_x + x_off, "y": 0.0},
+        {"axis": "y", "side": target_side, "x": center_x - x_off, "y": 0.0},
+        {"axis": "y", "side": target_side, "x": center_x, "y": 0.0},
+        {"axis": "y", "side": target_side, "x": center_x + x_off, "y": 0.0},
     ]
 
     return {
@@ -747,10 +748,15 @@ def build_case(p: MakiCaseParams):
         # Curved duck-bill shade extension integrated to front perimeter.
         if p.front_integrated and p.lens_hood_enabled and p.lens_hood_depth_mm > 0.0 and p.lens_hood_drop_mm > 0.0:
             hood_span = max(min(outer_w * p.lens_hood_span_ratio, outer_w + 0.2), 8.0)
+            tripod_on_neg = p.tripod_expected_side == "neg"
+            hood_on_neg = not tripod_on_neg
+            hood_anchor_y = min_y if hood_on_neg else max_y
+            hood_center_y = hood_anchor_y + (p.lens_hood_drop_mm if hood_on_neg else -p.lens_hood_drop_mm)
+            hood_r = math.sqrt((0.5 * hood_span) ** 2 + p.lens_hood_drop_mm**2)
             with BuildSketch(Plane.XY):
                 _add_rounded_rectangle(outer_w, outer_h, outer_corner_r)
-                with Locations((0.0, max_y - 0.5 * p.lens_hood_drop_mm)):
-                    Rectangle(hood_span, p.lens_hood_drop_mm, mode=Mode.INTERSECT)
+                with Locations((0.0, hood_center_y)):
+                    Circle(hood_r, mode=Mode.INTERSECT)
             extrude(amount=-p.lens_hood_depth_mm)
 
         if p.use_step_side_features:
@@ -760,16 +766,17 @@ def build_case(p: MakiCaseParams):
                 for panel_idx, panel in enumerate(vent_pattern["panels"]):
                     for z_c in vent_pattern["z_centers"]:
                         if panel["axis"] == "y":
-                            y_face = min_y - 0.2
+                            on_neg = panel["side"] == "neg"
+                            y_face = min_y - 0.2 if on_neg else max_y + 0.2
                             # Oval/slot vent cuts to match device vent style.
                             with BuildSketch(Plane.XZ.offset(y_face)):
                                 with Locations((panel["x"], z_c)):
                                     SlotOverall(vent_pattern["slot_t"], vent_pattern["slot_z"])
-                            extrude(amount=cut_depth, mode=Mode.SUBTRACT)
+                            extrude(amount=cut_depth if on_neg else -cut_depth, mode=Mode.SUBTRACT)
                             vents_used.append(
                                 {
                                     "axis": "y",
-                                    "side": "neg",
+                                    "side": panel["side"],
                                     "x": float(panel["x"]),
                                     "y": float(y_face),
                                     "z": float(z_c),
@@ -900,7 +907,9 @@ def build_case(p: MakiCaseParams):
                 x_c = map_x(t["x"])
                 z_c = map_z(t["z"])
                 d = max(2.0 * t["r"] * sx + p.tripod_cutout_extra_mm, 2.0)
-                on_neg = t["side"] == "neg"
+                detected_on_neg = t["side"] == "neg"
+                expected_on_neg = p.tripod_expected_side == "neg"
+                on_neg = expected_on_neg
                 y_face = (
                     min_y - p.tripod_armor_extra_mm - 0.2
                     if on_neg
@@ -938,7 +947,8 @@ def build_case(p: MakiCaseParams):
                         Circle(d * 0.5)
                 extrude(amount=cut_depth, mode=Mode.SUBTRACT)
                 tripod_used = {
-                    "side": t["side"],
+                    "side": "neg" if on_neg else "pos",
+                    "detected_side": "neg" if detected_on_neg else "pos",
                     "x": x_c,
                     "z": z_c,
                     "diameter": d,
@@ -951,35 +961,45 @@ def build_case(p: MakiCaseParams):
         # Fallback if STEP-derived features were unavailable.
         if not vents_used:
             vent_z0 = cavity_front_z + p.clearance_mm + p.vent_start_from_front_mm
-            y_face = min_y - 0.2
+            fallback_on_neg = p.tripod_expected_side == "neg"
+            y_face = min_y - 0.2 if fallback_on_neg else max_y + 0.2
             cut_depth = max(p.vent_cut_depth_mm, p.wall_mm + p.tripod_armor_extra_mm + 3.0)
             for i in range(p.vent_count):
                 z = vent_z0 + i * p.vent_pitch_mm
-                with Locations((0.0, y_face, z)):
-                    Box(
-                        p.vent_slot_h_mm,
-                        cut_depth,
-                        p.vent_slot_w_mm,
-                        align=(Align.CENTER, Align.MIN, Align.CENTER),
-                        mode=Mode.SUBTRACT,
-                    )
+                with BuildSketch(Plane.XZ.offset(y_face)):
+                    with Locations((0.0, z)):
+                        SlotOverall(p.vent_slot_w_mm, p.vent_slot_h_mm)
+                extrude(amount=cut_depth if fallback_on_neg else -cut_depth, mode=Mode.SUBTRACT)
 
         if tripod_used is None:
             tripod_z = cavity_front_z + p.clearance_mm + p.tripod_center_from_front_mm
+            fallback_on_neg = p.tripod_expected_side == "neg"
 
-            with Locations((0.0, min_y, tripod_z)):
+            with Locations((0.0, min_y if fallback_on_neg else max_y, tripod_z)):
                 Box(
                     p.tripod_hole_diameter_mm + 2.0 * p.tripod_armor_margin_mm,
                     p.tripod_armor_extra_mm,
                     p.tripod_hole_diameter_mm + 2.0 * p.tripod_armor_margin_mm,
-                    align=(Align.CENTER, Align.MAX, Align.CENTER),
+                    align=(Align.CENTER, Align.MAX, Align.CENTER)
+                    if fallback_on_neg
+                    else (Align.CENTER, Align.MIN, Align.CENTER),
                 )
 
-            with BuildSketch(Plane.ZX.offset(min_y - p.tripod_armor_extra_mm - 0.2)):
-                with Locations((tripod_z, 0.0)):
+            fallback_plane = (
+                Plane.ZX.offset(min_y - p.tripod_armor_extra_mm - 0.2)
+                if fallback_on_neg
+                else Plane.XZ.offset(max_y + p.tripod_armor_extra_mm + 0.2)
+            )
+            with BuildSketch(fallback_plane):
+                with Locations((tripod_z, 0.0) if fallback_on_neg else (0.0, tripod_z)):
                     Circle(p.tripod_hole_diameter_mm * 0.5)
             extrude(amount=(p.wall_mm + p.tripod_armor_extra_mm + 3.0), mode=Mode.SUBTRACT)
-            tripod_used = {"side": "neg", "x": 0.0, "z": tripod_z, "diameter": p.tripod_hole_diameter_mm}
+            tripod_used = {
+                "side": "neg" if fallback_on_neg else "pos",
+                "x": 0.0,
+                "z": tripod_z,
+                "diameter": p.tripod_hole_diameter_mm,
+            }
 
     sleeve = _largest_solid(sleeve_bp.part)
     sleeve, sleeve_fillet_y = _apply_axis_fillet(sleeve, Axis.Y, (0.8, 0.6, 0.45, 0.3, 0.2))
@@ -1014,6 +1034,7 @@ def build_case(p: MakiCaseParams):
                 "depth_mm": float(max(p.lens_hood_depth_mm, 0.0)),
                 "drop_mm": float(max(p.lens_hood_drop_mm, 0.0)),
                 "span_ratio": float(p.lens_hood_span_ratio),
+                "side": "neg" if p.tripod_expected_side == "pos" else "pos",
             },
             "cavity_front_z_mm": float(cavity_front_z),
             "inner_w_mm": float(inner_w),

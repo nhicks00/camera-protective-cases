@@ -478,7 +478,6 @@
           },
           "tripod_applied": {
             "side": "neg",
-            "detected_side": "neg",
             "x": 9.600208465045147e-16,
             "z": 49.53087839784373,
             "diameter": 9.339165114161233,
@@ -497,8 +496,7 @@
             "enabled": true,
             "depth_mm": 16.0,
             "drop_mm": 9.0,
-            "span_ratio": 0.84,
-            "side": "pos"
+            "span_ratio": 0.84
           },
           "cavity_front_z_mm": 3.0,
           "inner_w_mm": 61.59,
@@ -543,7 +541,7 @@
             "outer": 22.087156857946702
           },
           "machined_finish_mm": {
-            "sleeve_axis_y_fillet": 0.8
+            "sleeve_axis_y_fillet": 0.45
           },
           "outer_bounds_xy_mm": {
             "min_x": -33.795,
@@ -981,7 +979,6 @@
           "tripod_edge_candidate_count": 0,
           "tripod_applied": {
             "side": "neg",
-            "detected_side": "neg",
             "x": 9.600208465045147e-16,
             "z": 44.430878397843735,
             "diameter": 9.339165114161233

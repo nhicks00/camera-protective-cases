@@ -86,6 +86,7 @@ Active hard-shell and TPU workflows:
   - Side 3+3 vent group is placed on the opposite end from the tripod-side vent bank.
   - Side 3+3 vent dimensions are matched to the main tripanel vent style size.
   - Main `24` vent bank and side `3+3` vents use rounded-slot cuts on both ASA and TPU (not box/square cuts).
+  - Vent-bank/tripod side relationship is explicit: 24-bank and tripod opening remain on the same expected side (`tripod_expected_side`), with hood on the opposite side.
   - Front camera aperture in integrated front wall is trimmed by `2.0 mm` vs prior extraction.
   - Through-cut depth increased so vents fully penetrate.
   - Vent row clustering now locks to the STEP-derived rear vent bank (8 rows) and ignores front outlier slots.
@@ -93,7 +94,7 @@ Active hard-shell and TPU workflows:
   - Tripod hole cut orientation is corrected and validated as a true through-cut.
   - Dual-body tripod overlap is now numerically aligned (`dx=0.0`, `dz=0.0` in current reports).
   - Side `3 + 3` vents are rounded-slot cuts (not hard rectangular box cuts).
-  - Integrated top-front lens hood/shade uses an extended curved duck-bill profile (`lens_hood_*` params in case script).
+  - Integrated top-front lens hood/shade uses an extended curved duck-bill profile with curved root transition (`lens_hood_*` params in case script).
   - Vent pass-through validated (`30/30` total) and vent coordinates emitted in report under `step_side_features.vents_applied_entries`.
 - ASA caps:
   - Active outputs:

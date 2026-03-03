@@ -361,9 +361,10 @@ def _collapse_close(values: list[float], tol: float) -> list[float]:
 
 def _derive_tripanel_vents(step_vents, map_x, map_y, map_z, sx: float, sz: float, outer_w: float, p: MakiTpuLinerParams):
     """Derive a 3-panel vent pattern (8 rows each) from STEP side vents."""
+    target_side = p.tripod_expected_side if p.tripod_expected_side in ("neg", "pos") else "neg"
     neg_primary = []
     for v in step_vents:
-        if v["axis"] != "y" or v["side"] != "neg":
+        if v["axis"] != "y" or v["side"] != target_side:
             continue
         if v["z"] > -20.0:
             continue
@@ -378,9 +379,9 @@ def _derive_tripanel_vents(step_vents, map_x, map_y, map_z, sx: float, sz: float
         ]
         x_off = p.tripanel_fallback_x_offset_mm
         panels = [
-            {"axis": "x", "side": "neg", "x": -x_off, "y": 0.0},
-            {"axis": "y", "side": "neg", "x": 0.0, "y": 0.0},
-            {"axis": "x", "side": "pos", "x": x_off, "y": 0.0},
+            {"axis": "y", "side": target_side, "x": -x_off, "y": 0.0},
+            {"axis": "y", "side": target_side, "x": 0.0, "y": 0.0},
+            {"axis": "y", "side": target_side, "x": x_off, "y": 0.0},
         ]
         return {
             "panels": panels,
@@ -413,9 +414,9 @@ def _derive_tripanel_vents(step_vents, map_x, map_y, map_z, sx: float, sz: float
     center_x = float(np.median([map_x(v["x"]) for v in neg_primary]))
     x_off = min(max(p.tripanel_fallback_x_offset_mm, 8.0), 0.36 * outer_w)
     panels = [
-        {"axis": "y", "side": "neg", "x": center_x - x_off, "y": 0.0},
-        {"axis": "y", "side": "neg", "x": center_x, "y": 0.0},
-        {"axis": "y", "side": "neg", "x": center_x + x_off, "y": 0.0},
+        {"axis": "y", "side": target_side, "x": center_x - x_off, "y": 0.0},
+        {"axis": "y", "side": target_side, "x": center_x, "y": 0.0},
+        {"axis": "y", "side": target_side, "x": center_x + x_off, "y": 0.0},
     ]
     return {
         "panels": panels,
@@ -594,15 +595,16 @@ def build_liner(p: MakiTpuLinerParams):
                 for panel_idx, panel in enumerate(vent_pattern["panels"]):
                     for z_c in vent_pattern["z_centers"]:
                         if panel["axis"] == "y":
-                            y_face = min_y - 0.2
+                            on_neg = panel["side"] == "neg"
+                            y_face = min_y - 0.2 if on_neg else max_y + 0.2
                             with BuildSketch(Plane.XZ.offset(y_face)):
                                 with Locations((panel["x"], z_c)):
                                     SlotOverall(vent_pattern["slot_t"], vent_pattern["slot_z"])
-                            extrude(amount=cut_depth, mode=Mode.SUBTRACT)
+                            extrude(amount=cut_depth if on_neg else -cut_depth, mode=Mode.SUBTRACT)
                             vents_used.append(
                                 {
                                     "axis": "y",
-                                    "side": "neg",
+                                    "side": panel["side"],
                                     "x": float(panel["x"]),
                                     "y": float(y_face),
                                     "z": float(z_c),
@@ -729,7 +731,9 @@ def build_liner(p: MakiTpuLinerParams):
                 x_c = map_x(t["x"])
                 z_c = map_z(t["z"])
                 d = max(2.0 * t["r"] * sx + p.tripod_cutout_extra_mm, 2.0)
-                on_neg = t["side"] == "neg"
+                detected_on_neg = t["side"] == "neg"
+                expected_on_neg = p.tripod_expected_side == "neg"
+                on_neg = expected_on_neg
                 y_face = min_y - 0.2 if on_neg else max_y + 0.2
                 cut_depth = p.shell_thickness_mm + 2.5
                 if on_neg:
@@ -742,29 +746,38 @@ def build_liner(p: MakiTpuLinerParams):
                     with Locations(cut_loc):
                         Circle(d * 0.5)
                 extrude(amount=cut_depth, mode=Mode.SUBTRACT)
-                tripod_used = {"side": t["side"], "x": x_c, "z": z_c, "diameter": d}
+                tripod_used = {
+                    "side": "neg" if on_neg else "pos",
+                    "detected_side": "neg" if detected_on_neg else "pos",
+                    "x": x_c,
+                    "z": z_c,
+                    "diameter": d,
+                }
 
         if not vents_used:
-            y_face = min_y - 0.2
+            fallback_on_neg = p.tripod_expected_side == "neg"
+            y_face = min_y - 0.2 if fallback_on_neg else max_y + 0.2
             cut_depth = max(p.vent_cut_depth_mm, p.shell_thickness_mm + 3.0)
             for i in range(p.vent_count):
                 z = p.end_clearance_mm + p.vent_start_from_front_mm + i * p.vent_pitch_mm
-                with Locations((0.0, y_face, z)):
-                    Box(
-                        p.vent_slot_h_mm,
-                        cut_depth,
-                        p.vent_slot_w_mm,
-                        align=(Align.CENTER, Align.MIN, Align.CENTER),
-                        mode=Mode.SUBTRACT,
-                    )
+                with BuildSketch(Plane.XZ.offset(y_face)):
+                    with Locations((0.0, z)):
+                        SlotOverall(p.vent_slot_w_mm, p.vent_slot_h_mm)
+                extrude(amount=cut_depth if fallback_on_neg else -cut_depth, mode=Mode.SUBTRACT)
 
         if tripod_used is None:
-            with BuildSketch(Plane.ZX.offset(min_y - 0.2)):
-                with Locations((p.end_clearance_mm + p.tripod_center_from_front_mm, 0.0)):
+            fallback_on_neg = p.tripod_expected_side == "neg"
+            fallback_plane = Plane.ZX.offset(min_y - 0.2) if fallback_on_neg else Plane.XZ.offset(max_y + 0.2)
+            with BuildSketch(fallback_plane):
+                with Locations(
+                    (p.end_clearance_mm + p.tripod_center_from_front_mm, 0.0)
+                    if fallback_on_neg
+                    else (0.0, p.end_clearance_mm + p.tripod_center_from_front_mm)
+                ):
                     Circle(p.tripod_hole_diameter_mm * 0.5)
             extrude(amount=(p.shell_thickness_mm + 2.5), mode=Mode.SUBTRACT)
             tripod_used = {
-                "side": "neg",
+                "side": "neg" if fallback_on_neg else "pos",
                 "x": 0.0,
                 "z": p.end_clearance_mm + p.tripod_center_from_front_mm,
                 "diameter": p.tripod_hole_diameter_mm,

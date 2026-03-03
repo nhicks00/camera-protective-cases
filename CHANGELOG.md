@@ -2,6 +2,24 @@
 
 ## 2026-03-02
 
+### MAKI Orientation + Hood Curvature Correction
+- Corrected MAKI orientation constraints so critical features stay on intended sides:
+  - `24`-vent bank and tripod opening are forced to the same configured side (`tripod_expected_side`, default `neg`),
+  - front duck-bill hood is forced to the opposite side.
+- Added side override behavior for tripod placement:
+  - detection side is still recorded (`detected_side`),
+  - applied cut side follows expected-side policy for consistent print orientation.
+- Updated MAKI duck-bill hood profile to remove straight cross-cut behavior at the camera opening:
+  - hood root shape now uses a circular intersection with front profile for a more curved transition.
+- Applied in:
+  - `scripts/generate_maki_live_case.py`
+  - `scripts/generate_maki_live_tpu_liner.py`
+- Regenerated:
+  - `models/maki_case/maki_live_case_sleeve.step`
+  - `models/maki_case/maki_live_tpu_sleeve.step`
+  - `models/maki_case/maki_live_body_dual_material.step`
+  - updated MAKI reports in `models/maki_case/reports/`.
+
 ### Mevo Upper Rear Window + Front Lens Lift + Duck-Bill Hood Update
 - Updated Mevo upper manual rear cutout (button/headphone area) to be wider and shifted closer to the top while extending lower:
   - side margins changed to `3.0 mm` (from `6.35 mm`)
