@@ -870,12 +870,19 @@ def main():
     reports_dir = args.out / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
 
-    out_step = args.out / "maki_live_fit_validation_assembly.step"
-    out_device = args.out / "maki_live_device_aligned.step"
-    out_cap = args.out / "maki_live_rear_cap_aligned.step"
-    out_body = args.out / "maki_live_body_aligned.step"
+    out_step = reports_dir / "maki_live_fit_validation_assembly.step"
+    out_device = reports_dir / "maki_live_device_aligned.step"
+    out_cap = reports_dir / "maki_live_rear_cap_aligned.step"
+    out_body = reports_dir / "maki_live_body_aligned.step"
     out_json = reports_dir / "maki_live_fit_validation_report.json"
-    archived = _archive_existing([out_step, out_device, out_cap, out_body, out_json], args.out)
+    # Also archive any old top-level copies from prior runs.
+    legacy_top = [
+        args.out / "maki_live_fit_validation_assembly.step",
+        args.out / "maki_live_device_aligned.step",
+        args.out / "maki_live_rear_cap_aligned.step",
+        args.out / "maki_live_body_aligned.step",
+    ]
+    archived = _archive_existing([out_step, out_device, out_cap, out_body, out_json] + legacy_top, args.out)
 
     assembly, report, extras = validate_fit(
         device_step=args.device_step,

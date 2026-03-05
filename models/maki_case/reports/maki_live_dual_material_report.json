@@ -591,15 +591,17 @@
             "slide_in_from": "rear"
           },
           "snap_clips": {
+            "enabled": false
+          },
+          "friction_ridge": {
             "enabled": true,
-            "clip_count": 2,
-            "beam_length_mm": 5.0,
-            "catch_height_mm": 0.6,
-            "clip_tip_z_mm": 124.91999999999999,
-            "setback_mm": 3.0
+            "height_mm": 0.8,
+            "width_mm": 1.5,
+            "setback_mm": 3.0,
+            "z_mm": 124.91999999999999
           },
           "machined_finish_mm": {
-            "sleeve_axis_y_fillet": 0.2
+            "sleeve_axis_y_fillet": 0.3
           },
           "outer_bounds_xy_mm": {
             "min_x": -33.795,

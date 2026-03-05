@@ -19,12 +19,12 @@
     "shell_depth_mm": 127.91999999999999,
     "assumed_cap_thickness_mm": 3.0,
     "selected_flip_axis": "x",
-    "orientation_score": 4.227729294713489
+    "orientation_score": 0.0
   },
   "fit_metrics": {
     "device_vs_body_asa": {
       "intersection_volume_mm3": 0.0,
-      "min_distance_mm": 0.8998680332571527,
+      "min_distance_mm": 1.647380705840686,
       "hard_collision": false
     },
     "device_vs_body_tpu": {
@@ -38,7 +38,7 @@
       "hard_collision": false
     },
     "cap_asa_vs_body_asa": {
-      "intersection_volume_mm3": 0.004227729294713489,
+      "intersection_volume_mm3": 0.0,
       "min_distance_mm": 0.0,
       "hard_collision": false
     },
@@ -54,7 +54,7 @@
     },
     "cap_tpu_vs_body_asa": {
       "intersection_volume_mm3": 0.0,
-      "min_distance_mm": 0.27999999999699476,
+      "min_distance_mm": 0.27999999999699726,
       "hard_collision": false
     },
     "cap_tpu_vs_body_tpu": {

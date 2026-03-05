@@ -37,14 +37,18 @@
     "cold_shoe_slot_depth_mm": 2.0,
     "cold_shoe_z_from_rear_mm": 20.0,
     "cold_shoe_fillet_mm": 0.8,
-    "include_snap_clips": true,
-    "snap_clip_beam_length_mm": 5.0,
-    "snap_clip_beam_width_mm": 3.0,
-    "snap_clip_beam_thickness_mm": 1.0,
-    "snap_clip_catch_height_mm": 0.6,
+    "include_snap_clips": false,
+    "snap_clip_beam_length_mm": 7.0,
+    "snap_clip_beam_width_mm": 5.0,
+    "snap_clip_beam_thickness_mm": 1.5,
+    "snap_clip_catch_height_mm": 1.0,
     "snap_clip_catch_depth_mm": 1.0,
     "snap_clip_setback_mm": 3.0,
     "snap_clip_y_position_mm": 0.0,
+    "include_friction_ridge": true,
+    "friction_ridge_height_mm": 0.8,
+    "friction_ridge_width_mm": 1.5,
+    "friction_ridge_setback_mm": 3.0,
     "tripod_center_from_front_mm": 48.0,
     "tripod_open_w_mm": 20.0,
     "tripod_open_h_mm": 18.0,
@@ -618,15 +622,17 @@
         "slide_in_from": "rear"
       },
       "snap_clips": {
+        "enabled": false
+      },
+      "friction_ridge": {
         "enabled": true,
-        "clip_count": 2,
-        "beam_length_mm": 5.0,
-        "catch_height_mm": 0.6,
-        "clip_tip_z_mm": 124.91999999999999,
-        "setback_mm": 3.0
+        "height_mm": 0.8,
+        "width_mm": 1.5,
+        "setback_mm": 3.0,
+        "z_mm": 124.91999999999999
       },
       "machined_finish_mm": {
-        "sleeve_axis_y_fillet": 0.2
+        "sleeve_axis_y_fillet": 0.3
       },
       "outer_bounds_xy_mm": {
         "min_x": -33.795,

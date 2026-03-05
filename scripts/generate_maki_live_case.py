@@ -97,14 +97,20 @@ class MakiCaseParams:
     cold_shoe_fillet_mm: float = 0.8           # Edge fillet on boss
 
     # Snap-latch flexure clips for rear cap retention
-    include_snap_clips: bool = True
-    snap_clip_beam_length_mm: float = 5.0
-    snap_clip_beam_width_mm: float = 3.0
-    snap_clip_beam_thickness_mm: float = 1.0
-    snap_clip_catch_height_mm: float = 0.6
+    include_snap_clips: bool = False
+    snap_clip_beam_length_mm: float = 7.0
+    snap_clip_beam_width_mm: float = 5.0
+    snap_clip_beam_thickness_mm: float = 1.5
+    snap_clip_catch_height_mm: float = 1.0
     snap_clip_catch_depth_mm: float = 1.0
     snap_clip_setback_mm: float = 3.0
     snap_clip_y_position_mm: float = 0.0
+
+    # Continuous friction ridge around plug perimeter
+    include_friction_ridge: bool = True
+    friction_ridge_height_mm: float = 0.8
+    friction_ridge_width_mm: float = 1.5
+    friction_ridge_setback_mm: float = 3.0
 
     # Side tripod opening (derived from STEP feature location)
     tripod_center_from_front_mm: float = 48.0
@@ -947,9 +953,40 @@ def build_case(p: MakiCaseParams):
                 "enabled": True,
                 "clip_count": 2,
                 "beam_length_mm": float(p.snap_clip_beam_length_mm),
+                "beam_width_mm": float(p.snap_clip_beam_width_mm),
+                "beam_thickness_mm": float(beam_t),
                 "catch_height_mm": float(catch_h),
+                "catch_depth_mm": float(p.snap_clip_catch_depth_mm),
                 "clip_tip_z_mm": float(clip_tip_z),
                 "setback_mm": float(p.snap_clip_setback_mm),
+            }
+
+        # Continuous friction ridge: 4 box strips along inner walls for distributed cap holding force.
+        # Strips are shortened to avoid rounded corners so no geometry floats in open space.
+        friction_ridge_info = None
+        if p.include_friction_ridge and p.friction_ridge_height_mm > 0.0:
+            fr_z = shell_depth - p.friction_ridge_setback_mm
+            fr_h = p.friction_ridge_height_mm
+            fr_w = p.friction_ridge_width_mm
+            half_iw = 0.5 * inner_w
+            half_ih = 0.5 * inner_h
+            # Keep strips within straight wall sections (avoid corner radius zones).
+            x_strip_len = max(inner_h - 2.0 * inner_corner_r - 1.0, 4.0)
+            y_strip_len = max(inner_w - 2.0 * inner_corner_r - 1.0, 4.0)
+            for sx_sign in (-1.0, 1.0):
+                bx = sx_sign * (half_iw - 0.5 * fr_h)
+                with Locations((bx, 0.0, fr_z)):
+                    Box(fr_h, x_strip_len, fr_w)
+            for sy_sign in (-1.0, 1.0):
+                by = sy_sign * (half_ih - 0.5 * fr_h)
+                with Locations((0.0, by, fr_z)):
+                    Box(y_strip_len, fr_h, fr_w)
+            friction_ridge_info = {
+                "enabled": True,
+                "height_mm": float(fr_h),
+                "width_mm": float(fr_w),
+                "setback_mm": float(p.friction_ridge_setback_mm),
+                "z_mm": float(fr_z),
             }
 
         if p.use_step_side_features:
@@ -1252,6 +1289,7 @@ def build_case(p: MakiCaseParams):
             },
             "cold_shoe": cold_shoe_info if cold_shoe_info else {"enabled": False},
             "snap_clips": snap_clip_info if snap_clip_info else {"enabled": False},
+            "friction_ridge": friction_ridge_info if friction_ridge_info else {"enabled": False},
             "machined_finish_mm": {
                 "sleeve_axis_y_fillet": sleeve_fillet_y,
             },
@@ -1287,6 +1325,7 @@ def main():
     parser.add_argument("--tripod-z", type=float, default=None, help="Fallback tripod opening center from front (mm)")
     parser.add_argument("--no-cold-shoe", action="store_true", help="Disable cold shoe mount on top rear")
     parser.add_argument("--no-snap-clips", action="store_true", help="Disable snap-latch flexure clips")
+    parser.add_argument("--no-friction-ridge", action="store_true", help="Disable continuous friction ridge")
     parser.add_argument("--cold-shoe-z-from-rear", type=float, default=None, help="Cold shoe center distance from rear edge (mm)")
     parser.add_argument("--no-step-side-features", action="store_true", help="Disable STEP-derived side vents/tripod hole")
     parser.add_argument("--tripod-rect", action="store_true", help="Use rectangular cutout instead of circular tripod hole")
@@ -1317,6 +1356,8 @@ def main():
         params.cold_shoe_enabled = False
     if args.no_snap_clips:
         params.include_snap_clips = False
+    if args.no_friction_ridge:
+        params.include_friction_ridge = False
     if args.cold_shoe_z_from_rear is not None:
         params.cold_shoe_z_from_rear_mm = float(args.cold_shoe_z_from_rear)
     if args.no_step_side_features:

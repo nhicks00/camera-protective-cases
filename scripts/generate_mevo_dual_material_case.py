@@ -55,12 +55,12 @@ from build123d import (
 class DualMaterialParams:
     # Device nominal for reference
     device_nominal_w_mm: float = 34.0
-    device_nominal_h_mm: float = 75.5
+    device_nominal_h_mm: float = 67.5625
     device_nominal_l_mm: float = 87.0
 
     # Core fit dimensions (snug: nominal + 0.15 mm per side/end)
     tpu_inner_w_mm: float = 34.30
-    tpu_inner_h_mm: float = 75.80
+    tpu_inner_h_mm: float = 67.8625
     tpu_inner_depth_mm: float = 87.30
     tpu_wall_mm: float = 1.80
 
@@ -93,9 +93,12 @@ class DualMaterialParams:
     include_tpu_front_edge_wrap: bool = True
     include_tpu_rear_edge_wrap: bool = False
 
-    # Bottom tripod well
-    tripod_hole_d_mm: float = 22.86
-    tripod_center_from_front_mm: float = 43.20
+    # Bottom tripod cutout (rectangular by default)
+    tripod_use_rect_cutout: bool = True
+    tripod_rect_w_mm: float = 31.75    # 1.25 inches wide
+    tripod_rect_l_mm: float = 50.8     # 2 inches long (along Z axis)
+    tripod_hole_d_mm: float = 22.86    # legacy circular fallback
+    tripod_center_from_front_mm: float = 53.9625  # 1-5/16" from back of TPU liner
     tripod_well_d_mm: float = 32.0
     tripod_well_depth_mm: float = 6.0
     tripod_tpu_hole_extra_d_mm: float = 2.0
@@ -122,8 +125,8 @@ class DualMaterialParams:
     include_top_vent_hole: bool = True
     top_vent_hole_count: int = 5
     top_vent_hole_pitch_z_mm: float = 14.0
-    top_vent_slot_width_mm: float = 30.0   # long axis (X direction), replaces hole_d
-    top_vent_slot_height_mm: float = 3.0   # short axis (rounded ends)
+    top_vent_slot_width_mm: float = 24.0   # long axis (X direction); kept within dome flat zone
+    top_vent_slot_height_mm: float = 3.5   # short axis (rounded ends)
     top_vent_cut_depth_mm: float = 6.0
 
     # Cold shoe mount (ISO 518 female receptor) on top rear
@@ -140,29 +143,35 @@ class DualMaterialParams:
     cold_shoe_rail_thickness_mm: float = 1.8
     cold_shoe_slot_depth_mm: float = 2.0
 
-    # Snap-latch flexure clips for back cap retention
-    include_snap_clips: bool = True
-    snap_clip_beam_length_mm: float = 5.0
-    snap_clip_beam_width_mm: float = 3.0
-    snap_clip_beam_thickness_mm: float = 1.0
-    snap_clip_catch_height_mm: float = 0.6
+    # Snap-latch flexure clips for back cap retention (disabled: fragile on FDM)
+    include_snap_clips: bool = False
+    snap_clip_beam_length_mm: float = 7.0
+    snap_clip_beam_width_mm: float = 5.0
+    snap_clip_beam_thickness_mm: float = 1.5
+    snap_clip_catch_height_mm: float = 1.0
     snap_clip_catch_depth_mm: float = 1.0
     snap_clip_setback_mm: float = 3.0
-    snap_clip_ridge_height_mm: float = 0.7
+    snap_clip_ridge_height_mm: float = 1.0
     snap_clip_y_position_mm: float = 0.0
+
+    # Continuous friction ridge around plug perimeter
+    include_friction_ridge: bool = True
+    friction_ridge_height_mm: float = 0.5
+    friction_ridge_width_mm: float = 1.0
+    friction_ridge_setback_mm: float = 3.0
 
     # Back cap engagement geometry
     back_cap_thickness_mm: float = 3.0
     back_cap_lip_depth_mm: float = 5.0
     back_cap_lip_undersize_total_mm: float = 0.28
     back_cap_tongue_depth_mm: float = 1.4
-    back_cap_tongue_radial_step_mm: float = 0.30
+    back_cap_tongue_radial_step_mm: float = 0.0   # single-step plug (no tongue/lip step)
     back_cap_groove_radial_clearance_mm: float = 0.08
     back_cap_groove_axial_clearance_mm: float = 0.15
     back_cap_edge_fillet_mm: float = 0.6
 
-    # Optional TPU gasket on cap inner face (recommended)
-    include_back_cap_tpu_gasket: bool = True
+    # Optional TPU gasket on cap inner face (disabled: ring geometry conflicts with plug)
+    include_back_cap_tpu_gasket: bool = False
     back_cap_tpu_gasket_thickness_mm: float = 1.2
     back_cap_tpu_gasket_outer_inset_mm: float = 1.0
     back_cap_tpu_gasket_ring_width_mm: float = 1.6
@@ -447,6 +456,30 @@ def build_dual_material_body(p: DualMaterialParams):
                 "setback_mm": float(p.snap_clip_setback_mm),
             }
 
+        # Continuous friction ridge ring on inner wall for distributed cap holding force.
+        friction_ridge_info = None
+        if p.include_friction_ridge and p.friction_ridge_height_mm > 0.0:
+            fr_z = body_depth - p.friction_ridge_setback_mm
+            fr_h = p.friction_ridge_height_mm
+            fr_w = p.friction_ridge_width_mm
+            capsule = p.enforce_capsule_profile
+            inner_w_mm = d["asa_inner_w_mm"]
+            inner_h_mm = d["asa_inner_h_mm"]
+            # Outer ring = inner cavity boundary; inner ring = inset by ridge height
+            with BuildSketch(Plane.XY.offset(fr_z - 0.5 * fr_w)):
+                _add_profile(inner_w_mm, inner_h_mm, capsule)
+            extrude(amount=fr_w)
+            with BuildSketch(Plane.XY.offset(fr_z - 0.5 * fr_w - 0.1)):
+                _add_profile(inner_w_mm - 2.0 * fr_h, inner_h_mm - 2.0 * fr_h, capsule)
+            extrude(amount=fr_w + 0.2, mode=Mode.SUBTRACT)
+            friction_ridge_info = {
+                "enabled": True,
+                "height_mm": float(fr_h),
+                "width_mm": float(fr_w),
+                "setback_mm": float(p.friction_ridge_setback_mm),
+                "z_mm": float(fr_z),
+            }
+
         # Optional lens/LED openings when a closed front wall is used.
         if (not p.open_front_ovular) and p.include_front_lens_led_cutouts:
             with BuildSketch(Plane.XY.offset(-0.2)):
@@ -513,18 +546,27 @@ def build_dual_material_body(p: DualMaterialParams):
                             mode=Mode.SUBTRACT,
                         )
 
-        # Bottom tripod hole: clean circular through-cut.
+        # Bottom tripod cutout: rectangular or circular through-cut.
         # Capsule profile has a curved bottom, so the cut must be tall enough
         # to penetrate through the full semicircular wall section.
         tripod_asa_cut_depth = 0.5 * d["asa_outer_h_mm"]
-        with Locations((0.0, min_y_asa + 0.5 * tripod_asa_cut_depth, tripod_z)):
-            Cylinder(
-                0.5 * p.tripod_hole_d_mm,
-                tripod_asa_cut_depth,
-                rotation=(90, 0, 0),
-                align=(Align.CENTER, Align.CENTER, Align.CENTER),
-                mode=Mode.SUBTRACT,
-            )
+        if p.tripod_use_rect_cutout:
+            with Locations((0.0, min_y_asa + 0.5 * tripod_asa_cut_depth, tripod_z)):
+                Box(
+                    p.tripod_rect_w_mm,
+                    tripod_asa_cut_depth,
+                    p.tripod_rect_l_mm,
+                    mode=Mode.SUBTRACT,
+                )
+        else:
+            with Locations((0.0, min_y_asa + 0.5 * tripod_asa_cut_depth, tripod_z)):
+                Cylinder(
+                    0.5 * p.tripod_hole_d_mm,
+                    tripod_asa_cut_depth,
+                    rotation=(90, 0, 0),
+                    align=(Align.CENTER, Align.CENTER, Align.CENTER),
+                    mode=Mode.SUBTRACT,
+                )
 
         # Cold shoe mount (ISO 518) on top (Y+) rear with flat fill-pad.
         # Placed AFTER vent cuts so the fill pad re-fills any vent slots
@@ -661,19 +703,28 @@ def build_dual_material_body(p: DualMaterialParams):
                             SlotOverall(p.top_vent_slot_width_mm, p.top_vent_slot_height_mm)
                 extrude(amount=top_cut_depth, mode=Mode.SUBTRACT)
 
-        # Bottom tripod hole in TPU: circular through-cut with extra clearance.
-        # Capsule profile has a curved bottom, so the cut must be tall enough
-        # to penetrate through the full semicircular wall section.
-        tripod_tpu_d = p.tripod_hole_d_mm + max(p.tripod_tpu_hole_extra_d_mm, 0.0)
+        # Bottom tripod cutout in TPU: rectangular or circular through-cut.
         tripod_tpu_cut_depth = 0.5 * d["tpu_outer_h_mm"]
-        with Locations((0.0, min_y_tpu + 0.5 * tripod_tpu_cut_depth, tripod_z)):
-            Cylinder(
-                0.5 * tripod_tpu_d,
-                tripod_tpu_cut_depth,
-                rotation=(90, 0, 0),
-                align=(Align.CENTER, Align.CENTER, Align.CENTER),
-                mode=Mode.SUBTRACT,
-            )
+        if p.tripod_use_rect_cutout:
+            tpu_rect_w = p.tripod_rect_w_mm + max(p.tripod_tpu_hole_extra_d_mm, 0.0)
+            tpu_rect_l = p.tripod_rect_l_mm + max(p.tripod_tpu_hole_extra_d_mm, 0.0)
+            with Locations((0.0, min_y_tpu + 0.5 * tripod_tpu_cut_depth, tripod_z)):
+                Box(
+                    tpu_rect_w,
+                    tripod_tpu_cut_depth,
+                    tpu_rect_l,
+                    mode=Mode.SUBTRACT,
+                )
+        else:
+            tripod_tpu_d = p.tripod_hole_d_mm + max(p.tripod_tpu_hole_extra_d_mm, 0.0)
+            with Locations((0.0, min_y_tpu + 0.5 * tripod_tpu_cut_depth, tripod_z)):
+                Cylinder(
+                    0.5 * tripod_tpu_d,
+                    tripod_tpu_cut_depth,
+                    rotation=(90, 0, 0),
+                    align=(Align.CENTER, Align.CENTER, Align.CENTER),
+                    mode=Mode.SUBTRACT,
+                )
 
     tpu_sleeve = _largest_solid(tpu_bp.part)
     tpu_sleeve.label = "TPU_Sleeve"
@@ -707,9 +758,14 @@ def build_dual_material_body(p: DualMaterialParams):
                 "side_overwrap": float(max(p.duckbill_side_overwrap_mm, 0.0)),
                 "lens_clearance": float(max(p.duckbill_lens_clearance_mm, 0.0)),
             },
-            "tripod_hole_d": float(p.tripod_hole_d_mm),
-            "tripod_center_from_front": float(p.tripod_center_from_front_mm),
-            "tripod_tpu_relief_d": float(p.tripod_hole_d_mm + max(p.tripod_tpu_hole_extra_d_mm, 0.0)),
+            "tripod_cutout": {
+                "shape": "rect" if p.tripod_use_rect_cutout else "circle",
+                "rect_w_mm": float(p.tripod_rect_w_mm) if p.tripod_use_rect_cutout else None,
+                "rect_l_mm": float(p.tripod_rect_l_mm) if p.tripod_use_rect_cutout else None,
+                "hole_d_mm": float(p.tripod_hole_d_mm),
+                "center_from_front_mm": float(p.tripod_center_from_front_mm),
+                "center_from_back_mm": float(p.tpu_inner_depth_mm - p.tripod_center_from_front_mm),
+            },
             "thermal_vents": {
                 "enabled": bool(p.include_thermal_vents),
                 "side_slots": {
@@ -750,6 +806,7 @@ def build_dual_material_body(p: DualMaterialParams):
             "body_rear_groove_start_z": float(d["groove_start_z_mm"]),
             "cold_shoe": cold_shoe_info if cold_shoe_info else {"enabled": False},
             "snap_clips": snap_clip_info if snap_clip_info else {"enabled": False},
+            "friction_ridge": friction_ridge_info if friction_ridge_info else {"enabled": False},
         },
         "bond_interface_mm": {
             "target_gap_each": float(p.interface_gap_mm),
@@ -793,13 +850,34 @@ def build_back_cap(p: DualMaterialParams):
     slot_h = d["utility_slot_h_mm"]
     slot_center_y = d["utility_slot_center_y_mm"]
 
+    capsule = p.enforce_capsule_profile
+    cut_depth = p.back_cap_thickness_mm + p.back_cap_lip_depth_mm + p.back_cap_tpu_gasket_thickness_mm + 1.0
+
+    # ASA cap: plate + structural plug (tongue + lip tip).
+    # Build plate+plug first, fillet those edges, then add retention features.
     with BuildPart() as asa_cap_bp:
+        # Outer backing plate.
         with BuildSketch(Plane.XY):
-            _add_profile(d["asa_outer_w_mm"], d["asa_outer_h_mm"], p.enforce_capsule_profile)
+            _add_profile(d["asa_outer_w_mm"], d["asa_outer_h_mm"], capsule)
         extrude(amount=p.back_cap_thickness_mm)
 
+        # Structural plug on ASA.
+        if p.back_cap_tongue_radial_step_mm > 0.01:
+            # Two-stage plug: wider tongue then narrower lip tip.
+            with BuildSketch(Plane.XY.offset(p.back_cap_thickness_mm)):
+                _add_profile(d["tongue_w_mm"], d["tongue_h_mm"], capsule)
+            extrude(amount=d["tongue_depth_mm"])
+            with BuildSketch(Plane.XY.offset(p.back_cap_thickness_mm + d["tongue_depth_mm"])):
+                _add_profile(d["lip_tip_w_mm"], d["lip_tip_h_mm"], capsule)
+            extrude(amount=d["lip_tip_depth_mm"])
+        else:
+            # Single-step plug (no radial step between tongue and lip).
+            with BuildSketch(Plane.XY.offset(p.back_cap_thickness_mm)):
+                _add_profile(d["lip_tip_w_mm"], d["lip_tip_h_mm"], capsule)
+            extrude(amount=p.back_cap_lip_depth_mm)
+
+        # Port cutouts through full cap (plate + plug).
         if p.include_manual_back_cutouts:
-            cut_depth = p.back_cap_thickness_mm + p.back_cap_lip_depth_mm + p.back_cap_tpu_gasket_thickness_mm + 1.0
             with BuildSketch(Plane.XY.offset(-0.2)):
                 with Locations((0.0, d["manual_lower_center_y_mm"])):
                     SlotOverall(d["manual_lower_w_mm"], d["manual_lower_h_mm"])
@@ -810,20 +888,59 @@ def build_back_cap(p: DualMaterialParams):
                 )
             extrude(amount=cut_depth, mode=Mode.SUBTRACT)
         elif p.include_back_utility_slot:
-            cut_depth = p.back_cap_thickness_mm + p.back_cap_lip_depth_mm + p.back_cap_tpu_gasket_thickness_mm + 1.0
             with BuildSketch(Plane.XY.offset(-0.2)):
                 with Locations((0.0, slot_center_y)):
                     _add_vertical_stadium(slot_w, slot_h)
             extrude(amount=cut_depth, mode=Mode.SUBTRACT)
 
+    # Fillet plate+plug edges BEFORE adding small retention features.
     asa_cap = _largest_solid(asa_cap_bp.part)
     try:
         asa_cap = fillet(asa_cap.edges(), p.back_cap_edge_fillet_mm)
     except Exception:
         pass
     asa_cap = _largest_solid(asa_cap)
+
+    # Add snap ridges and friction ridges after filleting so they stay crisp.
+    if p.include_snap_clips and p.snap_clip_ridge_height_mm > 0.0:
+        ridge_z = p.back_cap_thickness_mm + (p.back_cap_lip_depth_mm - p.snap_clip_setback_mm)
+        ridge_h = p.snap_clip_ridge_height_mm
+        ridge_depth_z = p.snap_clip_catch_depth_mm
+        plug_half_w = 0.5 * d["lip_tip_w_mm"]
+        with BuildPart() as snap_ridge_bp:
+            for side_sign in (-1.0, 1.0):
+                ridge_x = side_sign * (plug_half_w + 0.5 * ridge_h)
+                with Locations((ridge_x, p.snap_clip_y_position_mm, ridge_z)):
+                    Box(ridge_h, p.snap_clip_beam_width_mm + 1.0, ridge_depth_z)
+        try:
+            asa_cap = _largest_solid(asa_cap + snap_ridge_bp.part)
+        except Exception:
+            pass
+
+    if p.include_friction_ridge and p.friction_ridge_height_mm > 0.0:
+        fr_z = p.back_cap_thickness_mm + (p.back_cap_lip_depth_mm - p.friction_ridge_setback_mm)
+        fr_h = p.friction_ridge_height_mm
+        fr_w = p.friction_ridge_width_mm
+        lip_w = d["lip_tip_w_mm"]
+        lip_h = d["lip_tip_h_mm"]
+        half_lw = 0.5 * lip_w
+        half_lh = 0.5 * lip_h
+        # Box strips on flat X walls only — capsule domes have no flat wall for Y strips.
+        # Shorten to stay within flat portion (exclude dome radius at each end).
+        dome_r = 0.5 * lip_w  # capsule dome radius
+        x_strip_len = max(lip_h - 2.0 * dome_r - 1.0, 4.0)
+        with BuildPart() as fr_ridge_bp:
+            for sx in (-1.0, 1.0):
+                with Locations((sx * (half_lw + 0.5 * fr_h), 0.0, fr_z)):
+                    Box(fr_h, x_strip_len, fr_w)
+        try:
+            asa_cap = _largest_solid(asa_cap + fr_ridge_bp.part)
+        except Exception:
+            pass
+
     asa_cap.label = "ASA_Back_Cap"
 
+    # TPU gasket: thin face pad/ring only (no structural plug duty).
     gasket = None
     if p.include_back_cap_tpu_gasket and p.back_cap_tpu_gasket_thickness_mm > 0.0:
         gasket_outer_w = max(d["asa_outer_w_mm"] - 2.0 * p.back_cap_tpu_gasket_outer_inset_mm, 2.0)
@@ -831,22 +948,13 @@ def build_back_cap(p: DualMaterialParams):
         gasket_inner_w = max(gasket_outer_w - 2.0 * p.back_cap_tpu_gasket_ring_width_mm, 1.0)
         gasket_inner_h = max(gasket_outer_h - 2.0 * p.back_cap_tpu_gasket_ring_width_mm, 1.0)
         with BuildPart() as gasket_bp:
-            # TPU plug geometry (camera-facing protrusion): this replaces ASA protrusions.
+            # TPU face pad/ring on camera-contact side of ASA plug.
             with BuildSketch(Plane.XY.offset(p.back_cap_thickness_mm)):
-                _add_profile(d["tongue_w_mm"], d["tongue_h_mm"], p.enforce_capsule_profile)
-            extrude(amount=d["tongue_depth_mm"])
-
-            with BuildSketch(Plane.XY.offset(p.back_cap_thickness_mm + d["tongue_depth_mm"])):
-                _add_profile(d["lip_tip_w_mm"], d["lip_tip_h_mm"], p.enforce_capsule_profile)
-            extrude(amount=d["lip_tip_depth_mm"])
-
-            # TPU face pad/ring on camera-contact side.
-            with BuildSketch(Plane.XY.offset(p.back_cap_thickness_mm)):
-                _add_profile(gasket_outer_w, gasket_outer_h, p.enforce_capsule_profile)
+                _add_profile(gasket_outer_w, gasket_outer_h, capsule)
             extrude(amount=p.back_cap_tpu_gasket_thickness_mm)
 
             with BuildSketch(Plane.XY.offset(p.back_cap_thickness_mm - 0.1)):
-                _add_profile(gasket_inner_w, gasket_inner_h, p.enforce_capsule_profile)
+                _add_profile(gasket_inner_w, gasket_inner_h, capsule)
             extrude(amount=p.back_cap_tpu_gasket_thickness_mm + 0.2, mode=Mode.SUBTRACT)
 
             if p.include_manual_back_cutouts:
@@ -859,10 +967,7 @@ def build_back_cap(p: DualMaterialParams):
                         d["manual_upper_bottom_y_mm"],
                     )
                 extrude(
-                    amount=max(
-                        p.back_cap_lip_depth_mm + p.back_cap_tpu_gasket_thickness_mm + 0.2,
-                        p.back_cap_tpu_gasket_thickness_mm + 0.2,
-                    ),
+                    amount=p.back_cap_tpu_gasket_thickness_mm + 0.2,
                     mode=Mode.SUBTRACT,
                 )
             elif p.include_back_utility_slot:
@@ -870,28 +975,20 @@ def build_back_cap(p: DualMaterialParams):
                     with Locations((0.0, slot_center_y)):
                         _add_vertical_stadium(slot_w, slot_h)
                 extrude(
-                    amount=max(
-                        p.back_cap_lip_depth_mm + p.back_cap_tpu_gasket_thickness_mm + 0.2,
-                        p.back_cap_tpu_gasket_thickness_mm + 0.2,
-                    ),
+                    amount=p.back_cap_tpu_gasket_thickness_mm + 0.2,
                     mode=Mode.SUBTRACT,
                 )
-
-            # Snap-latch ridge on TPU plug to engage with body clips.
-            if p.include_snap_clips and p.snap_clip_ridge_height_mm > 0.0:
-                ridge_z = p.back_cap_thickness_mm + (p.back_cap_lip_depth_mm - p.snap_clip_setback_mm)
-                ridge_h = p.snap_clip_ridge_height_mm
-                ridge_depth_z = p.snap_clip_catch_depth_mm
-                plug_half_w = 0.5 * d["lip_tip_w_mm"]
-                for side_sign in (-1.0, 1.0):
-                    ridge_x = side_sign * (plug_half_w + 0.5 * ridge_h)
-                    with Locations((ridge_x, p.snap_clip_y_position_mm, ridge_z)):
-                        Box(ridge_h, p.snap_clip_beam_width_mm + 1.0, ridge_depth_z)
 
         gasket = _largest_solid(gasket_bp.part)
         gasket.label = "TPU_Back_Insert"
 
     if gasket is not None:
+        # Subtract TPU volume from ASA so the two bodies don't overlap.
+        try:
+            asa_cap = _largest_solid(asa_cap - gasket)
+        except Exception:
+            pass
+        asa_cap.label = "ASA_Back_Cap"
         cap_asm = Compound(children=[gasket, asa_cap], label="Mevo_Back_Cap_Assembly")
         named_bodies = ["ASA_Back_Cap", "TPU_Back_Insert"]
     else:
@@ -1018,6 +1115,7 @@ def main():
     )
     parser.add_argument("--no-cold-shoe", action="store_true", help="Disable cold shoe mount on top rear")
     parser.add_argument("--no-snap-clips", action="store_true", help="Disable snap-latch flexure clips on body and cap")
+    parser.add_argument("--no-friction-ridge", action="store_true", help="Disable continuous friction ridge on body and cap")
     parser.add_argument("--cold-shoe-z-from-rear", type=float, default=None, help="Cold shoe center distance from rear edge (mm)")
     parser.add_argument(
         "--export-asa-only-back-cap",
@@ -1053,6 +1151,8 @@ def main():
         p.include_cold_shoe = False
     if args.no_snap_clips:
         p.include_snap_clips = False
+    if args.no_friction_ridge:
+        p.include_friction_ridge = False
     if args.cold_shoe_z_from_rear is not None:
         p.cold_shoe_pad_z_from_rear_mm = float(args.cold_shoe_z_from_rear)
 

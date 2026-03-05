@@ -50,11 +50,17 @@ class MakiRearCapDualParams:
     tpu_edge_wrap_width_mm: float = 1.8
 
     # Snap-latch ridge on plug for body clip engagement
-    include_snap_ridge: bool = True
-    snap_ridge_height_mm: float = 0.7
+    include_snap_ridge: bool = False
+    snap_ridge_height_mm: float = 1.0
     snap_ridge_depth_mm: float = 1.0
     snap_ridge_width_mm: float = 4.0
     snap_ridge_setback_mm: float = 3.0
+
+    # Continuous friction ridge around plug perimeter
+    include_friction_ridge: bool = True
+    friction_ridge_height_mm: float = 0.8
+    friction_ridge_width_mm: float = 1.0
+    friction_ridge_setback_mm: float = 0.5  # from plug tip (must be < plug_depth_mm)
 
 
 def _archive_existing(paths: list[Path], out_dir: Path) -> list[tuple[str, str]]:
@@ -179,6 +185,8 @@ def build_rear_cap_dual(p: MakiRearCapDualParams):
             "setback_mm": float(p.snap_ridge_setback_mm),
         }
 
+    friction_ridge_info = None  # populated after gasket subtraction
+
     derived = caps_report["derived"]
     corner_r = derived["corner_radius_mm"]
     rear_cutouts = caps_report["cutouts"]["rear"]
@@ -200,7 +208,55 @@ def build_rear_cap_dual(p: MakiRearCapDualParams):
         except Exception:
             pass
         rear_cap.label = "ASA_Back_Cap"
-        assembly = Compound(children=[gasket, rear_cap], label="Maki_Rear_Cap_Assembly")
+
+    # Add friction ridge AFTER gasket subtraction so the gasket doesn't erase the ridges.
+    # The gasket hollows the plug interior, so strips that span the shell boundary
+    # can't boolean-fuse cleanly. Instead, build thin strips that sit entirely on
+    # the plug outer surface (no embed needed) and bundle via Compound.
+    if p.include_friction_ridge and p.friction_ridge_height_mm > 0.0:
+        plug_w = float(derived["plug_w_mm"])
+        plug_h = float(derived["plug_h_mm"])
+        plug_r = float(corner_r["plug"])
+        plug_tip_z = p.cap_thickness_mm + p.plug_depth_mm
+        fr_z = plug_tip_z - p.friction_ridge_setback_mm
+        fr_h = p.friction_ridge_height_mm
+        fr_w = p.friction_ridge_width_mm
+        # Shorten strips to stay within flat wall sections (not rounded corners).
+        x_strip_len = max(plug_h - 2.0 * plug_r - 1.0, 4.0)
+        y_strip_len = max(plug_w - 2.0 * plug_r - 1.0, 4.0)
+        half_pw = 0.5 * plug_w
+        half_ph = 0.5 * plug_h
+        # Place strips on the plug outer surface, protruding outward only.
+        with BuildPart() as fr_bp:
+            for sx in (-1.0, 1.0):
+                cx = sx * (half_pw + 0.5 * fr_h)
+                with Locations((cx, 0.0, fr_z)):
+                    Box(fr_h, x_strip_len, fr_w)
+            for sy in (-1.0, 1.0):
+                cy = sy * (half_ph + 0.5 * fr_h)
+                with Locations((0.0, cy, fr_z)):
+                    Box(y_strip_len, fr_h, fr_w)
+        # Bundle as Compound — boolean fuse fails when plug is hollowed by gasket.
+        rear_cap = Compound(
+            children=[rear_cap] + fr_bp.part.solids(),
+            label="ASA_Back_Cap",
+        )
+        friction_ridge_info = {
+            "enabled": True,
+            "height_mm": float(fr_h),
+            "width_mm": float(fr_w),
+            "setback_mm": float(p.friction_ridge_setback_mm),
+            "z_mm": float(fr_z),
+        }
+
+    if gasket is not None:
+        children = [gasket]
+        # Unpack compound cap if needed.
+        if hasattr(rear_cap, "children") and rear_cap.children:
+            children.extend(rear_cap.children)
+        else:
+            children.append(rear_cap)
+        assembly = Compound(children=children, label="Maki_Rear_Cap_Assembly")
         named_bodies = ["ASA_Back_Cap", "TPU_Back_Gasket"]
     else:
         assembly = rear_cap
@@ -210,6 +266,7 @@ def build_rear_cap_dual(p: MakiRearCapDualParams):
         "named_bodies": named_bodies,
         "rear_cap_source": caps_report,
         "snap_ridge": snap_ridge_info if snap_ridge_info else {"enabled": False},
+        "friction_ridge": friction_ridge_info if friction_ridge_info else {"enabled": False},
         "tpu_gasket_mm": {
             "enabled": bool(gasket is not None),
             "thickness": float(p.tpu_gasket_thickness_mm),
@@ -236,6 +293,7 @@ def main():
     parser.add_argument("--plug-depth", type=float, default=None, help="ASA rear cap plug depth (mm)")
     parser.add_argument("--plug-clearance", type=float, default=None, help="ASA rear cap plug radial clearance (mm)")
     parser.add_argument("--no-snap-ridge", action="store_true", help="Disable snap-latch ridge on plug")
+    parser.add_argument("--no-friction-ridge", action="store_true", help="Disable continuous friction ridge on plug")
     parser.add_argument("--disable-tpu-gasket", action="store_true", help="Disable TPU gasket body on rear cap")
     parser.add_argument("--tpu-gasket-thickness", type=float, default=None, help="TPU gasket thickness on cap interior (mm)")
     parser.add_argument("--tpu-gasket-inset", type=float, default=None, help="TPU gasket outer inset from cap OD (mm)")
@@ -254,6 +312,8 @@ def main():
         p.plug_clearance_mm = float(args.plug_clearance)
     if args.no_snap_ridge:
         p.include_snap_ridge = False
+    if args.no_friction_ridge:
+        p.include_friction_ridge = False
     if args.disable_tpu_gasket:
         p.include_tpu_gasket = False
     if args.tpu_gasket_thickness is not None:

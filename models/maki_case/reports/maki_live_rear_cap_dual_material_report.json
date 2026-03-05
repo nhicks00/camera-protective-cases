@@ -10,11 +10,15 @@
     "tpu_gasket_outer_inset_mm": 0.0,
     "tpu_edge_wrap_depth_mm": 1.8,
     "tpu_edge_wrap_width_mm": 1.8,
-    "include_snap_ridge": true,
-    "snap_ridge_height_mm": 0.7,
+    "include_snap_ridge": false,
+    "snap_ridge_height_mm": 1.0,
     "snap_ridge_depth_mm": 1.0,
     "snap_ridge_width_mm": 4.0,
-    "snap_ridge_setback_mm": 3.0
+    "snap_ridge_setback_mm": 3.0,
+    "include_friction_ridge": true,
+    "friction_ridge_height_mm": 0.8,
+    "friction_ridge_width_mm": 1.0,
+    "friction_ridge_setback_mm": 0.5
   },
   "report": {
     "named_bodies": [
@@ -221,10 +225,14 @@
       }
     },
     "snap_ridge": {
+      "enabled": false
+    },
+    "friction_ridge": {
       "enabled": true,
-      "ridge_height_mm": 0.7,
-      "ridge_z_mm": 1.7999999999999998,
-      "setback_mm": 3.0
+      "height_mm": 0.8,
+      "width_mm": 1.0,
+      "setback_mm": 0.5,
+      "z_mm": 4.3
     },
     "tpu_gasket_mm": {
       "enabled": true,
