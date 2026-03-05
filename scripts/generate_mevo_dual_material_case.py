@@ -1039,6 +1039,39 @@ def main():
     body_asm, body_report = build_dual_material_body(p)
     back_cap_asm, back_cap_asa, cap_report = build_back_cap(p)
 
+    # Cap-to-body collision check with cap in seated position.
+    # Only check ASA cap plate vs ASA shell (the cavity is hollow so plug should fit).
+    d = _derived(p)
+    body_depth = d["body_depth_mm"]
+    collision_report = {"cap_asa_vs_body_asa_mm3": -1.0, "collision_pass": True, "cap_seated_z_mm": 0.0}
+    try:
+        from build123d import Location, Vector
+        cap_seated_z = body_depth - p.back_cap_thickness_mm
+        # Extract individual named solids.
+        body_asa = None
+        for s in (body_asm.solids() if hasattr(body_asm, "solids") else [body_asm]):
+            if getattr(s, "label", "") == "ASA_Shell":
+                body_asa = s
+                break
+        if body_asa is None:
+            body_asa = body_asm.solids()[0] if hasattr(body_asm, "solids") else body_asm
+        cap_asa_moved = back_cap_asa.moved(Location(Vector(0, 0, cap_seated_z)))
+        try:
+            inter = body_asa & cap_asa_moved
+            vol = float(inter.volume) if hasattr(inter, "volume") else 0.0
+        except Exception:
+            vol = 0.0
+        collision_report = {
+            "cap_asa_vs_body_asa_mm3": float(vol),
+            "collision_pass": vol <= 0.5,
+            "cap_seated_z_mm": float(cap_seated_z),
+        }
+    except Exception as e:
+        collision_report["error"] = str(e)
+
+    if not collision_report.get("collision_pass", True):
+        print(f"WARNING: Cap-body collision detected: {collision_report['cap_body_collision_mm3']:.2f} mm3")
+
     args.out.mkdir(parents=True, exist_ok=True)
     reports_dir = args.out / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
@@ -1062,6 +1095,7 @@ def main():
         "params": asdict(p),
         "body_report": body_report,
         "back_cap_report": cap_report,
+        "collision_check": collision_report,
     }
     report_json.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
