@@ -484,11 +484,12 @@ def build_dual_material_body(p: DualMaterialParams):
             pad_fill_height = max(max_y_asa - y_at_edge + 0.5, 1.0)
 
             # 1) Flat fill-pad: rectangle with rounded corners on top surface.
-            with BuildSketch(Plane.XZ.offset(max_y_asa)):
+            # Plane.XZ normal is -Y, so offset(-max_y_asa) places at Y = +max_y (top).
+            with BuildSketch(Plane.XZ.offset(-max_y_asa)):
                 with Locations((0.0, pad_z_center)):
                     Rectangle(pad_w, pad_l)
                     fillet(vertices(), p.cold_shoe_pad_corner_r_mm)
-            extrude(amount=-pad_fill_height)
+            extrude(amount=pad_fill_height)
 
             # 2) Cold shoe boss on top of pad.
             cs_boss_h = p.cold_shoe_boss_height_mm
@@ -499,28 +500,29 @@ def build_dual_material_body(p: DualMaterialParams):
             cs_slot_d = p.cold_shoe_slot_depth_mm
             cs_opening = cs_slot_w - 2.0 * cs_rail_oh
 
-            with BuildSketch(Plane.XZ.offset(max_y_asa)):
+            with BuildSketch(Plane.XZ.offset(-max_y_asa)):
                 with Locations((0.0, pad_z_center)):
                     Rectangle(cs_boss_w, cs_boss_l)
-            extrude(amount=cs_boss_h)
+            extrude(amount=-cs_boss_h)
 
             # 3) T-slot channel from boss front to past rear end.
-            boss_top_y = max_y_asa + cs_boss_h
+            # Boss top is at Y = max_y_asa + cs_boss_h; offset = -(max_y_asa + cs_boss_h).
+            boss_top_offset = -(max_y_asa + cs_boss_h)
             cs_front_z = pad_z_center - cs_boss_l * 0.5
             cs_slot_len = body_depth + 0.2 - cs_front_z
             cs_slot_mid_z = cs_front_z + cs_slot_len * 0.5
 
             # Floor slot (full foot width)
-            with BuildSketch(Plane.XZ.offset(boss_top_y + 0.1)):
+            with BuildSketch(Plane.XZ.offset(boss_top_offset - 0.1)):
                 with Locations((0.0, cs_slot_mid_z)):
                     Rectangle(cs_slot_w, cs_slot_len)
-            extrude(amount=-(cs_slot_d + 0.1), mode=Mode.SUBTRACT)
+            extrude(amount=(cs_slot_d + 0.1), mode=Mode.SUBTRACT)
 
             # Rail opening (narrower, through boss only)
-            with BuildSketch(Plane.XZ.offset(boss_top_y + 0.1)):
+            with BuildSketch(Plane.XZ.offset(boss_top_offset - 0.1)):
                 with Locations((0.0, cs_slot_mid_z)):
                     Rectangle(cs_opening, cs_slot_len)
-            extrude(amount=-(cs_boss_h + 0.05), mode=Mode.SUBTRACT)
+            extrude(amount=(cs_boss_h + 0.05), mode=Mode.SUBTRACT)
 
             cold_shoe_info = {
                 "enabled": True,
