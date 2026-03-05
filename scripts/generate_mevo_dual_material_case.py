@@ -5,9 +5,7 @@ Primary outputs:
 - models/mevo_case/mevo_start_body_dual_material.step
   - contains two named bodies: TPU_Sleeve and ASA_Shell
 - models/mevo_case/mevo_start_back_cap_dual_material.step
-  - contains two named bodies: ASA_Back_Cap and TPU_Back_Gasket
-- models/mevo_case/mevo_start_back_cap_asa.step
-  - compatibility export of ASA-only cap body
+  - contains two named bodies: ASA_Back_Cap and TPU_Back_Insert
 - models/mevo_case/reports/mevo_start_dual_material_report.json
 
 This generator implements the reviewed design spec while preserving
@@ -27,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import shutil
 from dataclasses import asdict, dataclass
 from datetime import datetime
@@ -38,6 +37,7 @@ from build123d import (
     BuildPart,
     BuildSketch,
     Circle,
+    Cylinder,
     Compound,
     Locations,
     Mode,
@@ -47,6 +47,7 @@ from build123d import (
     export_step,
     extrude,
     fillet,
+    vertices,
 )
 
 
@@ -65,6 +66,7 @@ class DualMaterialParams:
 
     asa_wall_mm: float = 2.20
     interface_gap_mm: float = 0.0
+    bond_interface_tolerance_mm: float = 0.02
 
     # Profile style: keep the Mevo ovular/capsule cross-section.
     enforce_capsule_profile: bool = True
@@ -76,28 +78,67 @@ class DualMaterialParams:
     lens_cutout_d_mm: float = 29.5
     lens_center_x_mm: float = 0.0
     lens_center_y_mm: float = 20.0
-    led_hole_d_mm: float = 3.0
+    led_hole_d_mm: float = 5.5
+    use_led_hole_from_bottom: bool = True
+    led_hole_center_from_bottom_mm: float = 15.875
     led_hole_offset_from_lens_y_mm: float = 12.0
     include_front_duckbill_hood: bool = True
     duckbill_depth_mm: float = 16.0
     duckbill_drop_mm: float = 9.0
-    duckbill_span_ratio: float = 0.90
+    duckbill_span_ratio: float = 1.18
+    duckbill_side_overwrap_mm: float = 6.0
+    duckbill_lens_clearance_mm: float = 0.1
     tpu_front_edge_wrap_depth_mm: float = 2.5
     tpu_front_edge_wrap_radial_mm: float = 2.0
     include_tpu_front_edge_wrap: bool = True
     include_tpu_rear_edge_wrap: bool = False
 
     # Bottom tripod well
-    tripod_hole_d_mm: float = 20.50
+    tripod_hole_d_mm: float = 22.86
     tripod_center_from_front_mm: float = 43.20
+    tripod_well_d_mm: float = 32.0
+    tripod_well_depth_mm: float = 6.0
+    tripod_tpu_hole_extra_d_mm: float = 2.0
+    tripod_tpu_cut_depth_mm: float = 8.0
+    tripod_tpu_flat_depth_mm: float = 7.5
 
-    # Optional side vents (kept for prior workflow compatibility)
+    # Legacy side vents (kept for compatibility, disabled by default)
     vent_count: int = 3
     vent_h_mm: float = 2.2
     vent_len_mm: float = 12.0
     vent_pitch_mm: float = 4.8
     vent_z_ratio: float = 0.57
-    include_side_vents: bool = True
+    include_side_vents: bool = False
+
+    # Thermal vents (primary)
+    include_thermal_vents: bool = True
+    include_side_slot_thermal_vents: bool = True
+    side_vent_slot_count: int = 5
+    side_vent_slot_h_mm: float = 20.0
+    side_vent_slot_w_mm: float = 3.0
+    side_vent_slot_pitch_z_mm: float = 9.0
+    side_vent_center_y_mm: float = 8.0
+    side_vent_cut_depth_mm: float = 6.0
+    include_top_vent_hole: bool = True
+    top_vent_hole_count: int = 5
+    top_vent_hole_pitch_z_mm: float = 14.0
+    top_vent_slot_width_mm: float = 30.0   # long axis (X direction), replaces hole_d
+    top_vent_slot_height_mm: float = 3.0   # short axis (rounded ends)
+    top_vent_cut_depth_mm: float = 6.0
+
+    # Cold shoe mount (ISO 518 female receptor) on top rear
+    include_cold_shoe: bool = True
+    cold_shoe_pad_width_mm: float = 28.0
+    cold_shoe_pad_length_mm: float = 30.0
+    cold_shoe_pad_z_from_rear_mm: float = 20.0
+    cold_shoe_pad_corner_r_mm: float = 3.0
+    cold_shoe_boss_height_mm: float = 4.0
+    cold_shoe_boss_length_mm: float = 22.0
+    cold_shoe_boss_width_mm: float = 22.0
+    cold_shoe_slot_width_mm: float = 18.2
+    cold_shoe_rail_overhang_mm: float = 2.85
+    cold_shoe_rail_thickness_mm: float = 1.8
+    cold_shoe_slot_depth_mm: float = 2.0
 
     # Back cap engagement geometry
     back_cap_thickness_mm: float = 3.0
@@ -114,6 +155,9 @@ class DualMaterialParams:
     back_cap_tpu_gasket_thickness_mm: float = 1.2
     back_cap_tpu_gasket_outer_inset_mm: float = 1.0
     back_cap_tpu_gasket_ring_width_mm: float = 1.6
+    # Clear rear TPU in the cap insertion zone so the ASA cap can seat without collision.
+    tpu_rear_cap_relief_depth_mm: float = 5.4
+    tpu_rear_cap_relief_radial_mm: float = 0.3
 
     # Manual back-cap cutouts from Mevo device-edge offsets (default enabled).
     include_manual_back_cutouts: bool = True
@@ -291,13 +335,18 @@ def _derived(p: DualMaterialParams) -> dict:
 def build_dual_material_body(p: DualMaterialParams):
     d = _derived(p)
 
+    min_x_asa = -0.5 * d["asa_outer_w_mm"]
     min_y_asa = -0.5 * d["asa_outer_h_mm"]
     max_y_asa = 0.5 * d["asa_outer_h_mm"]
     max_x_asa = 0.5 * d["asa_outer_w_mm"]
+    min_x_tpu = -0.5 * d["tpu_outer_w_mm"]
     min_y_tpu = -0.5 * d["tpu_outer_h_mm"]
+    max_x_tpu = 0.5 * d["tpu_outer_w_mm"]
+    max_y_tpu = 0.5 * d["tpu_outer_h_mm"]
 
     cavity_start_z = d["cavity_start_z_mm"]
     cavity_depth = p.tpu_inner_depth_mm
+    body_depth = d["body_depth_mm"]
 
     vent_z = cavity_start_z + cavity_depth * p.vent_z_ratio
     tripod_z = p.tripod_center_from_front_mm
@@ -305,6 +354,28 @@ def build_dual_material_body(p: DualMaterialParams):
     wrap_radial = max(p.tpu_front_edge_wrap_radial_mm, 0.6)
     wrap_inner_w = max(p.tpu_inner_w_mm - 2.0 * wrap_radial, 2.0)
     wrap_inner_h = max(p.tpu_inner_h_mm - 2.0 * wrap_radial, wrap_inner_w + 0.2)
+    side_slot_count = max(int(p.side_vent_slot_count), 1)
+    side_slot_pitch = max(float(p.side_vent_slot_pitch_z_mm), 0.0)
+    slot_mid_z = 0.5 * body_depth
+    side_slot_z_centers = [
+        float(slot_mid_z + (i - 0.5 * (side_slot_count - 1)) * side_slot_pitch)
+        for i in range(side_slot_count)
+    ]
+    # Keep side slots away from front/back corners for impact strength.
+    edge_margin_z = max(8.0, 0.5 * p.side_vent_slot_w_mm + 2.0)
+    side_slot_z_centers = [min(max(z, edge_margin_z), body_depth - edge_margin_z) for z in side_slot_z_centers]
+    top_hole_count = max(int(p.top_vent_hole_count), 1)
+    top_hole_pitch = max(float(p.top_vent_hole_pitch_z_mm), 0.0)
+    top_vent_z_centers = [
+        float(slot_mid_z + (i - 0.5 * (top_hole_count - 1)) * top_hole_pitch)
+        for i in range(top_hole_count)
+    ]
+    top_hole_margin_z = max(10.0, 0.5 * p.top_vent_slot_width_mm + 3.0)
+    top_vent_z_centers = [min(max(z, top_hole_margin_z), body_depth - top_hole_margin_z) for z in top_vent_z_centers]
+    if p.use_led_hole_from_bottom:
+        led_center_y = -0.5 * p.device_nominal_h_mm + p.led_hole_center_from_bottom_mm
+    else:
+        led_center_y = p.lens_center_y_mm + p.led_hole_offset_from_lens_y_mm
 
     # ASA bucket body (front wall + side shell, open at rear)
     with BuildPart() as asa_bp:
@@ -326,19 +397,117 @@ def build_dual_material_body(p: DualMaterialParams):
             with BuildSketch(Plane.XY.offset(-0.2)):
                 with Locations((p.lens_center_x_mm, p.lens_center_y_mm)):
                     Circle(0.5 * p.lens_cutout_d_mm)
-                with Locations((p.lens_center_x_mm, p.lens_center_y_mm + p.led_hole_offset_from_lens_y_mm)):
+                with Locations((p.lens_center_x_mm, led_center_y)):
                     Circle(0.5 * p.led_hole_d_mm)
             extrude(amount=p.sun_hood_depth_mm + 0.6, mode=Mode.SUBTRACT)
 
         # Integrated curved duck-bill hood on top-front perimeter.
         if (not p.open_front_ovular) and p.include_front_duckbill_hood and p.duckbill_depth_mm > 0.0 and p.duckbill_drop_mm > 0.0:
             hood_drop = min(max(p.duckbill_drop_mm, 1.0), 0.5 * d["asa_outer_h_mm"])
-            hood_span = max(min(d["asa_outer_w_mm"] * p.duckbill_span_ratio, d["asa_outer_w_mm"] + 0.2), 8.0)
+            hood_span = max(
+                min(
+                    max(d["asa_outer_w_mm"] * p.duckbill_span_ratio, d["asa_outer_w_mm"]),
+                    d["asa_outer_w_mm"] + 2.0 * max(p.duckbill_side_overwrap_mm, 0.0),
+                ),
+                8.0,
+            )
+            hood_center_y = max_y_asa + hood_drop
+            hood_r = ((0.5 * hood_span) ** 2 + hood_drop**2) ** 0.5
+            hood_clear_r = max(0.5 * p.lens_cutout_d_mm + max(p.duckbill_lens_clearance_mm, 0.0), 0.1)
             with BuildSketch(Plane.XY):
                 _add_profile(d["asa_outer_w_mm"], d["asa_outer_h_mm"], p.enforce_capsule_profile)
-                with Locations((0.0, max_y_asa - 0.5 * hood_drop)):
-                    Rectangle(hood_span, hood_drop, mode=Mode.INTERSECT)
+                with Locations((0.0, hood_center_y)):
+                    Circle(hood_r, mode=Mode.INTERSECT)
+                # Keep the optical aperture fully clear with a curved edge.
+                with Locations((p.lens_center_x_mm, p.lens_center_y_mm)):
+                    Circle(hood_clear_r, mode=Mode.SUBTRACT)
             extrude(amount=-p.duckbill_depth_mm)
+
+        # Cold shoe mount (ISO 518) on top (Y+) rear with flat fill-pad.
+        cold_shoe_info = None
+        if p.include_cold_shoe:
+            # Capsule geometry: straight section up to cap_center_y, then semicircle.
+            cap_center_y = 0.5 * (d["asa_outer_h_mm"] - d["asa_outer_w_mm"])
+            cap_r = 0.5 * d["asa_outer_w_mm"]
+            pad_w = p.cold_shoe_pad_width_mm
+            pad_l = p.cold_shoe_pad_length_mm
+            pad_z_center = body_depth - p.cold_shoe_pad_z_from_rear_mm
+
+            # Fill height: gap between curved cap surface at pad edge and max_y_asa.
+            half_pad_w = min(0.5 * pad_w, cap_r - 0.1)
+            y_at_edge = cap_center_y + math.sqrt(max(cap_r ** 2 - half_pad_w ** 2, 0.0))
+            pad_fill_height = max(max_y_asa - y_at_edge + 0.5, 1.0)
+
+            # 1) Flat fill-pad: rectangle with rounded corners on top surface.
+            with BuildSketch(Plane.XZ.offset(max_y_asa)):
+                with Locations((0.0, pad_z_center)):
+                    Rectangle(pad_w, pad_l)
+                    fillet(vertices(), p.cold_shoe_pad_corner_r_mm)
+            extrude(amount=-pad_fill_height)
+
+            # 2) Cold shoe boss on top of pad.
+            cs_boss_h = p.cold_shoe_boss_height_mm
+            cs_boss_l = p.cold_shoe_boss_length_mm
+            cs_boss_w = p.cold_shoe_boss_width_mm
+            cs_slot_w = p.cold_shoe_slot_width_mm
+            cs_rail_oh = p.cold_shoe_rail_overhang_mm
+            cs_slot_d = p.cold_shoe_slot_depth_mm
+            cs_opening = cs_slot_w - 2.0 * cs_rail_oh
+
+            with BuildSketch(Plane.XZ.offset(max_y_asa)):
+                with Locations((0.0, pad_z_center)):
+                    Rectangle(cs_boss_w, cs_boss_l)
+            extrude(amount=cs_boss_h)
+
+            # 3) T-slot channel from boss front to past rear end.
+            boss_top_y = max_y_asa + cs_boss_h
+            cs_front_z = pad_z_center - cs_boss_l * 0.5
+            cs_slot_len = body_depth + 0.2 - cs_front_z
+            cs_slot_mid_z = cs_front_z + cs_slot_len * 0.5
+
+            # Floor slot (full foot width)
+            with BuildSketch(Plane.XZ.offset(boss_top_y + 0.1)):
+                with Locations((0.0, cs_slot_mid_z)):
+                    Rectangle(cs_slot_w, cs_slot_len)
+            extrude(amount=-(cs_slot_d + 0.1), mode=Mode.SUBTRACT)
+
+            # Rail opening (narrower, through boss only)
+            with BuildSketch(Plane.XZ.offset(boss_top_y + 0.1)):
+                with Locations((0.0, cs_slot_mid_z)):
+                    Rectangle(cs_opening, cs_slot_len)
+            extrude(amount=-(cs_boss_h + 0.05), mode=Mode.SUBTRACT)
+
+            cold_shoe_info = {
+                "enabled": True,
+                "pad_z_center_mm": float(pad_z_center),
+                "pad_fill_height_mm": float(pad_fill_height),
+                "y_base_mm": float(max_y_asa),
+                "boss_height_mm": float(cs_boss_h),
+                "slot_width_mm": float(cs_slot_w),
+                "rail_opening_mm": float(cs_opening),
+                "slide_in_from": "rear",
+            }
+
+        # Thermal vents aligned for both ASA and TPU.
+        if p.include_thermal_vents:
+            if p.include_side_slot_thermal_vents:
+                side_cut_depth = max(p.side_vent_cut_depth_mm, p.asa_wall_mm + p.tpu_wall_mm + 1.0)
+                for side in ("neg", "pos"):
+                    x_face = min_x_asa - 0.2 if side == "neg" else max_x_asa + 0.2
+                    for z_c in side_slot_z_centers:
+                        with BuildSketch(Plane.YZ.offset(x_face)):
+                            with Locations((p.side_vent_center_y_mm, z_c)):
+                                SlotOverall(p.side_vent_slot_h_mm, p.side_vent_slot_w_mm)
+                        extrude(amount=side_cut_depth if side == "neg" else -side_cut_depth, mode=Mode.SUBTRACT)
+
+            if p.include_top_vent_hole:
+                top_cut_depth = max(p.top_vent_cut_depth_mm, p.asa_wall_mm + p.tpu_wall_mm + 1.0)
+                # Top vents are always on the face opposite the bottom tripod side.
+                with BuildSketch(Plane.XZ.offset(-(max_y_asa + 0.2))):
+                    for z_c in top_vent_z_centers:
+                        with Locations((0.0, z_c)):
+                            SlotOverall(p.top_vent_slot_width_mm, p.top_vent_slot_height_mm)
+                extrude(amount=top_cut_depth, mode=Mode.SUBTRACT)
 
         # Optional side vents.
         if p.include_side_vents:
@@ -354,11 +523,18 @@ def build_dual_material_body(p: DualMaterialParams):
                             mode=Mode.SUBTRACT,
                         )
 
-        # Bottom tripod hole through ASA.
-        with BuildSketch(Plane.XZ.offset(min_y_asa + 0.12)):
-            with Locations((0.0, tripod_z)):
-                Circle(0.5 * p.tripod_hole_d_mm)
-        extrude(amount=-(p.asa_wall_mm + 2.0), mode=Mode.SUBTRACT)
+        # Bottom tripod hole: clean circular through-cut.
+        # Capsule profile has a curved bottom, so the cut must be tall enough
+        # to penetrate through the full semicircular wall section.
+        tripod_asa_cut_depth = 0.5 * d["asa_outer_h_mm"]
+        with Locations((0.0, min_y_asa + 0.5 * tripod_asa_cut_depth, tripod_z)):
+            Cylinder(
+                0.5 * p.tripod_hole_d_mm,
+                tripod_asa_cut_depth,
+                rotation=(90, 0, 0),
+                align=(Align.CENTER, Align.CENTER, Align.CENTER),
+                mode=Mode.SUBTRACT,
+            )
 
     asa_shell = _largest_solid(asa_bp.part)
     asa_shell.label = "ASA_Shell"
@@ -391,16 +567,58 @@ def build_dual_material_body(p: DualMaterialParams):
                 _add_profile(wrap_inner_w, wrap_inner_h, p.enforce_capsule_profile)
             extrude(amount=wrap_depth + 0.4, mode=Mode.SUBTRACT)
 
-        # Bottom tripod hole through TPU too.
-        with BuildSketch(Plane.XZ.offset(min_y_tpu + 0.12)):
-            with Locations((0.0, tripod_z)):
-                Circle(0.5 * p.tripod_hole_d_mm)
-        extrude(amount=-(p.tpu_wall_mm + 1.5), mode=Mode.SUBTRACT)
+        # Rear TPU insertion relief for cap seating.
+        rear_relief_depth = min(max(p.tpu_rear_cap_relief_depth_mm, 0.0), max(cavity_depth - 1.0, 0.0))
+        if rear_relief_depth > 0.0:
+            relief_start_z = cavity_start_z + cavity_depth - rear_relief_depth
+            relief_w = d["tpu_outer_w_mm"] + 2.0 * max(p.tpu_rear_cap_relief_radial_mm, 0.0)
+            relief_h = d["tpu_outer_h_mm"] + 2.0 * max(p.tpu_rear_cap_relief_radial_mm, 0.0)
+            with BuildSketch(Plane.XY.offset(relief_start_z - 0.2)):
+                _add_profile(relief_w, relief_h, p.enforce_capsule_profile)
+            extrude(amount=rear_relief_depth + 0.4, mode=Mode.SUBTRACT)
+
+        if p.include_thermal_vents:
+            if p.include_side_slot_thermal_vents:
+                side_cut_depth = max(p.side_vent_cut_depth_mm, p.tpu_wall_mm + 1.5)
+                for side in ("neg", "pos"):
+                    x_face = min_x_tpu - 0.2 if side == "neg" else max_x_tpu + 0.2
+                    for z_c in side_slot_z_centers:
+                        with BuildSketch(Plane.YZ.offset(x_face)):
+                            with Locations((p.side_vent_center_y_mm, z_c)):
+                                SlotOverall(p.side_vent_slot_h_mm, p.side_vent_slot_w_mm)
+                        extrude(amount=side_cut_depth if side == "neg" else -side_cut_depth, mode=Mode.SUBTRACT)
+
+            if p.include_top_vent_hole:
+                top_cut_depth = max(p.top_vent_cut_depth_mm, p.tpu_wall_mm + 1.5)
+                with BuildSketch(Plane.XZ.offset(-(max_y_tpu + 0.2))):
+                    for z_c in top_vent_z_centers:
+                        with Locations((0.0, z_c)):
+                            SlotOverall(p.top_vent_slot_width_mm, p.top_vent_slot_height_mm)
+                extrude(amount=top_cut_depth, mode=Mode.SUBTRACT)
+
+        # Bottom tripod hole in TPU: circular through-cut with extra clearance.
+        # Capsule profile has a curved bottom, so the cut must be tall enough
+        # to penetrate through the full semicircular wall section.
+        tripod_tpu_d = p.tripod_hole_d_mm + max(p.tripod_tpu_hole_extra_d_mm, 0.0)
+        tripod_tpu_cut_depth = 0.5 * d["tpu_outer_h_mm"]
+        with Locations((0.0, min_y_tpu + 0.5 * tripod_tpu_cut_depth, tripod_z)):
+            Cylinder(
+                0.5 * tripod_tpu_d,
+                tripod_tpu_cut_depth,
+                rotation=(90, 0, 0),
+                align=(Align.CENTER, Align.CENTER, Align.CENTER),
+                mode=Mode.SUBTRACT,
+            )
 
     tpu_sleeve = _largest_solid(tpu_bp.part)
     tpu_sleeve.label = "TPU_Sleeve"
 
     assembly = Compound(children=[tpu_sleeve, asa_shell], label="Mevo_Body_Assembly")
+
+    interface_gap_w_each = 0.5 * (d["asa_inner_w_mm"] - d["tpu_outer_w_mm"])
+    interface_gap_h_each = 0.5 * (d["asa_inner_h_mm"] - d["tpu_outer_h_mm"])
+    max_abs_interface_gap = max(abs(interface_gap_w_each), abs(interface_gap_h_each))
+    bond_grade = "A" if max_abs_interface_gap <= p.bond_interface_tolerance_mm else "B"
 
     report = {
         "derived_mm": d,
@@ -411,6 +629,9 @@ def build_dual_material_body(p: DualMaterialParams):
             "lens_center_x": float(p.lens_center_x_mm),
             "lens_center_y": float(p.lens_center_y_mm),
             "led_hole_d": float(p.led_hole_d_mm),
+            "led_hole_center_y": float(led_center_y),
+            "led_hole_from_bottom_mm": float(p.led_hole_center_from_bottom_mm),
+            "led_hole_from_bottom_mode": bool(p.use_led_hole_from_bottom),
             "led_hole_offset_from_lens_y": float(p.led_hole_offset_from_lens_y_mm),
             "sun_hood_depth": float(p.sun_hood_depth_mm),
             "duckbill_hood": {
@@ -418,24 +639,83 @@ def build_dual_material_body(p: DualMaterialParams):
                 "depth": float(max(p.duckbill_depth_mm, 0.0)),
                 "drop": float(max(p.duckbill_drop_mm, 0.0)),
                 "span_ratio": float(p.duckbill_span_ratio),
+                "side_overwrap": float(max(p.duckbill_side_overwrap_mm, 0.0)),
+                "lens_clearance": float(max(p.duckbill_lens_clearance_mm, 0.0)),
             },
             "tripod_hole_d": float(p.tripod_hole_d_mm),
             "tripod_center_from_front": float(p.tripod_center_from_front_mm),
+            "tripod_tpu_relief_d": float(p.tripod_hole_d_mm + max(p.tripod_tpu_hole_extra_d_mm, 0.0)),
+            "thermal_vents": {
+                "enabled": bool(p.include_thermal_vents),
+                "side_slots": {
+                    "enabled": bool(p.include_side_slot_thermal_vents),
+                    "count_per_side": int(side_slot_count),
+                    "height": float(p.side_vent_slot_h_mm),
+                    "width": float(p.side_vent_slot_w_mm),
+                    "pitch_z": float(side_slot_pitch),
+                    "center_y": float(p.side_vent_center_y_mm),
+                    "z_centers": [float(z) for z in side_slot_z_centers],
+                    "aligned_through_asa_tpu": True,
+                },
+                "top_slots": {
+                    "enabled": bool(p.include_top_vent_hole),
+                    "count": int(top_hole_count),
+                    "pitch_z": float(top_hole_pitch),
+                    "slot_width": float(p.top_vent_slot_width_mm),
+                    "slot_height": float(p.top_vent_slot_height_mm),
+                    "z_centers": [float(z) for z in top_vent_z_centers],
+                    "center_x": 0.0,
+                    "face": "top_opposite_tripod",
+                },
+            },
             "tpu_edge_wrap_depth": float(wrap_depth),
             "tpu_edge_wrap_radial": float(wrap_radial),
             "tpu_edge_wrap_enabled": {
                 "front": bool(p.include_tpu_front_edge_wrap),
                 "rear": bool(p.include_tpu_rear_edge_wrap),
             },
+            "tpu_rear_cap_relief": {
+                "depth": float(min(max(p.tpu_rear_cap_relief_depth_mm, 0.0), max(cavity_depth - 1.0, 0.0))),
+                "radial": float(max(p.tpu_rear_cap_relief_radial_mm, 0.0)),
+            },
             "back_cap_fit_clearance_total": float(p.back_cap_lip_undersize_total_mm),
             "back_cap_tongue_depth": float(d["tongue_depth_mm"]),
             "back_cap_tongue_radial_step": float(p.back_cap_tongue_radial_step_mm),
             "body_rear_groove_depth": float(d["groove_depth_mm"]),
             "body_rear_groove_start_z": float(d["groove_start_z_mm"]),
+            "cold_shoe": cold_shoe_info if cold_shoe_info else {"enabled": False},
+        },
+        "bond_interface_mm": {
+            "target_gap_each": float(p.interface_gap_mm),
+            "tolerance_gap_each": float(p.bond_interface_tolerance_mm),
+            "actual_gap_each_width": float(interface_gap_w_each),
+            "actual_gap_each_height": float(interface_gap_h_each),
+            "max_abs_gap_each": float(max_abs_interface_gap),
+            "bonded_contact_depth": float(cavity_depth),
+            "bond_grade": bond_grade,
+        },
+        "print_fusion_guidance": {
+            "assemble_bodies_in_slicer": True,
+            "recommended_outer_walls": 4,
+            "prime_tower": True,
+            "min_flush_volume_mm3": 250,
         },
         "named_bodies": ["TPU_Sleeve", "ASA_Shell"],
         "warnings": [],
     }
+    if max_abs_interface_gap > p.bond_interface_tolerance_mm:
+        report["warnings"].append(
+            "TPU-to-ASA interface gap exceeds tolerance; fusion quality may be reduced."
+        )
+    if interface_gap_w_each < -p.bond_interface_tolerance_mm or interface_gap_h_each < -p.bond_interface_tolerance_mm:
+        report["warnings"].append(
+            "Negative interface gap indicates interference/overlap between TPU and ASA bodies."
+        )
+    top_bottom_margin = 0.5 * d["asa_outer_h_mm"] - (p.side_vent_center_y_mm + 0.5 * p.side_vent_slot_h_mm)
+    if top_bottom_margin < 2.5:
+        report["warnings"].append(
+            "Side vents are close to corner band; increase corner margin for higher impact resistance."
+        )
 
     return assembly, report
 
@@ -451,16 +731,6 @@ def build_back_cap(p: DualMaterialParams):
         with BuildSketch(Plane.XY):
             _add_profile(d["asa_outer_w_mm"], d["asa_outer_h_mm"], p.enforce_capsule_profile)
         extrude(amount=p.back_cap_thickness_mm)
-
-        # Stage 1: wider tongue that keys into the body rear groove.
-        with BuildSketch(Plane.XY.offset(p.back_cap_thickness_mm)):
-            _add_profile(d["tongue_w_mm"], d["tongue_h_mm"], p.enforce_capsule_profile)
-        extrude(amount=d["tongue_depth_mm"])
-
-        # Stage 2: slimmer tip for controlled friction fit deeper in the sleeve opening.
-        with BuildSketch(Plane.XY.offset(p.back_cap_thickness_mm + d["tongue_depth_mm"])):
-            _add_profile(d["lip_tip_w_mm"], d["lip_tip_h_mm"], p.enforce_capsule_profile)
-        extrude(amount=d["lip_tip_depth_mm"])
 
         if p.include_manual_back_cutouts:
             cut_depth = p.back_cap_thickness_mm + p.back_cap_lip_depth_mm + p.back_cap_tpu_gasket_thickness_mm + 1.0
@@ -495,6 +765,16 @@ def build_back_cap(p: DualMaterialParams):
         gasket_inner_w = max(gasket_outer_w - 2.0 * p.back_cap_tpu_gasket_ring_width_mm, 1.0)
         gasket_inner_h = max(gasket_outer_h - 2.0 * p.back_cap_tpu_gasket_ring_width_mm, 1.0)
         with BuildPart() as gasket_bp:
+            # TPU plug geometry (camera-facing protrusion): this replaces ASA protrusions.
+            with BuildSketch(Plane.XY.offset(p.back_cap_thickness_mm)):
+                _add_profile(d["tongue_w_mm"], d["tongue_h_mm"], p.enforce_capsule_profile)
+            extrude(amount=d["tongue_depth_mm"])
+
+            with BuildSketch(Plane.XY.offset(p.back_cap_thickness_mm + d["tongue_depth_mm"])):
+                _add_profile(d["lip_tip_w_mm"], d["lip_tip_h_mm"], p.enforce_capsule_profile)
+            extrude(amount=d["lip_tip_depth_mm"])
+
+            # TPU face pad/ring on camera-contact side.
             with BuildSketch(Plane.XY.offset(p.back_cap_thickness_mm)):
                 _add_profile(gasket_outer_w, gasket_outer_h, p.enforce_capsule_profile)
             extrude(amount=p.back_cap_tpu_gasket_thickness_mm)
@@ -512,19 +792,31 @@ def build_back_cap(p: DualMaterialParams):
                         d["manual_upper_top_y_mm"],
                         d["manual_upper_bottom_y_mm"],
                     )
-                extrude(amount=p.back_cap_tpu_gasket_thickness_mm + 0.2, mode=Mode.SUBTRACT)
+                extrude(
+                    amount=max(
+                        p.back_cap_lip_depth_mm + p.back_cap_tpu_gasket_thickness_mm + 0.2,
+                        p.back_cap_tpu_gasket_thickness_mm + 0.2,
+                    ),
+                    mode=Mode.SUBTRACT,
+                )
             elif p.include_back_utility_slot:
                 with BuildSketch(Plane.XY.offset(p.back_cap_thickness_mm - 0.1)):
                     with Locations((0.0, slot_center_y)):
                         _add_vertical_stadium(slot_w, slot_h)
-                extrude(amount=p.back_cap_tpu_gasket_thickness_mm + 0.2, mode=Mode.SUBTRACT)
+                extrude(
+                    amount=max(
+                        p.back_cap_lip_depth_mm + p.back_cap_tpu_gasket_thickness_mm + 0.2,
+                        p.back_cap_tpu_gasket_thickness_mm + 0.2,
+                    ),
+                    mode=Mode.SUBTRACT,
+                )
 
         gasket = _largest_solid(gasket_bp.part)
-        gasket.label = "TPU_Back_Gasket"
+        gasket.label = "TPU_Back_Insert"
 
     if gasket is not None:
         cap_asm = Compound(children=[gasket, asa_cap], label="Mevo_Back_Cap_Assembly")
-        named_bodies = ["ASA_Back_Cap", "TPU_Back_Gasket"]
+        named_bodies = ["ASA_Back_Cap", "TPU_Back_Insert"]
     else:
         cap_asm = asa_cap
         named_bodies = ["ASA_Back_Cap"]
@@ -647,6 +939,13 @@ def main():
         default=None,
         help="TPU gasket thickness on cap inner face (mm).",
     )
+    parser.add_argument("--no-cold-shoe", action="store_true", help="Disable cold shoe mount on top rear")
+    parser.add_argument("--cold-shoe-z-from-rear", type=float, default=None, help="Cold shoe center distance from rear edge (mm)")
+    parser.add_argument(
+        "--export-asa-only-back-cap",
+        action="store_true",
+        help="Also export an ASA-only back cap compatibility file.",
+    )
     args = parser.parse_args()
 
     p = DualMaterialParams()
@@ -672,6 +971,10 @@ def main():
     if args.back_cap_tpu_gasket_thickness is not None:
         p.back_cap_tpu_gasket_thickness_mm = max(float(args.back_cap_tpu_gasket_thickness), 0.0)
     p.enforce_capsule_profile = not bool(args.disable_capsule_profile)
+    if args.no_cold_shoe:
+        p.include_cold_shoe = False
+    if args.cold_shoe_z_from_rear is not None:
+        p.cold_shoe_pad_z_from_rear_mm = float(args.cold_shoe_z_from_rear)
 
     body_asm, body_report = build_dual_material_body(p)
     back_cap_asm, back_cap_asa, cap_report = build_back_cap(p)
@@ -685,11 +988,15 @@ def main():
     cap_step_asa = args.out / "mevo_start_back_cap_asa.step"
     report_json = reports_dir / "mevo_start_dual_material_report.json"
 
-    archived = _archive_existing([body_step, cap_step_dual, cap_step_asa, report_json], args.out)
+    to_archive = [body_step, cap_step_dual, report_json]
+    if args.export_asa_only_back_cap:
+        to_archive.append(cap_step_asa)
+    archived = _archive_existing(to_archive, args.out)
 
     export_step(body_asm, str(body_step))
     export_step(back_cap_asm, str(cap_step_dual))
-    export_step(back_cap_asa, str(cap_step_asa))
+    if args.export_asa_only_back_cap:
+        export_step(back_cap_asa, str(cap_step_asa))
 
     payload = {
         "params": asdict(p),
@@ -702,7 +1009,8 @@ def main():
         print(f"Archived {len(archived)} previous file(s) to {args.out / 'archive'}")
     print(f"Wrote {body_step}")
     print(f"Wrote {cap_step_dual}")
-    print(f"Wrote {cap_step_asa}")
+    if args.export_asa_only_back_cap:
+        print(f"Wrote {cap_step_asa}")
     print(f"Wrote {report_json}")
 
 
