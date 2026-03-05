@@ -3,7 +3,6 @@
 
 Outputs:
 - models/maki_case/maki_live_rear_cap_dual_material.step
-- models/maki_case/maki_live_rear_cap.step
 - models/maki_case/reports/maki_live_rear_cap_dual_material_report.json
 """
 
@@ -17,6 +16,7 @@ from datetime import datetime
 from pathlib import Path
 
 from build123d import (
+    Box,
     BuildPart,
     BuildSketch,
     Circle,
@@ -48,6 +48,13 @@ class MakiRearCapDualParams:
     tpu_gasket_outer_inset_mm: float = 0.0
     tpu_edge_wrap_depth_mm: float = 1.8
     tpu_edge_wrap_width_mm: float = 1.8
+
+    # Snap-latch ridge on plug for body clip engagement
+    include_snap_ridge: bool = True
+    snap_ridge_height_mm: float = 0.7
+    snap_ridge_depth_mm: float = 1.0
+    snap_ridge_width_mm: float = 4.0
+    snap_ridge_setback_mm: float = 3.0
 
 
 def _archive_existing(paths: list[Path], out_dir: Path) -> list[tuple[str, str]]:
@@ -148,6 +155,30 @@ def build_rear_cap_dual(p: MakiRearCapDualParams):
     rear_cap = _largest_solid(rear_cap)
     rear_cap.label = "ASA_Back_Cap"
 
+    # Add snap-latch ridges on the ASA plug outer surface.
+    snap_ridge_info = None
+    if p.include_snap_ridge and p.snap_ridge_height_mm > 0.0:
+        plug_w = float(caps_report["derived"]["plug_w_mm"])
+        plug_tip_z = p.cap_thickness_mm + p.plug_depth_mm
+        ridge_z = plug_tip_z - p.snap_ridge_setback_mm
+        ridge_h = p.snap_ridge_height_mm
+        with BuildPart() as ridge_bp:
+            for side_sign in (-1.0, 1.0):
+                ridge_x = side_sign * (0.5 * plug_w + 0.5 * ridge_h)
+                with Locations((ridge_x, 0.0, ridge_z)):
+                    Box(ridge_h, p.snap_ridge_width_mm, p.snap_ridge_depth_mm)
+        try:
+            rear_cap = _largest_solid(rear_cap + ridge_bp.part)
+        except Exception:
+            pass
+        rear_cap.label = "ASA_Back_Cap"
+        snap_ridge_info = {
+            "enabled": True,
+            "ridge_height_mm": float(ridge_h),
+            "ridge_z_mm": float(ridge_z),
+            "setback_mm": float(p.snap_ridge_setback_mm),
+        }
+
     derived = caps_report["derived"]
     corner_r = derived["corner_radius_mm"]
     rear_cutouts = caps_report["cutouts"]["rear"]
@@ -163,6 +194,12 @@ def build_rear_cap_dual(p: MakiRearCapDualParams):
     )
 
     if gasket is not None:
+        # Subtract TPU volume from ASA so the two bodies don't overlap.
+        try:
+            rear_cap = _largest_solid(rear_cap - gasket)
+        except Exception:
+            pass
+        rear_cap.label = "ASA_Back_Cap"
         assembly = Compound(children=[gasket, rear_cap], label="Maki_Rear_Cap_Assembly")
         named_bodies = ["ASA_Back_Cap", "TPU_Back_Gasket"]
     else:
@@ -172,6 +209,7 @@ def build_rear_cap_dual(p: MakiRearCapDualParams):
     report = {
         "named_bodies": named_bodies,
         "rear_cap_source": caps_report,
+        "snap_ridge": snap_ridge_info if snap_ridge_info else {"enabled": False},
         "tpu_gasket_mm": {
             "enabled": bool(gasket is not None),
             "thickness": float(p.tpu_gasket_thickness_mm),
@@ -197,6 +235,7 @@ def main():
     parser.add_argument("--cap-thickness", type=float, default=None, help="ASA rear cap plate thickness (mm)")
     parser.add_argument("--plug-depth", type=float, default=None, help="ASA rear cap plug depth (mm)")
     parser.add_argument("--plug-clearance", type=float, default=None, help="ASA rear cap plug radial clearance (mm)")
+    parser.add_argument("--no-snap-ridge", action="store_true", help="Disable snap-latch ridge on plug")
     parser.add_argument("--disable-tpu-gasket", action="store_true", help="Disable TPU gasket body on rear cap")
     parser.add_argument("--tpu-gasket-thickness", type=float, default=None, help="TPU gasket thickness on cap interior (mm)")
     parser.add_argument("--tpu-gasket-inset", type=float, default=None, help="TPU gasket outer inset from cap OD (mm)")
@@ -213,6 +252,8 @@ def main():
         p.plug_depth_mm = float(args.plug_depth)
     if args.plug_clearance is not None:
         p.plug_clearance_mm = float(args.plug_clearance)
+    if args.no_snap_ridge:
+        p.include_snap_ridge = False
     if args.disable_tpu_gasket:
         p.include_tpu_gasket = False
     if args.tpu_gasket_thickness is not None:
@@ -229,13 +270,11 @@ def main():
     reports_dir.mkdir(parents=True, exist_ok=True)
 
     out_dual = args.out / "maki_live_rear_cap_dual_material.step"
-    out_asa = args.out / "maki_live_rear_cap.step"
     out_json = reports_dir / "maki_live_rear_cap_dual_material_report.json"
-    archived = _archive_existing([out_dual, out_asa, out_json], args.out)
+    archived = _archive_existing([out_dual, out_json], args.out)
 
-    assembly, asa_cap, report = build_rear_cap_dual(p)
+    assembly, _, report = build_rear_cap_dual(p)
     export_step(assembly, str(out_dual))
-    export_step(asa_cap, str(out_asa))
 
     payload = {"params": asdict(p), "report": report}
     payload["params"]["step_path"] = str(p.step_path)
@@ -244,7 +283,6 @@ def main():
     if archived:
         print(f"Archived {len(archived)} previous file(s) to {args.out / 'archive'}")
     print(f"Wrote {out_dual}")
-    print(f"Wrote {out_asa}")
     print(f"Wrote {out_json}")
 
 

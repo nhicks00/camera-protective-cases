@@ -96,6 +96,16 @@ class MakiCaseParams:
     cold_shoe_z_from_rear_mm: float = 20.0     # Center distance from rear edge
     cold_shoe_fillet_mm: float = 0.8           # Edge fillet on boss
 
+    # Snap-latch flexure clips for rear cap retention
+    include_snap_clips: bool = True
+    snap_clip_beam_length_mm: float = 5.0
+    snap_clip_beam_width_mm: float = 3.0
+    snap_clip_beam_thickness_mm: float = 1.0
+    snap_clip_catch_height_mm: float = 0.6
+    snap_clip_catch_depth_mm: float = 1.0
+    snap_clip_setback_mm: float = 3.0
+    snap_clip_y_position_mm: float = 0.0
+
     # Side tripod opening (derived from STEP feature location)
     tripod_center_from_front_mm: float = 48.0
     tripod_open_w_mm: float = 20.0
@@ -913,6 +923,35 @@ def build_case(p: MakiCaseParams):
                 "slide_in_from": "rear",
             }
 
+        # Snap-latch flexure clips on inner X walls for rear cap retention.
+        snap_clip_info = None
+        if p.include_snap_clips:
+            clip_tip_z = shell_depth - p.snap_clip_setback_mm
+            clip_base_z = clip_tip_z - p.snap_clip_beam_length_mm
+            clip_mid_z = 0.5 * (clip_base_z + clip_tip_z)
+            clip_y = p.snap_clip_y_position_mm
+            inner_half_x = 0.5 * inner_w
+            beam_t = p.snap_clip_beam_thickness_mm
+            catch_h = p.snap_clip_catch_height_mm
+
+            for side_sign in (-1.0, 1.0):
+                beam_x = side_sign * (inner_half_x - 0.5 * beam_t)
+                with Locations((beam_x, clip_y, clip_mid_z)):
+                    Box(beam_t, p.snap_clip_beam_width_mm, p.snap_clip_beam_length_mm)
+                nub_x = side_sign * (inner_half_x - beam_t - 0.5 * catch_h)
+                nub_z = clip_tip_z - 0.5 * p.snap_clip_catch_depth_mm
+                with Locations((nub_x, clip_y, nub_z)):
+                    Box(catch_h, p.snap_clip_beam_width_mm, p.snap_clip_catch_depth_mm)
+
+            snap_clip_info = {
+                "enabled": True,
+                "clip_count": 2,
+                "beam_length_mm": float(p.snap_clip_beam_length_mm),
+                "catch_height_mm": float(catch_h),
+                "clip_tip_z_mm": float(clip_tip_z),
+                "setback_mm": float(p.snap_clip_setback_mm),
+            }
+
         if p.use_step_side_features:
             if p.enforce_tripanel_vent_layout:
                 vent_pattern = _derive_tripanel_vents(
@@ -1212,6 +1251,7 @@ def build_case(p: MakiCaseParams):
                 "outer": float(outer_corner_r),
             },
             "cold_shoe": cold_shoe_info if cold_shoe_info else {"enabled": False},
+            "snap_clips": snap_clip_info if snap_clip_info else {"enabled": False},
             "machined_finish_mm": {
                 "sleeve_axis_y_fillet": sleeve_fillet_y,
             },
@@ -1246,6 +1286,7 @@ def main():
     parser.add_argument("--lens-hood-drop", type=float, default=None, help="Integrated glare hood vertical drop (mm)")
     parser.add_argument("--tripod-z", type=float, default=None, help="Fallback tripod opening center from front (mm)")
     parser.add_argument("--no-cold-shoe", action="store_true", help="Disable cold shoe mount on top rear")
+    parser.add_argument("--no-snap-clips", action="store_true", help="Disable snap-latch flexure clips")
     parser.add_argument("--cold-shoe-z-from-rear", type=float, default=None, help="Cold shoe center distance from rear edge (mm)")
     parser.add_argument("--no-step-side-features", action="store_true", help="Disable STEP-derived side vents/tripod hole")
     parser.add_argument("--tripod-rect", action="store_true", help="Use rectangular cutout instead of circular tripod hole")
@@ -1274,6 +1315,8 @@ def main():
         params.tripod_center_from_front_mm = args.tripod_z
     if args.no_cold_shoe:
         params.cold_shoe_enabled = False
+    if args.no_snap_clips:
+        params.include_snap_clips = False
     if args.cold_shoe_z_from_rear is not None:
         params.cold_shoe_z_from_rear_mm = float(args.cold_shoe_z_from_rear)
     if args.no_step_side_features:

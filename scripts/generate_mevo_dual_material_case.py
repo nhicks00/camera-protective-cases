@@ -140,6 +140,17 @@ class DualMaterialParams:
     cold_shoe_rail_thickness_mm: float = 1.8
     cold_shoe_slot_depth_mm: float = 2.0
 
+    # Snap-latch flexure clips for back cap retention
+    include_snap_clips: bool = True
+    snap_clip_beam_length_mm: float = 5.0
+    snap_clip_beam_width_mm: float = 3.0
+    snap_clip_beam_thickness_mm: float = 1.0
+    snap_clip_catch_height_mm: float = 0.6
+    snap_clip_catch_depth_mm: float = 1.0
+    snap_clip_setback_mm: float = 3.0
+    snap_clip_ridge_height_mm: float = 0.7
+    snap_clip_y_position_mm: float = 0.0
+
     # Back cap engagement geometry
     back_cap_thickness_mm: float = 3.0
     back_cap_lip_depth_mm: float = 5.0
@@ -391,6 +402,40 @@ def build_dual_material_body(p: DualMaterialParams):
         with BuildSketch(Plane.XY.offset(d["groove_start_z_mm"])):
             _add_profile(d["groove_w_mm"], d["groove_h_mm"], p.enforce_capsule_profile)
         extrude(amount=d["groove_depth_mm"] + 0.2, mode=Mode.SUBTRACT)
+
+        # Snap-latch flexure clips on inner X walls for cap retention.
+        snap_clip_info = None
+        if p.include_snap_clips:
+            clip_tip_z = body_depth - p.snap_clip_setback_mm
+            clip_base_z = clip_tip_z - p.snap_clip_beam_length_mm
+            clip_mid_z = 0.5 * (clip_base_z + clip_tip_z)
+            clip_y = p.snap_clip_y_position_mm
+            asa_inner_half_x = 0.5 * d["asa_inner_w_mm"]
+            beam_t = p.snap_clip_beam_thickness_mm
+            catch_h = p.snap_clip_catch_height_mm
+
+            for side_sign in (-1.0, 1.0):
+                # Cantilever beam on inner wall surface
+                beam_x = side_sign * (asa_inner_half_x - 0.5 * beam_t)
+                with Locations((beam_x, clip_y, clip_mid_z)):
+                    Box(beam_t, p.snap_clip_beam_width_mm, p.snap_clip_beam_length_mm)
+                # Catch nub at tip, protruding radially inward
+                nub_x = side_sign * (asa_inner_half_x - beam_t - 0.5 * catch_h)
+                nub_z = clip_tip_z - 0.5 * p.snap_clip_catch_depth_mm
+                with Locations((nub_x, clip_y, nub_z)):
+                    Box(catch_h, p.snap_clip_beam_width_mm, p.snap_clip_catch_depth_mm)
+
+            snap_clip_info = {
+                "enabled": True,
+                "clip_count": 2,
+                "beam_length_mm": float(p.snap_clip_beam_length_mm),
+                "beam_width_mm": float(p.snap_clip_beam_width_mm),
+                "beam_thickness_mm": float(beam_t),
+                "catch_height_mm": float(catch_h),
+                "catch_depth_mm": float(p.snap_clip_catch_depth_mm),
+                "clip_tip_z_mm": float(clip_tip_z),
+                "setback_mm": float(p.snap_clip_setback_mm),
+            }
 
         # Optional lens/LED openings when a closed front wall is used.
         if (not p.open_front_ovular) and p.include_front_lens_led_cutouts:
@@ -684,6 +729,7 @@ def build_dual_material_body(p: DualMaterialParams):
             "body_rear_groove_depth": float(d["groove_depth_mm"]),
             "body_rear_groove_start_z": float(d["groove_start_z_mm"]),
             "cold_shoe": cold_shoe_info if cold_shoe_info else {"enabled": False},
+            "snap_clips": snap_clip_info if snap_clip_info else {"enabled": False},
         },
         "bond_interface_mm": {
             "target_gap_each": float(p.interface_gap_mm),
@@ -810,6 +856,17 @@ def build_back_cap(p: DualMaterialParams):
                     ),
                     mode=Mode.SUBTRACT,
                 )
+
+            # Snap-latch ridge on TPU plug to engage with body clips.
+            if p.include_snap_clips and p.snap_clip_ridge_height_mm > 0.0:
+                ridge_z = p.back_cap_thickness_mm + (p.back_cap_lip_depth_mm - p.snap_clip_setback_mm)
+                ridge_h = p.snap_clip_ridge_height_mm
+                ridge_depth_z = p.snap_clip_catch_depth_mm
+                plug_half_w = 0.5 * d["lip_tip_w_mm"]
+                for side_sign in (-1.0, 1.0):
+                    ridge_x = side_sign * (plug_half_w + 0.5 * ridge_h)
+                    with Locations((ridge_x, p.snap_clip_y_position_mm, ridge_z)):
+                        Box(ridge_h, p.snap_clip_beam_width_mm + 1.0, ridge_depth_z)
 
         gasket = _largest_solid(gasket_bp.part)
         gasket.label = "TPU_Back_Insert"
@@ -940,6 +997,7 @@ def main():
         help="TPU gasket thickness on cap inner face (mm).",
     )
     parser.add_argument("--no-cold-shoe", action="store_true", help="Disable cold shoe mount on top rear")
+    parser.add_argument("--no-snap-clips", action="store_true", help="Disable snap-latch flexure clips on body and cap")
     parser.add_argument("--cold-shoe-z-from-rear", type=float, default=None, help="Cold shoe center distance from rear edge (mm)")
     parser.add_argument(
         "--export-asa-only-back-cap",
@@ -973,6 +1031,8 @@ def main():
     p.enforce_capsule_profile = not bool(args.disable_capsule_profile)
     if args.no_cold_shoe:
         p.include_cold_shoe = False
+    if args.no_snap_clips:
+        p.include_snap_clips = False
     if args.cold_shoe_z_from_rear is not None:
         p.cold_shoe_pad_z_from_rear_mm = float(args.cold_shoe_z_from_rear)
 
