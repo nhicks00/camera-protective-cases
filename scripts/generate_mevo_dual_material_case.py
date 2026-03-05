@@ -383,6 +383,16 @@ def build_dual_material_body(p: DualMaterialParams):
     ]
     top_hole_margin_z = max(10.0, 0.5 * p.top_vent_slot_width_mm + 3.0)
     top_vent_z_centers = [min(max(z, top_hole_margin_z), body_depth - top_hole_margin_z) for z in top_vent_z_centers]
+
+    # Remove top vents whose center falls within the cold shoe pad footprint.
+    if p.include_cold_shoe:
+        cs_pad_z = body_depth - p.cold_shoe_pad_z_from_rear_mm
+        cs_pad_half_l = 0.5 * p.cold_shoe_pad_length_mm
+        top_vent_z_centers = [
+            z for z in top_vent_z_centers
+            if z < (cs_pad_z - cs_pad_half_l) or z > (cs_pad_z + cs_pad_half_l)
+        ]
+
     if p.use_led_hole_from_bottom:
         led_center_y = -0.5 * p.device_nominal_h_mm + p.led_hole_center_from_bottom_mm
     else:

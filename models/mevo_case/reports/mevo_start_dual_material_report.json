@@ -187,9 +187,7 @@
           "z_centers": [
             18.0,
             31.15,
-            45.15,
-            59.15,
-            72.3
+            45.15
           ],
           "center_x": 0.0,
           "face": "top_opposite_tripod"
