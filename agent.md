@@ -42,8 +42,8 @@ BirdDog MAKI Live:
 - ASA shell wall: `3.0 mm`
 - ASA radial clearance to device: `2.3 mm`
 - TPU sleeve wall: `2.0 mm`
-- TPU radial device clearance: `0.2 mm`
-- TPU-to-ASA radial air gap: `0.1 mm`
+- TPU radial device clearance: `0.15 mm`
+- TPU-to-ASA radial air gap: `0.15 mm` per side (current dual-body default stack)
 - ASA cap plug depth: `1.8 mm`
 
 Slicer baseline (ASA):
@@ -90,7 +90,7 @@ Active hard-shell and TPU workflows:
   - Front camera aperture in integrated front wall is trimmed by `2.0 mm` vs prior extraction.
   - Through-cut depth increased so vents fully penetrate.
   - Vent row clustering now locks to the STEP-derived rear vent bank (8 rows) and ignores front outlier slots.
-  - Tripod side includes local armor boss thickening around the mount opening.
+  - Tripod armor boss has been removed (params zeroed out).
   - Tripod hole cut orientation is corrected and validated as a true through-cut.
   - Dual-body tripod overlap is now numerically aligned (`dx=0.0`, `dz=0.0` in current reports).
   - Side `3 + 3` vents are rounded-slot cuts (not hard rectangular box cuts).
@@ -99,7 +99,6 @@ Active hard-shell and TPU workflows:
 - ASA caps:
   - Active outputs:
     - `models/maki_case/maki_live_rear_cap_dual_material.step`
-    - `models/maki_case/maki_live_rear_cap.step` (ASA-only compatibility export)
   - Generator: `scripts/generate_maki_live_rear_cap_dual_material.py`
   - Dual rear cap contains: `ASA_Back_Cap` + `TPU_Back_Gasket`.
   - TPU rear-cap body now includes:
@@ -112,28 +111,44 @@ Active hard-shell and TPU workflows:
 - TPU one-piece sleeve (preferred TPU output):
   - `models/maki_case/maki_live_tpu_sleeve.step`
   - Generator: `scripts/generate_maki_live_tpu_liner.py`
-  - Single connected TPU sleeve with front edge wrap enabled and rear edge wrap disabled by default.
+  - Single connected TPU sleeve with front edge wrap disabled (ASA front wall provides retention) and rear edge wrap disabled by default.
   - Rear remains open for insertion; rear-side TPU contact is handled by rear cap TPU gasket.
   - Side `3 + 3` vents are rounded-slot cuts to match ASA style.
   - Does not use full TPU face caps.
   - Vent pass-through validated (`30/30` through by ray-check), with tripod through-cut also validated.
   - Vent rows are aligned to the ASA sleeve vent coordinates in device frame.
+  - Applied empirical vent alignment deltas from tripod-registered overlay:
+    - tripanel bank Z shift: `-4.226 mm`
+    - side-trio bank Z shift: `-13.397 mm`
+  - 24-grid lateral spacing calibration:
+    - center column remains fixed
+    - left/right columns are inset toward center by `2.6 mm` each
+    - resulting tripanel X centers: `-13.4, 0.0, +13.4 mm`
   - Legacy separate TPU liner/caps and unibody files are archived automatically.
 - Dual-material body assembly (combined slicer object):
   - `models/maki_case/maki_live_body_dual_material.step`
   - Generator: `scripts/generate_maki_live_dual_material_body.py`
   - Contains two bodies: `TPU_Sleeve` + `ASA_Shell`.
-  - TPU is auto-aligned into ASA cavity with report-verified fit stack (default ~0.1 mm radial gap each side, ~2.1 mm axial front/back gap).
+  - TPU is auto-aligned into ASA cavity with report-verified fit stack (default `0.15 mm` radial gap each side, ~`2.1 mm` axial front/back gap).
+  - Fit validation pipeline:
+    - Script: `scripts/validate_maki_live_fit.py`
+    - Output assembly: `models/maki_case/maki_live_fit_validation_assembly.step`
+    - Output report: `models/maki_case/reports/maki_live_fit_validation_report.json`
+    - Validates real device STEP placement inside body + rear cap and reports pairwise hard-collision volumes.
+    - Also validates all major opening geometry against STEP-derived expectations:
+      - 24 tripanel vents + 6 side vents for both ASA and TPU bodies,
+      - tripod opening alignment for both ASA and TPU,
+      - rear-cap cutout center/size matching against STEP-derived rear port cutouts.
+    - Current baseline result: no hard collisions and all feature checks passing.
 
 ### Mevo Start
 Current preferred workflow:
 - Dual-material bucket-body workflow (primary):
   - `models/mevo_case/mevo_start_body_dual_material.step`
   - `models/mevo_case/mevo_start_back_cap_dual_material.step`
-  - `models/mevo_case/mevo_start_back_cap_asa.step`
   - Generator: `scripts/generate_mevo_dual_material_case.py`
   - Body STEP contains named solids: `TPU_Sleeve`, `ASA_Shell`.
-  - Back-cap dual STEP contains named solids: `ASA_Back_Cap`, `TPU_Back_Gasket`.
+  - Back-cap dual STEP contains named solids: `ASA_Back_Cap`, `TPU_Back_Insert`.
 - Geometry intent:
   - ovular/capsule-profile sleeve geometry (not rounded-rectangle profile),
   - front-integrated body by default (front wall fused to sleeve),
@@ -141,13 +156,15 @@ Current preferred workflow:
   - front lens/LED cutouts enabled by default in closed-front mode,
   - lens opening defaults updated to `29.5 mm` at `Y=20.0` for improved framing,
   - integrated curved duck-bill front visor is enabled by default (`depth=16 mm`, `drop=9 mm`, `span_ratio=0.90`),
+  - thermal venting defaults: top holes enabled plus side slot vents enabled; top-hole plane orientation is corrected to the hood/top side,
   - separate back-cap assembly with TPU gasket (ASA-only cap exported for compatibility),
   - manual two-cutout rear-cap layout is default-enabled (`include_manual_back_cutouts=true`):
     - lower slot from Mevo edge offsets (10 mm side margins, 7 mm bottom offset),
     - upper domed cutout using top offsets (3.0 mm and 28.0 mm from top, 3.0 mm side margins),
   - TPU-aware back-cap fit clearance default: `0.28 mm` total undersize,
   - two-stage tongue engagement with matching rear body groove seat,
-  - bottom tripod hole cuts through ASA and TPU so mount contacts camera directly.
+  - bottom tripod opening is enlarged to `25.4 mm` with local bottom flattening + TPU relief to keep the opening clear.
+  - rear TPU insertion relief is enabled (`5.4 mm` default) so the back-cap plug can seat without colliding with sleeve TPU.
 - Mevo back cap utility slot is default-disabled (`include_back_utility_slot=false`) until exact rear port map is confirmed.
 - Mevo lens opening uses offset center (`lens_center_y_mm=20.0`) to avoid centered misalignment.
 - Optional flags:
@@ -164,7 +181,6 @@ User shorthand often means:
 - “TPU sleeve for Maki” = `maki_live_tpu_sleeve.step` (single part)
 - “Maki caps” = dual-material rear cap by default (`maki_live_rear_cap_dual_material.step`)
 - “Mevo rear closure” = `mevo_start_back_cap_dual_material.step` (ASA cap + TPU gasket)
-- “Mevo ASA-only rear cap” = `mevo_start_back_cap_asa.step` (compatibility export)
 - “Mevo case back plate” = legacy/optional only
 
 ## Key References
@@ -187,6 +203,7 @@ python scripts/generate_maki_live_case.py
 python scripts/generate_maki_live_tpu_liner.py
 python scripts/generate_maki_live_dual_material_body.py
 python scripts/generate_maki_live_rear_cap_dual_material.py
+python scripts/validate_maki_live_fit.py
 ```
 
 Mevo:

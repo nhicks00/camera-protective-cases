@@ -67,6 +67,7 @@ class MakiCapParams:
     front_major_aperture_shrink_mm: float = 2.0
     rear_min_cutout_dim_mm: float = 4.0
     rear_min_cutout_area_mm2: float = 8.0
+    hdmi_extra_clearance_mm: float = 2.0
 
     # Processing
     section_z_ratio: float = 0.50
@@ -246,8 +247,8 @@ def _extract_end_cutouts(solids, p: MakiCapParams, sx: float, sy: float, zmin: f
                     )
                     d_maj = max(d_maj, 1.0)
                     entry = {
-                        "x": xmid * sx,
-                        "y": ymid * sy,
+                        "x": float(xmid),
+                        "y": float(ymid),
                         "shape": "circle",
                         "d": d_maj,
                     }
@@ -257,9 +258,11 @@ def _extract_end_cutouts(solids, p: MakiCapParams, sx: float, sy: float, zmin: f
                 shape = _classify_cutout(xlen, ylen)
                 if shape is None:
                     continue
+                # Use raw STEP wire centres (not profile-scaled) so cutouts
+                # align with the actual device port positions in the assembly.
                 entry = {
-                    "x": xmid * sx,
-                    "y": ymid * sy,
+                    "x": float(xmid),
+                    "y": float(ymid),
                     "shape": shape["shape"],
                 }
                 if shape["shape"] == "circle":
@@ -276,6 +279,20 @@ def _extract_end_cutouts(solids, p: MakiCapParams, sx: float, sy: float, zmin: f
                     if max_dim < p.rear_min_cutout_dim_mm or area < p.rear_min_cutout_area_mm2:
                         continue
                     rear.append(entry)
+
+    # Apply additional HDMI clearance to the largest rear slot/rect.
+    if rear and p.hdmi_extra_clearance_mm > 0.0:
+        best_idx = None
+        best_area = 0.0
+        for ri, rc in enumerate(rear):
+            if rc["shape"] in ("slot", "rect"):
+                a = rc["w"] * rc["h"]
+                if a > best_area:
+                    best_area = a
+                    best_idx = ri
+        if best_idx is not None:
+            rear[best_idx]["w"] += p.hdmi_extra_clearance_mm
+            rear[best_idx]["h"] += p.hdmi_extra_clearance_mm
 
     # Deduplicate by rounded center+size
     def dedupe(items):

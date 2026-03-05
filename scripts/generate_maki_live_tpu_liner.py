@@ -54,7 +54,7 @@ class MakiTpuLinerParams:
     nominal_length_mm: float = 120.32
 
     # Fit against camera body (snug)
-    device_clearance_mm: float = 0.2
+    device_clearance_mm: float = 0.15
     end_clearance_mm: float = 0.2
     asa_shell_clearance_mm: float = 2.3
     asa_cap_plug_depth_mm: float = 1.8
@@ -63,8 +63,12 @@ class MakiTpuLinerParams:
     shell_thickness_mm: float = 2.0
     edge_wrap_depth_mm: float = 2.5
     edge_wrap_radial_mm: float = 2.0
-    include_front_edge_wrap: bool = True
+    include_front_edge_wrap: bool = False
     include_rear_edge_wrap: bool = False
+
+    # Front face pad (shock absorption between ASA front wall and camera face)
+    include_front_face_pad: bool = True
+    front_face_pad_thickness_mm: float = 1.2
 
     # Keep side vent/tripod regions open through TPU
     use_step_side_features: bool = True
@@ -80,11 +84,17 @@ class MakiTpuLinerParams:
     vent_rows_per_panel: int = 8
     enforce_tripanel_vent_layout: bool = True
     tripanel_fallback_x_offset_mm: float = 16.0
+    # Pull outer 24-grid columns inward toward center (center column stays fixed).
+    tripanel_outer_column_inset_mm: float = 2.6
+    # Z shift for vent arrays (0 = place at STEP-derived positions).
+    tripanel_vent_z_shift_mm: float = 0.0
     vent_cut_depth_mm: float = 8.0
     include_side_trio_vents: bool = True
     side_trio_per_side: int = 3
-    side_trio_z_threshold_mm: float = -20.0
-    side_trio_flip_end: bool = True
+    side_trio_z_threshold_mm: float = -60.0
+    side_trio_select_rear: bool = True
+    side_trio_flip_end: bool = False
+    side_trio_vent_z_shift_mm: float = 0.0
     side_trio_scale_t: float = 1.6
     side_trio_scale_z: float = 1.5
     side_trio_min_t_mm: float = 6.4
@@ -99,6 +109,13 @@ class MakiTpuLinerParams:
     tripod_z_min_mm: float = -110.0
     tripod_z_max_mm: float = -20.0
     tripod_expected_side: str = "neg"
+
+    # Rectangular tripod mount cutout (replaces circular hole when enabled)
+    tripod_use_rect_cutout: bool = True
+    tripod_rect_long_mm: float = 50.80   # 2.0 inches
+    tripod_rect_short_mm: float = 40.64  # 1.6 inches
+    tripod_rect_long_along_z: bool = True  # True = long side along case length
+    tripod_rect_z_shift_mm: float = -6.35  # negative = toward front/lens (1/4")
 
     # Processing
     section_z_ratio: float = 0.50
@@ -192,7 +209,7 @@ def _load_step_as_mesh(step_path: Path, tmp_stl: Path, p: MakiTpuLinerParams):
         tmp_stl.unlink(missing_ok=True)
     except Exception:
         pass
-    return mesh, step_features
+    return mesh, housing, step_features
 
 
 def _extract_tripod_from_cylindrical_faces(housing, p: MakiTpuLinerParams):
@@ -220,15 +237,20 @@ def _extract_tripod_from_cylindrical_faces(housing, p: MakiTpuLinerParams):
         major_span = max(float(bb.size.X), float(bb.size.Y), float(bb.size.Z))
         if major_span < 4.0:
             continue
+        # Use bounding-box midpoint for X and Z (the cross-section plane
+        # coordinates) because face.center() on cylindrical faces can be
+        # offset by one radius from the true axis centre.
+        bb_cx = float((bb.min.X + bb.max.X) * 0.5)
+        bb_cz = float((bb.min.Z + bb.max.Z) * 0.5)
         side = "neg" if c.Y < 0 else "pos"
         score = (
             0.0 if side == p.tripod_expected_side else 1.0,
             abs(float(r) - p.tripod_thread_radius_mm),
             abs(float(n.Z) + 1.0),
-            abs(float(c.X)),
-            abs(float(c.Z) + 45.0),
+            abs(bb_cx),
+            abs(bb_cz + 45.0),
         )
-        candidates.append({"side": side, "x": float(c.X), "y": float(c.Y), "z": float(c.Z), "r": float(r), "score": score})
+        candidates.append({"side": side, "x": bb_cx, "y": float(c.Y), "z": bb_cz, "r": float(r), "score": score})
     if not candidates:
         return None, 0
     best = min(candidates, key=lambda c: c["score"])
@@ -359,10 +381,39 @@ def _collapse_close(values: list[float], tol: float) -> list[float]:
     return out
 
 
-def _derive_tripanel_vents(step_vents, map_x, map_y, map_z, sx: float, sz: float, outer_w: float, p: MakiTpuLinerParams):
+def _resolve_tripanel_side(step_vents, fallback_side: str) -> str:
+    fallback = fallback_side if fallback_side in ("neg", "pos") else "neg"
+    counts = {"neg": 0, "pos": 0}
+    for v in step_vents:
+        if v.get("axis") != "y":
+            continue
+        if float(v.get("z", 0.0)) > -20.0:
+            continue
+        if float(v.get("slot_t", 0.0)) < 8.0 or float(v.get("slot_z", 0.0)) < 1.6:
+            continue
+        side = v.get("side")
+        if side in counts:
+            counts[side] += 1
+    if counts["neg"] == counts["pos"]:
+        return fallback
+    return "neg" if counts["neg"] > counts["pos"] else "pos"
+
+
+def _derive_tripanel_vents(
+    step_vents,
+    map_x,
+    map_y,
+    map_z,
+    sx: float,
+    sz: float,
+    outer_w: float,
+    p: MakiTpuLinerParams,
+    target_side: str | None = None,
+):
     """Derive a 3-panel vent pattern (8 rows each) from STEP side vents."""
-    target_side = p.tripod_expected_side if p.tripod_expected_side in ("neg", "pos") else "neg"
-    neg_primary = []
+    if target_side not in ("neg", "pos"):
+        target_side = _resolve_tripanel_side(step_vents, p.tripod_expected_side)
+    side_primary = []
     for v in step_vents:
         if v["axis"] != "y" or v["side"] != target_side:
             continue
@@ -370,14 +421,14 @@ def _derive_tripanel_vents(step_vents, map_x, map_y, map_z, sx: float, sz: float
             continue
         if v["slot_t"] < 8.0 or v["slot_z"] < 1.6:
             continue
-        neg_primary.append(v)
+        side_primary.append(v)
 
-    if not neg_primary:
+    if not side_primary:
         z_centers = [
             p.end_clearance_mm + p.vent_start_from_front_mm + i * p.vent_pitch_mm
             for i in range(p.vent_rows_per_panel)
         ]
-        x_off = p.tripanel_fallback_x_offset_mm
+        x_off = max(p.tripanel_fallback_x_offset_mm - p.tripanel_outer_column_inset_mm, 6.0)
         panels = [
             {"axis": "y", "side": target_side, "x": -x_off, "y": 0.0},
             {"axis": "y", "side": target_side, "x": 0.0, "y": 0.0},
@@ -388,13 +439,14 @@ def _derive_tripanel_vents(step_vents, map_x, map_y, map_z, sx: float, sz: float
             "z_centers": z_centers,
             "slot_t": p.vent_slot_w_mm,
             "slot_z": p.vent_slot_h_mm,
+            "panel_side": target_side,
             "source": "fallback",
         }
 
-    slot_t = float(np.median([v["slot_t"] * sx + p.side_feature_clearance_mm for v in neg_primary]))
-    slot_z = float(np.median([max(v["slot_z"] * sz + p.side_feature_clearance_mm, 0.8) for v in neg_primary]))
+    slot_t = float(np.median([v["slot_t"] * sx + p.side_feature_clearance_mm for v in side_primary]))
+    slot_z = float(np.median([max(v["slot_z"] * sz + p.side_feature_clearance_mm, 0.8) for v in side_primary]))
 
-    z_vals = sorted(_collapse_close([v["z"] for v in neg_primary], tol=0.7))
+    z_vals = sorted(_collapse_close([v["z"] for v in side_primary], tol=0.7))
     if len(z_vals) >= p.vent_rows_per_panel:
         best = None
         for i in range(0, len(z_vals) - p.vent_rows_per_panel + 1):
@@ -411,8 +463,8 @@ def _derive_tripanel_vents(step_vents, map_x, map_y, map_z, sx: float, sz: float
         z0 = z_vals[0] if z_vals else (p.end_clearance_mm + p.vent_start_from_front_mm)
         z_centers = [float(map_z(z0 + i * pitch)) for i in range(p.vent_rows_per_panel)]
 
-    center_x = float(np.median([map_x(v["x"]) for v in neg_primary]))
-    x_off = min(max(p.tripanel_fallback_x_offset_mm, 8.0), 0.36 * outer_w)
+    center_x = float(np.median([map_x(v["x"]) for v in side_primary]))
+    x_off = min(max(p.tripanel_fallback_x_offset_mm - p.tripanel_outer_column_inset_mm, 6.0), 0.36 * outer_w)
     panels = [
         {"axis": "y", "side": target_side, "x": center_x - x_off, "y": 0.0},
         {"axis": "y", "side": target_side, "x": center_x, "y": 0.0},
@@ -423,6 +475,7 @@ def _derive_tripanel_vents(step_vents, map_x, map_y, map_z, sx: float, sz: float
         "z_centers": [float(z) for z in z_centers],
         "slot_t": slot_t,
         "slot_z": slot_z,
+        "panel_side": target_side,
         "source": "step_tripanel_cluster",
     }
 
@@ -440,9 +493,13 @@ def _derive_side_trio_vents(
     for v in step_vents:
         if v["axis"] != "x":
             continue
-        if v["z"] <= p.side_trio_z_threshold_mm:
-            continue
-        if not (2.5 <= v["slot_t"] <= 6.5 and 0.6 <= v["slot_z"] <= 2.5):
+        if p.side_trio_select_rear:
+            if v["z"] > p.side_trio_z_threshold_mm:
+                continue
+        else:
+            if v["z"] <= p.side_trio_z_threshold_mm:
+                continue
+        if not (1.5 <= v["slot_t"] <= 12.0 and 0.5 <= v["slot_z"] <= 3.5):
             continue
         family.append(v)
 
@@ -501,9 +558,95 @@ def _extract_profile_xy(mesh: trimesh.Trimesh, z_mm: float) -> Polygon:
     return _to_single_poly(base.simplify(0.05, preserve_topology=True))
 
 
+def _extract_front_cutouts_tpu(housing, p: MakiTpuLinerParams, sx: float, sy: float, zmax: float):
+    """Extract front-face openings from STEP housing (lens, LED, etc.) for TPU pad cutouts."""
+    front_window_mm = 16.0
+    cutout_extra_mm = 0.25
+    min_cutout_dim_mm = 3.0
+    min_cutout_area_mm2 = 8.0
+    max_cutout_ratio_xy = 0.80
+    aperture_shrink_mm = 2.0
+
+    cutouts = []
+    for f in housing.faces():
+        wires = f.wires()
+        if len(wires) <= 1:
+            continue
+        try:
+            n = f.normal_at()
+        except Exception:
+            continue
+        if n.Z <= 0 or abs(n.Z) < 0.92:
+            continue
+        for w in wires[1:]:
+            bb = w.bounding_box()
+            xlen = float(bb.size.X)
+            ylen = float(bb.size.Y)
+            zmid = float((bb.min.Z + bb.max.Z) * 0.5)
+            if zmid <= (zmax - front_window_mm):
+                continue
+
+            xmid = float((bb.min.X + bb.max.X) * 0.5)
+            ymid = float((bb.min.Y + bb.max.Y) * 0.5)
+
+            too_large = (
+                xlen > p.nominal_width_mm * max_cutout_ratio_xy
+                and ylen > p.nominal_height_mm * max_cutout_ratio_xy
+            )
+
+            if too_large:
+                d_maj = (
+                    (xlen + ylen) * 0.5 * (sx + sy) * 0.5
+                    + cutout_extra_mm
+                    - aperture_shrink_mm
+                )
+                d_maj = max(d_maj, min_cutout_dim_mm)
+                cutouts.append({"x": xmid * sx, "y": ymid * sy, "shape": "circle", "d": d_maj})
+                continue
+
+            d_max = max(xlen, ylen)
+            d_min = min(xlen, ylen)
+            if d_min < 0.6:
+                continue
+            ratio = d_max / max(d_min, 1e-6)
+            if ratio <= 1.18:
+                shape_info = {"shape": "circle", "d": (xlen + ylen) * 0.5}
+            elif ratio <= 3.6:
+                shape_info = {"shape": "slot", "w": d_max, "h": d_min}
+            else:
+                shape_info = {"shape": "rect", "w": xlen, "h": ylen}
+
+            entry = {"x": xmid * sx, "y": ymid * sy, "shape": shape_info["shape"]}
+            if shape_info["shape"] == "circle":
+                entry["d"] = shape_info["d"] * (sx + sy) * 0.5 + cutout_extra_mm
+                max_dim = entry["d"]
+                area = math.pi * (0.5 * entry["d"]) ** 2
+            else:
+                entry["w"] = max(shape_info.get("w", 1.0) * sx + cutout_extra_mm, 0.8)
+                entry["h"] = max(shape_info.get("h", 1.0) * sy + cutout_extra_mm, 0.8)
+                max_dim = max(entry["w"], entry["h"])
+                area = entry["w"] * entry["h"]
+            if max_dim < min_cutout_dim_mm or area < min_cutout_area_mm2:
+                continue
+            cutouts.append(entry)
+
+    out = []
+    seen = set()
+    for c in cutouts:
+        if c["shape"] == "circle":
+            key = (c["shape"], round(c["x"], 2), round(c["y"], 2), round(c["d"], 2))
+        else:
+            key = (c["shape"], round(c["x"], 2), round(c["y"], 2), round(c.get("w", 0), 2), round(c.get("h", 0), 2))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(c)
+    return out
+
+
 def build_liner(p: MakiTpuLinerParams):
     tmp_stl = Path("tmp/maki_device_from_step_tpu_ref.stl")
-    mesh, step_features = _load_step_as_mesh(p.step_path, tmp_stl, p)
+    mesh, housing, step_features = _load_step_as_mesh(p.step_path, tmp_stl, p)
 
     zmin, zmax = mesh.bounds[:, 2]
     z_section = zmin + (zmax - zmin) * p.section_z_ratio
@@ -548,6 +691,7 @@ def build_liner(p: MakiTpuLinerParams):
         # Match ASA sleeve datum with end clearance offset from front edge.
         return float((zmax - z_dev) * sz + p.end_clearance_mm)
 
+    resolved_tripod_side = _resolve_tripanel_side(step_features["vents"], p.tripod_expected_side)
     vents_used = []
     tripod_used = None
 
@@ -560,6 +704,32 @@ def build_liner(p: MakiTpuLinerParams):
         with BuildSketch(Plane.XY.offset(-0.2)):
             _add_rounded_rectangle(inner_w, inner_h, inner_corner_r)
         extrude(amount=shell_depth + 0.4, mode=Mode.SUBTRACT)
+
+        # Front face pad — full-face TPU between ASA front wall and camera.
+        front_pad_cutouts_used = []
+        if p.include_front_face_pad:
+            pad_thick = p.front_face_pad_thickness_mm
+            with BuildSketch(Plane.XY):
+                _add_rounded_rectangle(inner_w, inner_h, inner_corner_r)
+            extrude(amount=pad_thick)
+
+            # Cut through lens / LED / port openings extracted from STEP
+            front_cutouts = _extract_front_cutouts_tpu(housing, p, sx, sy, zmax)
+            for co in front_cutouts:
+                cx, cy = co["x"], co["y"]
+                if co["shape"] == "circle":
+                    with BuildSketch(Plane.XY.offset(-0.1)):
+                        with Locations((cx, cy)):
+                            Circle(co["d"] * 0.5)
+                    extrude(amount=pad_thick + 0.2, mode=Mode.SUBTRACT)
+                else:
+                    cw = co.get("w", 6.0)
+                    ch = co.get("h", 3.0)
+                    with BuildSketch(Plane.XY.offset(-0.1)):
+                        with Locations((cx, cy)):
+                            Rectangle(cw, ch)
+                    extrude(amount=pad_thick + 0.2, mode=Mode.SUBTRACT)
+                front_pad_cutouts_used.append(co)
 
         # Front edge-wrap (perimeter only, no full-face cap).
         if p.include_front_edge_wrap:
@@ -590,15 +760,27 @@ def build_liner(p: MakiTpuLinerParams):
 
         if p.use_step_side_features:
             if p.enforce_tripanel_vent_layout:
-                vent_pattern = _derive_tripanel_vents(step_features["vents"], map_x, map_y, map_z, sx, sz, outer_w, p)
+                vent_pattern = _derive_tripanel_vents(
+                    step_features["vents"],
+                    map_x,
+                    map_y,
+                    map_z,
+                    sx,
+                    sz,
+                    outer_w,
+                    p,
+                    target_side=resolved_tripod_side,
+                )
+                resolved_tripod_side = vent_pattern.get("panel_side", resolved_tripod_side)
                 cut_depth = max(p.vent_cut_depth_mm, p.shell_thickness_mm + 3.0)
                 for panel_idx, panel in enumerate(vent_pattern["panels"]):
                     for z_c in vent_pattern["z_centers"]:
+                        z_shifted = min(max(z_c + p.tripanel_vent_z_shift_mm, 1.0), shell_depth - 1.0)
                         if panel["axis"] == "y":
                             on_neg = panel["side"] == "neg"
                             y_face = min_y - 0.2 if on_neg else max_y + 0.2
                             with BuildSketch(Plane.XZ.offset(y_face)):
-                                with Locations((panel["x"], z_c)):
+                                with Locations((panel["x"], z_shifted)):
                                     SlotOverall(vent_pattern["slot_t"], vent_pattern["slot_z"])
                             extrude(amount=cut_depth if on_neg else -cut_depth, mode=Mode.SUBTRACT)
                             vents_used.append(
@@ -607,7 +789,7 @@ def build_liner(p: MakiTpuLinerParams):
                                     "side": panel["side"],
                                     "x": float(panel["x"]),
                                     "y": float(y_face),
-                                    "z": float(z_c),
+                                    "z": float(z_shifted),
                                     "slot_t": float(vent_pattern["slot_t"]),
                                     "slot_z": float(vent_pattern["slot_z"]),
                                     "slot_w": float(vent_pattern["slot_t"]),
@@ -620,7 +802,7 @@ def build_liner(p: MakiTpuLinerParams):
                             on_neg = panel["side"] == "neg"
                             x_face = panel["x"] - 0.2 if on_neg else panel["x"] + 0.2
                             with BuildSketch(Plane.YZ.offset(x_face)):
-                                with Locations((panel["y"], z_c)):
+                                with Locations((panel["y"], z_shifted)):
                                     SlotOverall(vent_pattern["slot_t"], vent_pattern["slot_z"])
                             extrude(amount=cut_depth if on_neg else -cut_depth, mode=Mode.SUBTRACT)
                             vents_used.append(
@@ -629,7 +811,7 @@ def build_liner(p: MakiTpuLinerParams):
                                     "side": panel["side"],
                                     "x": float(panel["x"]),
                                     "y": float(panel["y"]),
-                                    "z": float(z_c),
+                                    "z": float(z_shifted),
                                     "slot_t": float(vent_pattern["slot_t"]),
                                     "slot_z": float(vent_pattern["slot_z"]),
                                     "slot_w": float(vent_pattern["slot_t"]),
@@ -649,6 +831,7 @@ def build_liner(p: MakiTpuLinerParams):
                         size_override=(vent_pattern["slot_t"], vent_pattern["slot_z"]),
                     )
                     side_trio_z = shell_depth - trio["z_center"] if p.side_trio_flip_end else trio["z_center"]
+                    side_trio_z = min(max(side_trio_z + p.side_trio_vent_z_shift_mm, 1.0), shell_depth - 1.0)
                     for side in ("neg", "pos"):
                         x_face = min_x - 0.2 if side == "neg" else max_x + 0.2
                         for y_c in trio["y_centers"]:
@@ -732,50 +915,63 @@ def build_liner(p: MakiTpuLinerParams):
                 z_c = map_z(t["z"])
                 d = max(2.0 * t["r"] * sx + p.tripod_cutout_extra_mm, 2.0)
                 detected_on_neg = t["side"] == "neg"
-                expected_on_neg = p.tripod_expected_side == "neg"
+                expected_on_neg = resolved_tripod_side == "neg"
                 on_neg = expected_on_neg
                 y_face = min_y - 0.2 if on_neg else max_y + 0.2
                 cut_depth = p.shell_thickness_mm + 2.5
-                if on_neg:
-                    cut_plane = Plane.ZX.offset(y_face)
-                    cut_loc = (z_c, x_c)
-                else:
-                    cut_plane = Plane.XZ.offset(y_face)
-                    cut_loc = (x_c, z_c)
-                with BuildSketch(cut_plane):
-                    with Locations(cut_loc):
-                        Circle(d * 0.5)
-                extrude(amount=cut_depth, mode=Mode.SUBTRACT)
+                if p.tripod_use_rect_cutout:
+                    z_c += p.tripod_rect_z_shift_mm
+                with BuildSketch(Plane.XZ.offset(y_face)):
+                    with Locations((x_c, z_c)):
+                        if p.tripod_use_rect_cutout:
+                            rect_x = p.tripod_rect_short_mm if p.tripod_rect_long_along_z else p.tripod_rect_long_mm
+                            rect_z = p.tripod_rect_long_mm if p.tripod_rect_long_along_z else p.tripod_rect_short_mm
+                            Rectangle(rect_x, rect_z)
+                        else:
+                            Circle(d * 0.5)
+                extrude(amount=cut_depth if on_neg else -cut_depth, mode=Mode.SUBTRACT)
                 tripod_used = {
                     "side": "neg" if on_neg else "pos",
                     "detected_side": "neg" if detected_on_neg else "pos",
                     "x": x_c,
                     "z": z_c,
+                    "cutout_shape": "rect" if p.tripod_use_rect_cutout else "circle",
                     "diameter": d,
                 }
 
         if not vents_used:
-            fallback_on_neg = p.tripod_expected_side == "neg"
+            fallback_on_neg = resolved_tripod_side == "neg"
             y_face = min_y - 0.2 if fallback_on_neg else max_y + 0.2
             cut_depth = max(p.vent_cut_depth_mm, p.shell_thickness_mm + 3.0)
             for i in range(p.vent_count):
-                z = p.end_clearance_mm + p.vent_start_from_front_mm + i * p.vent_pitch_mm
+                z = min(
+                    max(
+                        p.end_clearance_mm + p.vent_start_from_front_mm + i * p.vent_pitch_mm + p.tripanel_vent_z_shift_mm,
+                        1.0,
+                    ),
+                    shell_depth - 1.0,
+                )
                 with BuildSketch(Plane.XZ.offset(y_face)):
                     with Locations((0.0, z)):
                         SlotOverall(p.vent_slot_w_mm, p.vent_slot_h_mm)
                 extrude(amount=cut_depth if fallback_on_neg else -cut_depth, mode=Mode.SUBTRACT)
 
         if tripod_used is None:
-            fallback_on_neg = p.tripod_expected_side == "neg"
-            fallback_plane = Plane.ZX.offset(min_y - 0.2) if fallback_on_neg else Plane.XZ.offset(max_y + 0.2)
-            with BuildSketch(fallback_plane):
-                with Locations(
-                    (p.end_clearance_mm + p.tripod_center_from_front_mm, 0.0)
-                    if fallback_on_neg
-                    else (0.0, p.end_clearance_mm + p.tripod_center_from_front_mm)
-                ):
-                    Circle(p.tripod_hole_diameter_mm * 0.5)
-            extrude(amount=(p.shell_thickness_mm + 2.5), mode=Mode.SUBTRACT)
+            fallback_on_neg = resolved_tripod_side == "neg"
+            fallback_y = min_y - 0.2 if fallback_on_neg else max_y + 0.2
+            fallback_depth = p.shell_thickness_mm + 2.5
+            fallback_tripod_z = p.end_clearance_mm + p.tripod_center_from_front_mm
+            if p.tripod_use_rect_cutout:
+                fallback_tripod_z += p.tripod_rect_z_shift_mm
+            with BuildSketch(Plane.XZ.offset(fallback_y)):
+                with Locations((0.0, fallback_tripod_z)):
+                    if p.tripod_use_rect_cutout:
+                        rect_x = p.tripod_rect_short_mm if p.tripod_rect_long_along_z else p.tripod_rect_long_mm
+                        rect_z = p.tripod_rect_long_mm if p.tripod_rect_long_along_z else p.tripod_rect_short_mm
+                        Rectangle(rect_x, rect_z)
+                    else:
+                        Circle(p.tripod_hole_diameter_mm * 0.5)
+            extrude(amount=fallback_depth if fallback_on_neg else -fallback_depth, mode=Mode.SUBTRACT)
             tripod_used = {
                 "side": "neg" if fallback_on_neg else "pos",
                 "x": 0.0,
@@ -795,6 +991,7 @@ def build_liner(p: MakiTpuLinerParams):
         "profile_raw_mm": {"width": float(raw_w), "height": float(raw_h)},
         "profile_scale": {"sx": float(sx), "sy": float(sy), "sz": float(sz)},
         "step_side_features": {
+            "resolved_tripod_side": resolved_tripod_side,
             "vents_detected": len(step_features["vents"]),
             "vents_applied": len(vents_used),
             "vents_applied_entries": vents_used,
@@ -826,6 +1023,12 @@ def build_liner(p: MakiTpuLinerParams):
             "edge_wrap_enabled": {
                 "front": bool(p.include_front_edge_wrap),
                 "rear": bool(p.include_rear_edge_wrap),
+            },
+            "front_face_pad": {
+                "enabled": bool(p.include_front_face_pad),
+                "thickness_mm": float(p.front_face_pad_thickness_mm) if p.include_front_face_pad else 0.0,
+                "cutouts_applied": len(front_pad_cutouts_used),
+                "cutouts": front_pad_cutouts_used,
             },
             "corner_radius_mm": {
                 "base_section": float(base_corner_r),
@@ -864,6 +1067,11 @@ def main():
     parser.add_argument("--edge-wrap-radial", type=float, default=None, help="Edge wrap radial hold on face perimeter (mm)")
     parser.add_argument("--end-clearance", type=float, default=None, help="Front/rear clearance to camera (mm each end)")
     parser.add_argument("--no-step-side-features", action="store_true", help="Disable STEP-derived side vents/tripod")
+    parser.add_argument("--tripod-rect", action="store_true", help="Use rectangular cutout instead of circular tripod hole")
+    parser.add_argument("--tripod-rect-along-width", action="store_true", help="Orient long side of rect along case width (default: along length)")
+    parser.add_argument("--no-front-face-pad", action="store_true", help="Disable front face TPU pad")
+    parser.add_argument("--front-face-pad-thickness", type=float, default=None, help="Front face pad thickness (mm)")
+    parser.add_argument("--out-suffix", type=str, default="", help="Suffix appended to output filenames")
     args = parser.parse_args()
 
     params = MakiTpuLinerParams(step_path=args.step)
@@ -879,14 +1087,23 @@ def main():
         params.end_clearance_mm = args.end_clearance
     if args.no_step_side_features:
         params.use_step_side_features = False
+    if args.tripod_rect:
+        params.tripod_use_rect_cutout = True
+    if args.tripod_rect_along_width:
+        params.tripod_rect_long_along_z = False
+    if args.no_front_face_pad:
+        params.include_front_face_pad = False
+    if args.front_face_pad_thickness is not None:
+        params.front_face_pad_thickness_mm = args.front_face_pad_thickness
 
     liner, report = build_liner(params)
 
+    suffix = args.out_suffix
     args.out.mkdir(parents=True, exist_ok=True)
     reports_dir = args.out / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
-    out_step = args.out / "maki_live_tpu_sleeve.step"
-    out_json = reports_dir / "maki_live_tpu_sleeve_report.json"
+    out_step = args.out / f"maki_live_tpu_sleeve{suffix}.step"
+    out_json = reports_dir / f"maki_live_tpu_sleeve_report{suffix}.json"
     archived = _archive_existing(
         [
             out_step,

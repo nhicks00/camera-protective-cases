@@ -1,0 +1,166 @@
+{
+  "inputs": {
+    "device_step": "refs/BirdDog_MAKI-Live_3D-file.step",
+    "body_step": "models/maki_case/maki_live_body_dual_material.step",
+    "cap_step": "models/maki_case/maki_live_rear_cap_dual_material.step",
+    "dual_report": "models/maki_case/reports/maki_live_dual_material_report.json",
+    "rear_cap_report": "models/maki_case/reports/maki_live_rear_cap_dual_material_report.json"
+  },
+  "device_to_case_transform": {
+    "mode": "rotate_y180_z180_plus_translate_z",
+    "sx": 1.0,
+    "sy": -1.0,
+    "sz": -1.0,
+    "tx": 0.0,
+    "ty": 0.0,
+    "tz": 5.3
+  },
+  "cap_placement": {
+    "shell_depth_mm": 127.91999999999999,
+    "assumed_cap_thickness_mm": 3.0,
+    "selected_flip_axis": "x",
+    "orientation_score": 0.0
+  },
+  "fit_metrics": {
+    "device_vs_body_asa": {
+      "intersection_volume_mm3": 0.0,
+      "min_distance_mm": 2.2985169194599884,
+      "hard_collision": false
+    },
+    "device_vs_body_tpu": {
+      "intersection_volume_mm3": 0.0,
+      "min_distance_mm": 0.15341712506949953,
+      "hard_collision": false
+    },
+    "device_vs_cap_asa": {
+      "intersection_volume_mm3": 0.0,
+      "min_distance_mm": 0.7199830362316675,
+      "hard_collision": false
+    },
+    "cap_asa_vs_body_asa": {
+      "intersection_volume_mm3": 0.0,
+      "min_distance_mm": 0.0,
+      "hard_collision": false
+    },
+    "cap_asa_vs_body_tpu": {
+      "intersection_volume_mm3": 0.0,
+      "min_distance_mm": 2.3999999999999915,
+      "hard_collision": false
+    },
+    "device_vs_cap_tpu": {
+      "intersection_volume_mm3": 0.0,
+      "min_distance_mm": 0.7199830362316675,
+      "hard_collision": false
+    },
+    "cap_tpu_vs_body_asa": {
+      "intersection_volume_mm3": 0.0,
+      "min_distance_mm": 0.27999999999699476,
+      "hard_collision": false
+    },
+    "cap_tpu_vs_body_tpu": {
+      "intersection_volume_mm3": 0.0,
+      "min_distance_mm": 2.3999999999999915,
+      "hard_collision": false
+    }
+  },
+  "hard_collision_pairs": [],
+  "feature_validation": {
+    "all_feature_checks_passed": false,
+    "case_openings_vs_device": {
+      "passed": false,
+      "expected_feature_source": {
+        "vents_detected": 30,
+        "tripod_detected": true,
+        "tripod_source": "cylindrical_face"
+      },
+      "asa_vents": {
+        "passed": true,
+        "count_actual": 30,
+        "count_expected": 30,
+        "unmatched_actual": 0,
+        "unmatched_expected": 0,
+        "max_center_delta_z_mm": 0.0,
+        "max_center_delta_tangent_mm": 0.0,
+        "max_size_delta_t_mm": 0.0,
+        "max_size_delta_z_mm": 0.0,
+        "tolerances_mm": {
+          "center": 0.35,
+          "size": 0.35
+        }
+      },
+      "tpu_vents": {
+        "passed": false,
+        "count_actual": 30,
+        "count_expected": 30,
+        "unmatched_actual": 0,
+        "unmatched_expected": 0,
+        "max_center_delta_z_mm": 2.0999999999999943,
+        "max_center_delta_tangent_mm": 0.0,
+        "max_size_delta_t_mm": 0.0,
+        "max_size_delta_z_mm": 0.0,
+        "tolerances_mm": {
+          "center": 0.35,
+          "size": 0.35
+        }
+      },
+      "asa_tripod": {
+        "passed": false,
+        "side_match": true,
+        "delta_x_mm": 0.0,
+        "delta_z_mm": 7.759999999999998,
+        "delta_diameter_mm": 0.0,
+        "tolerances_mm": {
+          "center": 0.35,
+          "diameter": 0.45
+        }
+      },
+      "tpu_tripod": {
+        "passed": false,
+        "side_match": true,
+        "delta_x_mm": 0.0,
+        "delta_z_mm": 9.859999999999992,
+        "delta_diameter_mm": 0.0,
+        "tolerances_mm": {
+          "center": 0.35,
+          "diameter": 0.45
+        }
+      },
+      "counts": {
+        "expected_total_vents": 30,
+        "expected_tripanel": 24,
+        "expected_side_trio": 6
+      }
+    },
+    "rear_cap_cutouts_vs_device": {
+      "passed": true,
+      "count_actual": 5,
+      "count_expected": 5,
+      "unmatched_actual": 0,
+      "unmatched_expected": 0,
+      "max_center_delta_mm": 4.9897914209167815e-12,
+      "max_major_size_delta_mm": 1.0000000000008056,
+      "max_minor_size_delta_mm": 1.0000000000008056,
+      "tolerances_mm": {
+        "center": 0.45,
+        "size": 1.15
+      },
+      "source": {
+        "actual_from_cap_step": "models/maki_case/maki_live_rear_cap_dual_material.step",
+        "expected_from_device_step": "refs/BirdDog_MAKI-Live_3D-file.step",
+        "rear_cap_report_used": "models/maki_case/reports/maki_live_rear_cap_dual_material_report.json"
+      }
+    },
+    "pin_through_vent_test": {
+      "passed": true,
+      "tested": 30,
+      "blocked": 0,
+      "clear": 30,
+      "blocked_vents": [],
+      "threshold_mm3": 0.5
+    },
+    "warnings": []
+  },
+  "blocking_issues": [
+    "One or more feature-alignment checks failed."
+  ]
+}
