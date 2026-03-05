@@ -468,73 +468,6 @@ def build_dual_material_body(p: DualMaterialParams):
                     Circle(hood_clear_r, mode=Mode.SUBTRACT)
             extrude(amount=-p.duckbill_depth_mm)
 
-        # Cold shoe mount (ISO 518) on top (Y+) rear with flat fill-pad.
-        cold_shoe_info = None
-        if p.include_cold_shoe:
-            # Capsule geometry: straight section up to cap_center_y, then semicircle.
-            cap_center_y = 0.5 * (d["asa_outer_h_mm"] - d["asa_outer_w_mm"])
-            cap_r = 0.5 * d["asa_outer_w_mm"]
-            pad_w = p.cold_shoe_pad_width_mm
-            pad_l = p.cold_shoe_pad_length_mm
-            pad_z_center = body_depth - p.cold_shoe_pad_z_from_rear_mm
-
-            # Fill height: gap between curved cap surface at pad edge and max_y_asa.
-            half_pad_w = min(0.5 * pad_w, cap_r - 0.1)
-            y_at_edge = cap_center_y + math.sqrt(max(cap_r ** 2 - half_pad_w ** 2, 0.0))
-            pad_fill_height = max(max_y_asa - y_at_edge + 0.5, 1.0)
-
-            # 1) Flat fill-pad: rectangle with rounded corners on top surface.
-            # Plane.XZ normal is -Y, so offset(-max_y_asa) places at Y = +max_y (top).
-            with BuildSketch(Plane.XZ.offset(-max_y_asa)):
-                with Locations((0.0, pad_z_center)):
-                    Rectangle(pad_w, pad_l)
-                    fillet(vertices(), p.cold_shoe_pad_corner_r_mm)
-            extrude(amount=pad_fill_height)
-
-            # 2) Cold shoe boss on top of pad.
-            cs_boss_h = p.cold_shoe_boss_height_mm
-            cs_boss_l = p.cold_shoe_boss_length_mm
-            cs_boss_w = p.cold_shoe_boss_width_mm
-            cs_slot_w = p.cold_shoe_slot_width_mm
-            cs_rail_oh = p.cold_shoe_rail_overhang_mm
-            cs_slot_d = p.cold_shoe_slot_depth_mm
-            cs_opening = cs_slot_w - 2.0 * cs_rail_oh
-
-            with BuildSketch(Plane.XZ.offset(-max_y_asa)):
-                with Locations((0.0, pad_z_center)):
-                    Rectangle(cs_boss_w, cs_boss_l)
-            extrude(amount=-cs_boss_h)
-
-            # 3) T-slot channel from boss front to past rear end.
-            # Boss top is at Y = max_y_asa + cs_boss_h; offset = -(max_y_asa + cs_boss_h).
-            boss_top_offset = -(max_y_asa + cs_boss_h)
-            cs_front_z = pad_z_center - cs_boss_l * 0.5
-            cs_slot_len = body_depth + 0.2 - cs_front_z
-            cs_slot_mid_z = cs_front_z + cs_slot_len * 0.5
-
-            # Floor slot (full foot width)
-            with BuildSketch(Plane.XZ.offset(boss_top_offset - 0.1)):
-                with Locations((0.0, cs_slot_mid_z)):
-                    Rectangle(cs_slot_w, cs_slot_len)
-            extrude(amount=(cs_slot_d + 0.1), mode=Mode.SUBTRACT)
-
-            # Rail opening (narrower, through boss only)
-            with BuildSketch(Plane.XZ.offset(boss_top_offset - 0.1)):
-                with Locations((0.0, cs_slot_mid_z)):
-                    Rectangle(cs_opening, cs_slot_len)
-            extrude(amount=(cs_boss_h + 0.05), mode=Mode.SUBTRACT)
-
-            cold_shoe_info = {
-                "enabled": True,
-                "pad_z_center_mm": float(pad_z_center),
-                "pad_fill_height_mm": float(pad_fill_height),
-                "y_base_mm": float(max_y_asa),
-                "boss_height_mm": float(cs_boss_h),
-                "slot_width_mm": float(cs_slot_w),
-                "rail_opening_mm": float(cs_opening),
-                "slide_in_from": "rear",
-            }
-
         # Thermal vents aligned for both ASA and TPU.
         if p.include_thermal_vents:
             if p.include_side_slot_thermal_vents:
@@ -582,6 +515,81 @@ def build_dual_material_body(p: DualMaterialParams):
                 align=(Align.CENTER, Align.CENTER, Align.CENTER),
                 mode=Mode.SUBTRACT,
             )
+
+        # Cold shoe mount (ISO 518) on top (Y+) rear with flat fill-pad.
+        # Placed AFTER vent cuts so the fill pad re-fills any vent slots
+        # that overlap the cold shoe footprint.
+        cold_shoe_info = None
+        if p.include_cold_shoe:
+            # Capsule geometry: straight section up to cap_center_y, then semicircle.
+            cap_center_y = 0.5 * (d["asa_outer_h_mm"] - d["asa_outer_w_mm"])
+            cap_r = 0.5 * d["asa_outer_w_mm"]
+            pad_w = p.cold_shoe_pad_width_mm
+            pad_l = p.cold_shoe_pad_length_mm
+            pad_z_center = body_depth - p.cold_shoe_pad_z_from_rear_mm
+
+            # Fill height: extend deep enough to fully merge with the shell wall.
+            # Use the full cap radius so the pad reaches well past the inner wall
+            # at all points; the inner cavity subtraction below cleans the interior.
+            pad_fill_height = max(cap_r + 0.5, 2.0)
+
+            # 1) Flat fill-pad: rectangle with rounded corners on top surface.
+            # Plane.XZ normal is -Y, so offset(-max_y_asa) places at Y = +max_y (top).
+            with BuildSketch(Plane.XZ.offset(-max_y_asa)):
+                with Locations((0.0, pad_z_center)):
+                    Rectangle(pad_w, pad_l)
+                    fillet(vertices(), p.cold_shoe_pad_corner_r_mm)
+            extrude(amount=pad_fill_height)
+
+            # Subtract the inner cavity capsule so the fill pad doesn't protrude
+            # into the interior — the inside surface follows the smooth capsule curve.
+            with BuildSketch(Plane.XY.offset(pad_z_center - 0.5 * pad_l - 1.0)):
+                _add_profile(d["asa_inner_w_mm"], d["asa_inner_h_mm"], p.enforce_capsule_profile)
+            extrude(amount=pad_l + 2.0, mode=Mode.SUBTRACT)
+
+            # 2) Cold shoe boss on top of pad.
+            cs_boss_h = p.cold_shoe_boss_height_mm
+            cs_boss_l = p.cold_shoe_boss_length_mm
+            cs_boss_w = p.cold_shoe_boss_width_mm
+            cs_slot_w = p.cold_shoe_slot_width_mm
+            cs_rail_oh = p.cold_shoe_rail_overhang_mm
+            cs_slot_d = p.cold_shoe_slot_depth_mm
+            cs_opening = cs_slot_w - 2.0 * cs_rail_oh
+
+            with BuildSketch(Plane.XZ.offset(-max_y_asa)):
+                with Locations((0.0, pad_z_center)):
+                    Rectangle(cs_boss_w, cs_boss_l)
+            extrude(amount=-cs_boss_h)
+
+            # 3) T-slot channel from boss front to past rear end.
+            # Boss top is at Y = max_y_asa + cs_boss_h; offset = -(max_y_asa + cs_boss_h).
+            boss_top_offset = -(max_y_asa + cs_boss_h)
+            cs_front_z = pad_z_center - cs_boss_l * 0.5
+            cs_slot_len = body_depth + 0.2 - cs_front_z
+            cs_slot_mid_z = cs_front_z + cs_slot_len * 0.5
+
+            # Floor slot (full foot width)
+            with BuildSketch(Plane.XZ.offset(boss_top_offset - 0.1)):
+                with Locations((0.0, cs_slot_mid_z)):
+                    Rectangle(cs_slot_w, cs_slot_len)
+            extrude(amount=(cs_slot_d + 0.1), mode=Mode.SUBTRACT)
+
+            # Rail opening (narrower, through boss only)
+            with BuildSketch(Plane.XZ.offset(boss_top_offset - 0.1)):
+                with Locations((0.0, cs_slot_mid_z)):
+                    Rectangle(cs_opening, cs_slot_len)
+            extrude(amount=(cs_boss_h + 0.05), mode=Mode.SUBTRACT)
+
+            cold_shoe_info = {
+                "enabled": True,
+                "pad_z_center_mm": float(pad_z_center),
+                "pad_fill_height_mm": float(pad_fill_height),
+                "y_base_mm": float(max_y_asa),
+                "boss_height_mm": float(cs_boss_h),
+                "slot_width_mm": float(cs_slot_w),
+                "rail_opening_mm": float(cs_opening),
+                "slide_in_from": "rear",
+            }
 
     asa_shell = _largest_solid(asa_bp.part)
     asa_shell.label = "ASA_Shell"

@@ -213,7 +213,7 @@
       "cold_shoe": {
         "enabled": true,
         "pad_z_center_mm": 70.3,
-        "pad_fill_height_mm": 5.796845739727381,
+        "pad_fill_height_mm": 21.65,
         "y_base_mm": 41.9,
         "boss_height_mm": 4.0,
         "slot_width_mm": 18.2,
