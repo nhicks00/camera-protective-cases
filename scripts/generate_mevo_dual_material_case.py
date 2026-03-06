@@ -59,9 +59,9 @@ class DualMaterialParams:
     device_nominal_l_mm: float = 87.0
 
     # Core fit dimensions (snug: nominal + 0.15 mm per side/end)
-    tpu_inner_w_mm: float = 34.30
-    tpu_inner_h_mm: float = 67.8625
-    tpu_inner_depth_mm: float = 87.30
+    tpu_inner_w_mm: float = 34.80
+    tpu_inner_h_mm: float = 68.3625
+    tpu_inner_depth_mm: float = 87.80
     tpu_wall_mm: float = 1.80
 
     asa_wall_mm: float = 2.20
@@ -80,7 +80,7 @@ class DualMaterialParams:
     lens_center_y_mm: float = 20.0
     led_hole_d_mm: float = 5.5
     use_led_hole_from_bottom: bool = True
-    led_hole_center_from_bottom_mm: float = 15.875
+    led_hole_center_from_bottom_mm: float = 17.875
     led_hole_offset_from_lens_y_mm: float = 12.0
     include_front_duckbill_hood: bool = True
     duckbill_depth_mm: float = 16.0
@@ -98,7 +98,7 @@ class DualMaterialParams:
     tripod_rect_w_mm: float = 31.75    # 1.25 inches wide
     tripod_rect_l_mm: float = 50.8     # 2 inches long (along Z axis)
     tripod_hole_d_mm: float = 22.86    # legacy circular fallback
-    tripod_center_from_front_mm: float = 53.9625  # 1-5/16" from back of TPU liner
+    tripod_center_from_front_mm: float = 44.4375  # shifted 3/8" toward front
     tripod_well_d_mm: float = 32.0
     tripod_well_depth_mm: float = 6.0
     tripod_tpu_hole_extra_d_mm: float = 2.0
@@ -138,10 +138,10 @@ class DualMaterialParams:
     cold_shoe_boss_height_mm: float = 4.0
     cold_shoe_boss_length_mm: float = 22.0
     cold_shoe_boss_width_mm: float = 22.0
-    cold_shoe_slot_width_mm: float = 18.2
-    cold_shoe_rail_overhang_mm: float = 2.85
+    cold_shoe_slot_width_mm: float = 18.8      # +0.4mm/side clearance for foot flange
+    cold_shoe_rail_overhang_mm: float = 2.65   # reduced for looser stem fit
     cold_shoe_rail_thickness_mm: float = 1.8
-    cold_shoe_slot_depth_mm: float = 2.0
+    cold_shoe_slot_depth_mm: float = 2.5
 
     # Snap-latch flexure clips for back cap retention (disabled: fragile on FDM)
     include_snap_clips: bool = False
@@ -156,7 +156,7 @@ class DualMaterialParams:
 
     # Continuous friction ridge around plug perimeter
     include_friction_ridge: bool = True
-    friction_ridge_height_mm: float = 0.5
+    friction_ridge_height_mm: float = 0.8
     friction_ridge_width_mm: float = 1.0
     friction_ridge_setback_mm: float = 3.0
 
@@ -172,7 +172,7 @@ class DualMaterialParams:
 
     # Optional TPU gasket on cap inner face (disabled: ring geometry conflicts with plug)
     include_back_cap_tpu_gasket: bool = False
-    back_cap_tpu_gasket_thickness_mm: float = 1.2
+    back_cap_tpu_gasket_thickness_mm: float = 1.5
     back_cap_tpu_gasket_outer_inset_mm: float = 1.0
     back_cap_tpu_gasket_ring_width_mm: float = 1.6
     # Clear rear TPU in the cap insertion zone so the ASA cap can seat without collision.
@@ -181,9 +181,9 @@ class DualMaterialParams:
 
     # Manual back-cap cutouts from Mevo device-edge offsets (default enabled).
     include_manual_back_cutouts: bool = True
-    lower_cutout_side_margin_mm: float = 10.0
+    lower_cutout_side_margin_mm: float = 8.5   # widened ~3mm for USB-C boot clearance
     lower_cutout_bottom_offset_mm: float = 7.0
-    lower_cutout_height_mm: float = 8.0
+    lower_cutout_height_mm: float = 16.0      # doubled height, extends upward toward camera top
     upper_cutout_side_margin_mm: float = 3.0
     upper_cutout_top_offset_mm: float = 3.0
     upper_cutout_bottom_offset_from_top_mm: float = 28.0
@@ -456,26 +456,33 @@ def build_dual_material_body(p: DualMaterialParams):
                 "setback_mm": float(p.snap_clip_setback_mm),
             }
 
-        # Continuous friction ridge ring on inner wall for distributed cap holding force.
+        # Detent pockets on inner wall — 4 discrete pockets (one per wall center)
+        # for snap-in cap retention.  Oversized vs cap bumps for insertion tolerance.
         friction_ridge_info = None
         if p.include_friction_ridge and p.friction_ridge_height_mm > 0.0:
             fr_z = body_depth - p.friction_ridge_setback_mm
-            fr_h = p.friction_ridge_height_mm
-            fr_w = p.friction_ridge_width_mm
-            capsule = p.enforce_capsule_profile
+            fr_h = p.friction_ridge_height_mm  # pocket depth (radial)
+            fr_w = p.friction_ridge_width_mm   # pocket extent along Z
             inner_w_mm = d["asa_inner_w_mm"]
             inner_h_mm = d["asa_inner_h_mm"]
-            # Outer ring = inner cavity boundary; inner ring = inset by ridge height
-            with BuildSketch(Plane.XY.offset(fr_z - 0.5 * fr_w)):
-                _add_profile(inner_w_mm, inner_h_mm, capsule)
-            extrude(amount=fr_w)
-            with BuildSketch(Plane.XY.offset(fr_z - 0.5 * fr_w - 0.1)):
-                _add_profile(inner_w_mm - 2.0 * fr_h, inner_h_mm - 2.0 * fr_h, capsule)
-            extrude(amount=fr_w + 0.2, mode=Mode.SUBTRACT)
+            pocket_w = 8.0   # pocket width (tangential)
+            pocket_d = 0.8   # pocket radial depth into wall (leaves 1.4mm of 2.2mm wall)
+            pocket_z = 4.0   # pocket extent along Z
+            half_iw = 0.5 * inner_w_mm
+            half_ih = 0.5 * inner_h_mm
+            # 2 pockets on X walls only (flat sides of capsule; dome ends unsuitable)
+            # Position so pocket extends INTO the wall from inner surface outward.
+            for sx in (-1.0, 1.0):
+                px = sx * (half_iw + 0.5 * pocket_d)
+                with Locations((px, 0.0, fr_z)):
+                    Box(pocket_d, pocket_w, pocket_z, mode=Mode.SUBTRACT)
             friction_ridge_info = {
                 "enabled": True,
-                "height_mm": float(fr_h),
-                "width_mm": float(fr_w),
+                "type": "detent_pockets",
+                "pocket_count": 2,
+                "pocket_width_mm": float(pocket_w),
+                "pocket_depth_mm": float(pocket_d),
+                "pocket_z_mm": float(pocket_z),
                 "setback_mm": float(p.friction_ridge_setback_mm),
                 "z_mm": float(fr_z),
             }
@@ -510,6 +517,24 @@ def build_dual_material_body(p: DualMaterialParams):
                 with Locations((p.lens_center_x_mm, p.lens_center_y_mm)):
                     Circle(hood_clear_r, mode=Mode.SUBTRACT)
             extrude(amount=-p.duckbill_depth_mm)
+
+            # Hollow the hood interior — leave only shell-wall-thickness walls.
+            # Uses inset of hood's own outer profile (not inner cavity) so both
+            # the outer wall AND the inner wall around the lens opening are preserved.
+            hood_wall = p.asa_wall_mm
+            hollow_len = p.duckbill_depth_mm - 2.0 * hood_wall
+            if hollow_len > 1.0:
+                with BuildSketch(Plane.XY.offset(-hood_wall)):
+                    _add_profile(
+                        d["asa_outer_w_mm"] - 2.0 * hood_wall,
+                        d["asa_outer_h_mm"] - 2.0 * hood_wall,
+                        p.enforce_capsule_profile,
+                    )
+                    with Locations((0.0, hood_center_y)):
+                        Circle(max(hood_r - hood_wall, 1.0), mode=Mode.INTERSECT)
+                    with Locations((p.lens_center_x_mm, p.lens_center_y_mm)):
+                        Circle(hood_clear_r + hood_wall, mode=Mode.SUBTRACT)
+                extrude(amount=-hollow_len, mode=Mode.SUBTRACT)
 
         # Thermal vents aligned for both ASA and TPU.
         if p.include_thermal_vents:
@@ -599,13 +624,24 @@ def build_dual_material_body(p: DualMaterialParams):
                 _add_profile(d["asa_inner_w_mm"], d["asa_inner_h_mm"], p.enforce_capsule_profile)
             extrude(amount=pad_l + 2.0, mode=Mode.SUBTRACT)
 
+            # Hollow the fill pad interior to save filament — leave wall-thickness shell.
+            pad_shell = p.asa_wall_mm
+            pad_inner_w = pad_w - 2.0 * pad_shell
+            pad_inner_l = pad_l - 2.0 * pad_shell
+            if pad_inner_w > 2.0 and pad_inner_l > 2.0:
+                with BuildSketch(Plane.XZ.offset(-max_y_asa + pad_shell)):
+                    with Locations((0.0, pad_z_center)):
+                        Rectangle(pad_inner_w, pad_inner_l)
+                extrude(amount=pad_fill_height - pad_shell, mode=Mode.SUBTRACT)
+
             # 2) Cold shoe boss on top of pad.
-            cs_boss_h = p.cold_shoe_boss_height_mm
             cs_boss_l = p.cold_shoe_boss_length_mm
             cs_boss_w = p.cold_shoe_boss_width_mm
             cs_slot_w = p.cold_shoe_slot_width_mm
             cs_rail_oh = p.cold_shoe_rail_overhang_mm
+            cs_rail_t = p.cold_shoe_rail_thickness_mm
             cs_slot_d = p.cold_shoe_slot_depth_mm
+            cs_boss_h = cs_slot_d + cs_rail_t  # derive boss height so rail_thickness controls geometry
             cs_opening = cs_slot_w - 2.0 * cs_rail_oh
 
             with BuildSketch(Plane.XZ.offset(-max_y_asa)):
@@ -620,17 +656,19 @@ def build_dual_material_body(p: DualMaterialParams):
             cs_slot_len = body_depth + 0.2 - cs_front_z
             cs_slot_mid_z = cs_front_z + cs_slot_len * 0.5
 
-            # Floor slot (full foot width)
-            with BuildSketch(Plane.XZ.offset(boss_top_offset - 0.1)):
-                with Locations((0.0, cs_slot_mid_z)):
-                    Rectangle(cs_slot_w, cs_slot_len)
-            extrude(amount=(cs_slot_d + 0.1), mode=Mode.SUBTRACT)
-
-            # Rail opening (narrower, through boss only)
+            # Narrow opening through entire boss height (shoe stem passage)
             with BuildSketch(Plane.XZ.offset(boss_top_offset - 0.1)):
                 with Locations((0.0, cs_slot_mid_z)):
                     Rectangle(cs_opening, cs_slot_len)
-            extrude(amount=(cs_boss_h + 0.05), mode=Mode.SUBTRACT)
+            extrude(amount=(cs_boss_h + 0.2), mode=Mode.SUBTRACT)
+
+            # Wide floor pocket from boss bottom upward (flange pocket + rails at top)
+            # Boss bottom is at shell surface: Plane.XZ.offset(-max_y_asa)
+            # Normal is -Y; negative extrude goes +Y (upward into boss).
+            with BuildSketch(Plane.XZ.offset(-max_y_asa + 0.1)):
+                with Locations((0.0, cs_slot_mid_z)):
+                    Rectangle(cs_slot_w, cs_slot_len)
+            extrude(amount=-(cs_slot_d + 0.2), mode=Mode.SUBTRACT)
 
             cold_shoe_info = {
                 "enabled": True,
@@ -880,7 +918,8 @@ def build_back_cap(p: DualMaterialParams):
         if p.include_manual_back_cutouts:
             with BuildSketch(Plane.XY.offset(-0.2)):
                 with Locations((0.0, d["manual_lower_center_y_mm"])):
-                    SlotOverall(d["manual_lower_w_mm"], d["manual_lower_h_mm"])
+                    Rectangle(d["manual_lower_w_mm"], d["manual_lower_h_mm"])
+                    fillet(vertices(), min(3.0, 0.5 * min(d["manual_lower_w_mm"], d["manual_lower_h_mm"]) - 0.1))
                 _add_upper_domed_window(
                     d["manual_upper_w_mm"],
                     d["manual_upper_top_y_mm"],
@@ -919,20 +958,18 @@ def build_back_cap(p: DualMaterialParams):
 
     if p.include_friction_ridge and p.friction_ridge_height_mm > 0.0:
         fr_z = p.back_cap_thickness_mm + (p.back_cap_lip_depth_mm - p.friction_ridge_setback_mm)
-        fr_h = p.friction_ridge_height_mm
-        fr_w = p.friction_ridge_width_mm
+        fr_h = p.friction_ridge_height_mm  # bump protrusion (0.4 mm)
         lip_w = d["lip_tip_w_mm"]
         lip_h = d["lip_tip_h_mm"]
         half_lw = 0.5 * lip_w
         half_lh = 0.5 * lip_h
-        # Box strips on flat X walls only — capsule domes have no flat wall for Y strips.
-        # Shorten to stay within flat portion (exclude dome radius at each end).
-        dome_r = 0.5 * lip_w  # capsule dome radius
-        x_strip_len = max(lip_h - 2.0 * dome_r - 1.0, 4.0)
+        bump_w = 8.0    # bump tangential width
+        bump_z = 4.0    # bump extent along Z
+        # 2 bumps on X walls only (flat sides of capsule; dome ends unsuitable)
         with BuildPart() as fr_ridge_bp:
             for sx in (-1.0, 1.0):
                 with Locations((sx * (half_lw + 0.5 * fr_h), 0.0, fr_z)):
-                    Box(fr_h, x_strip_len, fr_w)
+                    Box(fr_h, bump_w, bump_z)
         try:
             asa_cap = _largest_solid(asa_cap + fr_ridge_bp.part)
         except Exception:
@@ -960,7 +997,8 @@ def build_back_cap(p: DualMaterialParams):
             if p.include_manual_back_cutouts:
                 with BuildSketch(Plane.XY.offset(p.back_cap_thickness_mm - 0.1)):
                     with Locations((0.0, d["manual_lower_center_y_mm"])):
-                        SlotOverall(d["manual_lower_w_mm"], d["manual_lower_h_mm"])
+                        Rectangle(d["manual_lower_w_mm"], d["manual_lower_h_mm"])
+                        fillet(vertices(), min(3.0, 0.5 * min(d["manual_lower_w_mm"], d["manual_lower_h_mm"]) - 0.1))
                     _add_upper_domed_window(
                         d["manual_upper_w_mm"],
                         d["manual_upper_top_y_mm"],
