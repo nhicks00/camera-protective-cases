@@ -516,6 +516,10 @@ def build_dual_material_body(p: DualMaterialParams):
                 # Keep the optical aperture fully clear with a curved edge.
                 with Locations((p.lens_center_x_mm, p.lens_center_y_mm)):
                     Circle(hood_clear_r, mode=Mode.SUBTRACT)
+                try:
+                    fillet(vertices(), 4.0)
+                except Exception:
+                    pass
             extrude(amount=-p.duckbill_depth_mm)
 
             # Hollow the hood interior — leave only shell-wall-thickness walls.
@@ -534,6 +538,10 @@ def build_dual_material_body(p: DualMaterialParams):
                         Circle(max(hood_r - hood_wall, 1.0), mode=Mode.INTERSECT)
                     with Locations((p.lens_center_x_mm, p.lens_center_y_mm)):
                         Circle(hood_clear_r + hood_wall, mode=Mode.SUBTRACT)
+                    try:
+                        fillet(vertices(), 4.0)
+                    except Exception:
+                        pass
                 extrude(amount=-hollow_len, mode=Mode.SUBTRACT)
 
         # Thermal vents aligned for both ASA and TPU.
