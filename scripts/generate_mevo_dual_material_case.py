@@ -61,7 +61,7 @@ class DualMaterialParams:
     # Core fit dimensions (snug: nominal + 0.15 mm per side/end)
     tpu_inner_w_mm: float = 34.80
     tpu_inner_h_mm: float = 68.3625
-    tpu_inner_depth_mm: float = 87.80
+    tpu_inner_depth_mm: float = 97.325
     tpu_wall_mm: float = 1.80
 
     asa_wall_mm: float = 2.20
