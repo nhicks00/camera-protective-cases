@@ -990,6 +990,21 @@ def build_back_cap(p: DualMaterialParams):
         except Exception:
             pass
 
+        # Relief pockets around each bump so bump can deflect inward during insertion.
+        relief_extra = 1.0   # mm clearance around bump per side
+        relief_depth = 0.4   # mm into plug wall
+        with BuildPart() as relief_bp:
+            for sx in (-1.0, 1.0):
+                with Locations((sx * (half_lw - 0.5 * relief_depth), 0.0, fr_z)):
+                    Box(relief_depth, bump_w + 2 * relief_extra, bump_z + 2 * relief_extra)
+            for sy in (-1.0, 1.0):
+                with Locations((0.0, sy * (half_lh - 0.5 * relief_depth), fr_z)):
+                    Box(bump_w + 2 * relief_extra, relief_depth, bump_z + 2 * relief_extra)
+        try:
+            asa_cap = _largest_solid(asa_cap - relief_bp.part)
+        except Exception:
+            pass
+
     asa_cap.label = "ASA_Back_Cap"
 
     # TPU gasket: thin face pad/ring only (no structural plug duty).
