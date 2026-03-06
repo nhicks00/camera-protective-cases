@@ -470,16 +470,20 @@ def build_dual_material_body(p: DualMaterialParams):
             pocket_z = 4.0   # pocket extent along Z
             half_iw = 0.5 * inner_w_mm
             half_ih = 0.5 * inner_h_mm
-            # 2 pockets on X walls only (flat sides of capsule; dome ends unsuitable)
+            # 4 pockets: 2 on X walls (flat sides) + 2 on Y walls (dome ends)
             # Position so pocket extends INTO the wall from inner surface outward.
             for sx in (-1.0, 1.0):
                 px = sx * (half_iw + 0.5 * pocket_d)
                 with Locations((px, 0.0, fr_z)):
                     Box(pocket_d, pocket_w, pocket_z, mode=Mode.SUBTRACT)
+            for sy in (-1.0, 1.0):
+                py = sy * (half_ih + 0.5 * pocket_d)
+                with Locations((0.0, py, fr_z)):
+                    Box(pocket_w, pocket_d, pocket_z, mode=Mode.SUBTRACT)
             friction_ridge_info = {
                 "enabled": True,
                 "type": "detent_pockets",
-                "pocket_count": 2,
+                "pocket_count": 4,
                 "pocket_width_mm": float(pocket_w),
                 "pocket_depth_mm": float(pocket_d),
                 "pocket_z_mm": float(pocket_z),
@@ -973,11 +977,14 @@ def build_back_cap(p: DualMaterialParams):
         half_lh = 0.5 * lip_h
         bump_w = 8.0    # bump tangential width
         bump_z = 4.0    # bump extent along Z
-        # 2 bumps on X walls only (flat sides of capsule; dome ends unsuitable)
+        # 4 bumps: 2 on X walls (flat sides) + 2 on Y walls (dome ends)
         with BuildPart() as fr_ridge_bp:
             for sx in (-1.0, 1.0):
                 with Locations((sx * (half_lw + 0.5 * fr_h), 0.0, fr_z)):
                     Box(fr_h, bump_w, bump_z)
+            for sy in (-1.0, 1.0):
+                with Locations((0.0, sy * (half_lh + 0.5 * fr_h), fr_z)):
+                    Box(bump_w, fr_h, bump_z)
         try:
             asa_cap = _largest_solid(asa_cap + fr_ridge_bp.part)
         except Exception:
