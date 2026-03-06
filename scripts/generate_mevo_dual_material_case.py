@@ -98,7 +98,7 @@ class DualMaterialParams:
     tripod_rect_w_mm: float = 31.75    # 1.25 inches wide
     tripod_rect_l_mm: float = 50.8     # 2 inches long (along Z axis)
     tripod_hole_d_mm: float = 22.86    # legacy circular fallback
-    tripod_center_from_front_mm: float = 44.4375  # shifted 3/8" toward front
+    tripod_center_from_front_mm: float = 50.7875  # shifted 1/4" toward rear vs previous
     tripod_well_d_mm: float = 32.0
     tripod_well_depth_mm: float = 6.0
     tripod_tpu_hole_extra_d_mm: float = 2.0
