@@ -160,6 +160,14 @@ class DualMaterialParams:
     friction_ridge_width_mm: float = 1.0
     friction_ridge_setback_mm: float = 3.0
 
+    # Cantilever latch geometry (applied to friction ridge bumps/pockets)
+    latch_side_gap_mm: float = 1.0        # tangential gap each side of cantilever
+    latch_tip_gap_z_mm: float = 1.5       # axial gap at free tip
+    latch_catch_height_mm: float = 0.6    # catch protrusion beyond bump
+    latch_catch_ramp_mm: float = 1.5      # ramp length for insertion ease
+    latch_notch_depth_mm: float = 0.6     # extra radial depth of body notch
+    latch_notch_z_mm: float = 1.5         # Z extent of body notch
+
     # Back cap engagement geometry
     back_cap_thickness_mm: float = 3.0
     back_cap_lip_depth_mm: float = 5.0
@@ -456,37 +464,49 @@ def build_dual_material_body(p: DualMaterialParams):
                 "setback_mm": float(p.snap_clip_setback_mm),
             }
 
-        # Detent pockets on inner wall — 4 discrete pockets (one per wall center)
-        # for snap-in cap retention.  Oversized vs cap bumps for insertion tolerance.
+        # Latch pockets on inner wall — 4 discrete pockets (one per wall center)
+        # with catch-shelf notches for cantilever snap engagement.
         friction_ridge_info = None
         if p.include_friction_ridge and p.friction_ridge_height_mm > 0.0:
             fr_z = body_depth - p.friction_ridge_setback_mm
             fr_h = p.friction_ridge_height_mm  # pocket depth (radial)
-            fr_w = p.friction_ridge_width_mm   # pocket extent along Z
             inner_w_mm = d["asa_inner_w_mm"]
             inner_h_mm = d["asa_inner_h_mm"]
             pocket_w = 8.0   # pocket width (tangential)
-            pocket_d = 0.8   # pocket radial depth into wall (leaves 1.4mm of 2.2mm wall)
+            pocket_d = 0.8   # pocket radial depth into wall
             pocket_z = 4.0   # pocket extent along Z
             half_iw = 0.5 * inner_w_mm
             half_ih = 0.5 * inner_h_mm
+            notch_d = p.latch_notch_depth_mm   # extra radial depth for catch shelf
+            notch_z = p.latch_notch_z_mm       # Z extent of notch
+            total_notch_d = pocket_d + notch_d  # total radial depth at notch
             # 4 pockets: 2 on X walls (flat sides) + 2 on Y walls (dome ends)
-            # Position so pocket extends INTO the wall from inner surface outward.
             for sx in (-1.0, 1.0):
                 px = sx * (half_iw + 0.5 * pocket_d)
                 with Locations((px, 0.0, fr_z)):
                     Box(pocket_d, pocket_w, pocket_z, mode=Mode.SUBTRACT)
+                # Catch shelf notch at front Z-edge of pocket (camera-facing end)
+                notch_z_pos = fr_z - 0.5 * pocket_z + 0.5 * notch_z
+                nx = sx * (half_iw + 0.5 * total_notch_d)
+                with Locations((nx, 0.0, notch_z_pos)):
+                    Box(total_notch_d, pocket_w, notch_z, mode=Mode.SUBTRACT)
             for sy in (-1.0, 1.0):
                 py = sy * (half_ih + 0.5 * pocket_d)
                 with Locations((0.0, py, fr_z)):
                     Box(pocket_w, pocket_d, pocket_z, mode=Mode.SUBTRACT)
+                notch_z_pos = fr_z - 0.5 * pocket_z + 0.5 * notch_z
+                ny = sy * (half_ih + 0.5 * total_notch_d)
+                with Locations((0.0, ny, notch_z_pos)):
+                    Box(pocket_w, total_notch_d, notch_z, mode=Mode.SUBTRACT)
             friction_ridge_info = {
                 "enabled": True,
-                "type": "detent_pockets",
+                "type": "latch_pockets",
                 "pocket_count": 4,
                 "pocket_width_mm": float(pocket_w),
                 "pocket_depth_mm": float(pocket_d),
                 "pocket_z_mm": float(pocket_z),
+                "notch_depth_mm": float(notch_d),
+                "notch_z_mm": float(notch_z),
                 "setback_mm": float(p.friction_ridge_setback_mm),
                 "z_mm": float(fr_z),
             }
@@ -500,7 +520,8 @@ def build_dual_material_body(p: DualMaterialParams):
                     Circle(0.5 * p.led_hole_d_mm)
             extrude(amount=p.sun_hood_depth_mm + 0.6, mode=Mode.SUBTRACT)
 
-        # Integrated curved duck-bill hood on top-front perimeter.
+        # Compute hood parameters (hood built separately after exiting BuildPart).
+        _build_hood = False
         if (not p.open_front_ovular) and p.include_front_duckbill_hood and p.duckbill_depth_mm > 0.0 and p.duckbill_drop_mm > 0.0:
             hood_drop = min(max(p.duckbill_drop_mm, 1.0), 0.5 * d["asa_outer_h_mm"])
             hood_span = max(
@@ -513,40 +534,9 @@ def build_dual_material_body(p: DualMaterialParams):
             hood_center_y = max_y_asa + hood_drop
             hood_r = ((0.5 * hood_span) ** 2 + hood_drop**2) ** 0.5
             hood_clear_r = max(0.5 * p.lens_cutout_d_mm + max(p.duckbill_lens_clearance_mm, 0.0), 0.1)
-            with BuildSketch(Plane.XY):
-                _add_profile(d["asa_outer_w_mm"], d["asa_outer_h_mm"], p.enforce_capsule_profile)
-                with Locations((0.0, hood_center_y)):
-                    Circle(hood_r, mode=Mode.INTERSECT)
-                # Keep the optical aperture fully clear with a curved edge.
-                with Locations((p.lens_center_x_mm, p.lens_center_y_mm)):
-                    Circle(hood_clear_r, mode=Mode.SUBTRACT)
-                try:
-                    fillet(vertices(), 4.0)
-                except Exception:
-                    pass
-            extrude(amount=-p.duckbill_depth_mm)
-
-            # Hollow the hood interior — leave only shell-wall-thickness walls.
-            # Uses inset of hood's own outer profile (not inner cavity) so both
-            # the outer wall AND the inner wall around the lens opening are preserved.
             hood_wall = p.asa_wall_mm
             hollow_len = p.duckbill_depth_mm - 2.0 * hood_wall
-            if hollow_len > 1.0:
-                with BuildSketch(Plane.XY.offset(-hood_wall)):
-                    _add_profile(
-                        d["asa_outer_w_mm"] - 2.0 * hood_wall,
-                        d["asa_outer_h_mm"] - 2.0 * hood_wall,
-                        p.enforce_capsule_profile,
-                    )
-                    with Locations((0.0, hood_center_y)):
-                        Circle(max(hood_r - hood_wall, 1.0), mode=Mode.INTERSECT)
-                    with Locations((p.lens_center_x_mm, p.lens_center_y_mm)):
-                        Circle(hood_clear_r + hood_wall, mode=Mode.SUBTRACT)
-                    try:
-                        fillet(vertices(), 4.0)
-                    except Exception:
-                        pass
-                extrude(amount=-hollow_len, mode=Mode.SUBTRACT)
+            _build_hood = True
 
         # Thermal vents aligned for both ASA and TPU.
         if p.include_thermal_vents:
@@ -694,6 +684,44 @@ def build_dual_material_body(p: DualMaterialParams):
             }
 
     asa_shell = _largest_solid(asa_bp.part)
+
+    # Build hood as separate solid with 3D edge fillet, then union.
+    if _build_hood:
+        with BuildPart() as hood_bp:
+            with BuildSketch(Plane.XY):
+                _add_profile(d["asa_outer_w_mm"], d["asa_outer_h_mm"], p.enforce_capsule_profile)
+                with Locations((0.0, hood_center_y)):
+                    Circle(hood_r, mode=Mode.INTERSECT)
+                with Locations((p.lens_center_x_mm, p.lens_center_y_mm)):
+                    Circle(hood_clear_r, mode=Mode.SUBTRACT)
+            extrude(amount=-p.duckbill_depth_mm)
+
+            if hollow_len > 1.0:
+                with BuildSketch(Plane.XY.offset(-hood_wall)):
+                    _add_profile(
+                        d["asa_outer_w_mm"] - 2.0 * hood_wall,
+                        d["asa_outer_h_mm"] - 2.0 * hood_wall,
+                        p.enforce_capsule_profile,
+                    )
+                    with Locations((0.0, hood_center_y)):
+                        Circle(max(hood_r - hood_wall, 1.0), mode=Mode.INTERSECT)
+                    with Locations((p.lens_center_x_mm, p.lens_center_y_mm)):
+                        Circle(hood_clear_r + hood_wall, mode=Mode.SUBTRACT)
+                extrude(amount=-hollow_len, mode=Mode.SUBTRACT)
+
+        hood_solid = hood_bp.part
+        # Apply 3D edge fillet to round the sharp crescent tip corners.
+        for fillet_r in (3.0, 2.0, 1.0):
+            try:
+                hood_solid = fillet(hood_solid.edges(), fillet_r)
+                break
+            except Exception:
+                continue
+        try:
+            asa_shell = _largest_solid(asa_shell + hood_solid)
+        except Exception:
+            pass
+
     asa_shell.label = "ASA_Shell"
 
     # TPU sleeve fused in body region only (starts after sun hood).
@@ -970,14 +998,24 @@ def build_back_cap(p: DualMaterialParams):
 
     if p.include_friction_ridge and p.friction_ridge_height_mm > 0.0:
         fr_z = p.back_cap_thickness_mm + (p.back_cap_lip_depth_mm - p.friction_ridge_setback_mm)
-        fr_h = p.friction_ridge_height_mm  # bump protrusion (0.4 mm)
+        fr_h = p.friction_ridge_height_mm  # bump protrusion (radial)
         lip_w = d["lip_tip_w_mm"]
         lip_h = d["lip_tip_h_mm"]
         half_lw = 0.5 * lip_w
         half_lh = 0.5 * lip_h
         bump_w = 8.0    # bump tangential width
         bump_z = 4.0    # bump extent along Z
-        # 4 bumps: 2 on X walls (flat sides) + 2 on Y walls (dome ends)
+        side_gap = p.latch_side_gap_mm
+        tip_gap_z = p.latch_tip_gap_z_mm
+        catch_h = p.latch_catch_height_mm
+        catch_ramp = p.latch_catch_ramp_mm
+        relief_thru = fr_h + 0.5  # cut fully through protrusion into wall
+
+        # 4 cantilever flex-tabs: 2 on X walls + 2 on Y walls.
+        # Each tab is a bump attached only at its rear (cap-backing) end.
+        # The free (camera-facing) tip gets a triangular catch.
+
+        # Step A: Add bump bodies (same as before).
         with BuildPart() as fr_ridge_bp:
             for sx in (-1.0, 1.0):
                 with Locations((sx * (half_lw + 0.5 * fr_h), 0.0, fr_z)):
@@ -990,16 +1028,78 @@ def build_back_cap(p: DualMaterialParams):
         except Exception:
             pass
 
-        # Relief pockets around each bump so bump can deflect inward during insertion.
-        relief_extra = 1.0   # mm clearance around bump per side
-        relief_depth = 0.4   # mm into plug wall
+        # Step B: Add triangular catches at free tip of each cantilever.
+        # Catch protrudes catch_h beyond bump surface, with a ramp on insertion side.
+        catch_full_z = catch_ramp  # catch block Z extent = ramp length
+        catch_z_center = fr_z - 0.5 * bump_z + 0.5 * catch_full_z  # at front tip of bump
+        with BuildPart() as catch_bp:
+            for sx in (-1.0, 1.0):
+                # Catch block on outer face of bump
+                cx = sx * (half_lw + fr_h + 0.5 * catch_h)
+                with Locations((cx, 0.0, catch_z_center)):
+                    Box(catch_h, bump_w, catch_full_z)
+            for sy in (-1.0, 1.0):
+                cy = sy * (half_lh + fr_h + 0.5 * catch_h)
+                with Locations((0.0, cy, catch_z_center)):
+                    Box(bump_w, catch_h, catch_full_z)
+        try:
+            asa_cap = _largest_solid(asa_cap + catch_bp.part)
+        except Exception:
+            pass
+
+        # Chamfer the catch to form the insertion ramp: cut a wedge from the rear
+        # (high-Z) edge of the catch block so it slopes from full protrusion at
+        # the retention face (low-Z) to flush at the rear (high-Z).
+        # Use an angled box subtraction: a box tilted so it removes the ramp slope.
+        ramp_rear_z = catch_z_center + 0.5 * catch_full_z  # rear edge of catch
+        ramp_front_z = catch_z_center - 0.5 * catch_full_z  # front edge (retention face)
+        # Simple approach: subtract a triangular prism approximated as a thin box
+        # at the rear half of the catch, tapering the protrusion.
+        # Actually, we'll use a Box at the rear end of the catch that removes the
+        # upper portion, creating a stepped ramp. For true ramp, we'd need a Wedge.
+        # Use half the catch as the ramp zone.
+        ramp_z_len = catch_full_z * 0.5
+        ramp_z_center = catch_z_center + 0.25 * catch_full_z  # rear half
+        with BuildPart() as ramp_cut_bp:
+            for sx in (-1.0, 1.0):
+                rx = sx * (half_lw + fr_h + 0.5 * catch_h)
+                with Locations((rx, 0.0, ramp_z_center)):
+                    Box(catch_h, bump_w, ramp_z_len)
+            for sy in (-1.0, 1.0):
+                ry = sy * (half_lh + fr_h + 0.5 * catch_h)
+                with Locations((0.0, ry, ramp_z_center)):
+                    Box(bump_w, catch_h, ramp_z_len)
+        try:
+            asa_cap = _largest_solid(asa_cap - ramp_cut_bp.part)
+        except Exception:
+            pass
+
+        # Step C: U-channel relief cuts to free the cantilever on 3 sides.
+        # Side slots: tangential gaps on each side of the bump.
+        # Tip slot: axial gap at the camera-facing (front/low-Z) end of the bump.
         with BuildPart() as relief_bp:
             for sx in (-1.0, 1.0):
-                with Locations((sx * (half_lw - 0.5 * relief_depth), 0.0, fr_z)):
-                    Box(relief_depth, bump_w + 2 * relief_extra, bump_z + 2 * relief_extra)
+                bump_center_x = sx * (half_lw + 0.5 * fr_h)
+                # Two side slots (tangential direction = Y for X-wall bumps)
+                for side_s in (-1.0, 1.0):
+                    slot_y = side_s * (0.5 * bump_w + 0.5 * side_gap)
+                    with Locations((bump_center_x, slot_y, fr_z)):
+                        Box(relief_thru, side_gap, bump_z + 2.0 * tip_gap_z)
+                # Tip slot at front (low-Z) end
+                tip_z = fr_z - 0.5 * bump_z - 0.5 * tip_gap_z
+                with Locations((bump_center_x, 0.0, tip_z)):
+                    Box(relief_thru, bump_w + 2.0 * side_gap, tip_gap_z)
             for sy in (-1.0, 1.0):
-                with Locations((0.0, sy * (half_lh - 0.5 * relief_depth), fr_z)):
-                    Box(bump_w + 2 * relief_extra, relief_depth, bump_z + 2 * relief_extra)
+                bump_center_y = sy * (half_lh + 0.5 * fr_h)
+                # Two side slots (tangential direction = X for Y-wall bumps)
+                for side_s in (-1.0, 1.0):
+                    slot_x = side_s * (0.5 * bump_w + 0.5 * side_gap)
+                    with Locations((slot_x, bump_center_y, fr_z)):
+                        Box(side_gap, relief_thru, bump_z + 2.0 * tip_gap_z)
+                # Tip slot at front (low-Z) end
+                tip_z = fr_z - 0.5 * bump_z - 0.5 * tip_gap_z
+                with Locations((0.0, bump_center_y, tip_z)):
+                    Box(bump_w + 2.0 * side_gap, relief_thru, tip_gap_z)
         try:
             asa_cap = _largest_solid(asa_cap - relief_bp.part)
         except Exception:
