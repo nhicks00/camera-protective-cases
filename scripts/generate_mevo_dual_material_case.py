@@ -116,7 +116,7 @@ class DualMaterialParams:
     # Thermal vents (primary)
     include_thermal_vents: bool = True
     include_side_slot_thermal_vents: bool = True
-    side_vent_slot_count: int = 5
+    side_vent_slot_count: int = 7
     side_vent_slot_h_mm: float = 20.0
     side_vent_slot_w_mm: float = 3.0
     side_vent_slot_pitch_z_mm: float = 9.0
