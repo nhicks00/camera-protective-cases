@@ -23,8 +23,8 @@ Primary goals:
 Use these as the current default stack unless user explicitly overrides.
 
 Mevo Start:
-- Device envelope reference: `87.0 x 75.5 x 34.0 mm` (L x H x W)
-- TPU inner cavity (active fit): `34.3 x 75.8 x 87.3 mm` (W x H x depth)
+- Device envelope reference: `87.0 x 67.56 x 34.0 mm` (L x H x W) — height corrected (tripod base excluded)
+- TPU inner cavity (active fit): `34.3 x 67.86 x 87.3 mm` (W x H x depth)
 - TPU wall: `1.8 mm`
 - TPU inner vertical corner fillet: `4.0 mm`
 - TPU-to-ASA interface gap: `0.0 mm` (coincident interface)
@@ -33,7 +33,7 @@ Mevo Start:
 - Front bucket/sun hood depth: `3.0 mm`
 - Front lens cutout: `32.0 mm`
 - Front tally LED hole: `3.0 mm`, centered `12.0 mm` above lens center
-- Bottom tripod hole: `20.5 mm` diameter, center `43.2 mm` from front face
+- Bottom tripod cutout: `31.75 x 50.8 mm` rectangular, center `50.7875 mm` from front face
 - ASA back-cap plug lip: `5.0 mm` depth, `0.1 mm` total undersize
 - Back utility slot: `15.0 mm` wide, top margin `15.0 mm`, bottom margin `10.0 mm`
 
@@ -103,9 +103,13 @@ Active hard-shell and TPU workflows:
     - Foot slides in from rear (open at shell_depth end, closed at front).
     - Controlled by `cold_shoe_*` params; disable with `--no-cold-shoe`.
   - Snap-latch flexure clips (2x on inner X walls) for rear cap retention:
-    - Cantilever beams: 5×3×1 mm, 0.6 mm catch nub at tip.
-    - Matching ridge on rear cap plug for snap engagement.
+    - Cantilever beams: 7×5×1.5 mm, 1.0 mm catch nub at tip.
+    - Matching 1.0 mm ridge on rear cap plug for snap engagement.
     - Controlled by `snap_clip_*` params; disable with `--no-snap-clips` / `--no-snap-ridge`.
+  - Continuous friction ridge around inner wall perimeter (4 box strips, 0.5 mm inward protrusion, 1.0 mm wide band):
+    - Provides distributed holding force for cap retention alongside snap clips.
+    - Matching friction ridge on rear cap ASA plug outer surface.
+    - Controlled by `friction_ridge_*` params; disable with `--no-friction-ridge`.
   - Vent pass-through validated (`30/30` total) and vent coordinates emitted in report under `step_side_features.vents_applied_entries`.
 - ASA caps:
   - Active outputs:
@@ -119,7 +123,8 @@ Active hard-shell and TPU workflows:
   - Legacy rear-cap-only generator remains available (`scripts/generate_maki_live_caps.py --profile asa`).
   - Rear cutouts are extracted from all STEP solids with tiny-hole filtering to preserve port access cutouts over corner fastener holes.
   - Rear cap port cutouts include default oversize clearance (`cutout_extra_mm=1.5`) for cable boot/plastic strain-relief fit.
-  - Snap ridge on ASA plug (0.7 mm height, matching body clips); disable with `--no-snap-ridge`.
+  - Snap ridge on ASA plug (1.0 mm height, matching body clips); disable with `--no-snap-ridge`.
+  - Continuous friction ridge ring on ASA plug (0.5 mm protrusion, 1.0 mm wide); disable with `--no-friction-ridge`.
 - TPU one-piece sleeve (preferred TPU output):
   - `models/maki_case/maki_live_tpu_sleeve.step`
   - Generator: `scripts/generate_maki_live_tpu_liner.py`
@@ -148,7 +153,7 @@ Active hard-shell and TPU workflows:
   - TPU is auto-aligned into ASA cavity with report-verified fit stack (default `0.15 mm` radial gap each side, ~`2.1 mm` axial front/back gap).
   - Fit validation pipeline:
     - Script: `scripts/validate_maki_live_fit.py`
-    - Output assembly: `models/maki_case/maki_live_fit_validation_assembly.step`
+    - Output assembly: `models/maki_case/reports/maki_live_fit_validation_assembly.step`
     - Output report: `models/maki_case/reports/maki_live_fit_validation_report.json`
     - Validates real device STEP placement inside body + rear cap and reports pairwise hard-collision volumes.
     - Also validates all major opening geometry against STEP-derived expectations:
@@ -171,15 +176,18 @@ Current preferred workflow:
   - TPU body uses front edge wrap only (rear wrap disabled) to keep insertion path open,
   - front lens/LED cutouts enabled by default in closed-front mode,
   - lens opening defaults updated to `29.5 mm` at `Y=20.0` for improved framing,
-  - integrated curved duck-bill front visor is enabled by default (`depth=16 mm`, `drop=9 mm`, `span_ratio=0.90`),
-  - thermal venting: 5x oval slot vents on top (30 mm × 3 mm each, replacing legacy 7 mm circles) plus side slot vents; top-hole plane orientation is corrected to the hood/top side,
-  - separate back-cap assembly with TPU gasket (ASA-only cap exported for compatibility),
+  - integrated curved duck-bill front visor is enabled by default (`depth=16 mm`, `drop=9 mm`, `span_ratio=1.18`), with 4mm vertex fillet rounding the junction corners,
+  - thermal venting: 5x oval slot vents on top (24 mm × 3.5 mm each) plus 7 side slot vents per side (up from 5); top-hole plane orientation is corrected to the hood/top side,
+  - separate back-cap assembly: ASA structural plug + TPU gasket face pad,
+    - ASA cap carries the full structural plug (3.0 mm plate + 5.0 mm two-stage tongue/lip insertion),
+    - TPU is a 1.2 mm gasket ring only — no structural plug duty,
+    - snap ridges and friction ridges are on the ASA plug, not TPU,
   - manual two-cutout rear-cap layout is default-enabled (`include_manual_back_cutouts=true`):
     - lower slot from Mevo edge offsets (10 mm side margins, 7 mm bottom offset),
     - upper domed cutout using top offsets (3.0 mm and 28.0 mm from top, 3.0 mm side margins),
   - TPU-aware back-cap fit clearance default: `0.28 mm` total undersize,
-  - two-stage tongue engagement with matching rear body groove seat,
-  - bottom tripod opening is enlarged to `25.4 mm` with local bottom flattening + TPU relief to keep the opening clear.
+  - single-step plug engagement with matching rear body groove seat (ASA, tongue_radial_step=0),
+  - bottom tripod opening is a 31.75 × 50.8 mm rectangular cutout, centered 50.79 mm from front, with TPU relief to keep the opening clear.
   - rear TPU insertion relief is enabled (`5.4 mm` default) so the back-cap plug can seat without colliding with sleeve TPU.
   - Cold shoe mount (ISO 518 female receptor) on top rear of capsule:
     - Flat fill-pad bridges curved capsule top to create level mounting surface (28×30 mm, 3 mm corner radius).
@@ -188,9 +196,13 @@ Current preferred workflow:
     - Foot slides in from rear (open at rear end, closed at front).
     - Controlled by `cold_shoe_*` params; disable with `--no-cold-shoe`.
   - Snap-latch flexure clips (2x on inner X walls) for back cap retention:
-    - Cantilever beams: 5×3×1 mm, 0.6 mm catch nub at tip.
-    - Matching 0.7 mm ridge on TPU back-cap plug for snap engagement.
+    - Cantilever beams: 7×5×1.5 mm, 1.0 mm catch nub at tip.
+    - Matching 1.0 mm ridge on ASA back-cap plug for snap engagement.
     - Controlled by `snap_clip_*` params; disable with `--no-snap-clips`.
+  - 4-point detent pocket/bump retention system (2 on X walls + 2 on Y walls):
+    - Body has 4 pockets (8×0.8×4 mm) at friction_ridge_setback from rear.
+    - Cap plug has 4 matching bumps with 0.4 mm relief channels for deflection during insertion.
+    - Controlled by `friction_ridge_*` params; disable with `--no-friction-ridge`.
   - Cap collision check runs automatically during generation:
     - Compares ASA cap plate vs ASA shell (not full assemblies) to avoid false positives from plug-in-cavity geometry.
     - Reports collision volume in `mevo_start_dual_material_report.json`; warns if > 0.5 mm³.
@@ -200,7 +212,7 @@ Current preferred workflow:
   - `--open-front-ovular` for legacy open-front mode,
   - `--disable-front-lens-led-cutouts` to keep front wall solid,
   - `--no-cold-shoe` to disable cold shoe mount,
-  - `--cold-shoe-z-from-rear` to adjust cold shoe position (default 20 mm),
+  - `--cold-shoe-z-from-rear` to adjust cold shoe position (default 15 mm, flush with rear),
   - `--no-snap-clips` to disable snap-latch flexure clips.
 - Active review-spec values are recorded in `models/mevo_case/reports/mevo_start_dual_material_report.json`.
 - Legacy open-through/cap workflows remain in repo for fallback only and are not the active default path.
