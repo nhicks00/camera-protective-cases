@@ -133,7 +133,7 @@ class DualMaterialParams:
     include_cold_shoe: bool = True
     cold_shoe_pad_width_mm: float = 28.0
     cold_shoe_pad_length_mm: float = 30.0
-    cold_shoe_pad_z_from_rear_mm: float = 20.0
+    cold_shoe_pad_z_from_rear_mm: float = 15.0
     cold_shoe_pad_corner_r_mm: float = 3.0
     cold_shoe_boss_height_mm: float = 4.0
     cold_shoe_boss_length_mm: float = 22.0
