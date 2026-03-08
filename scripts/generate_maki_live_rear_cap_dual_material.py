@@ -44,7 +44,7 @@ class MakiRearCapDualParams:
 
     # TPU gasket on the cap inner side (device-contact side).
     include_tpu_gasket: bool = True
-    tpu_gasket_thickness_mm: float = 1.2
+    tpu_gasket_thickness_mm: float = 1.5
     tpu_gasket_outer_inset_mm: float = 0.0
     tpu_edge_wrap_depth_mm: float = 1.8
     tpu_edge_wrap_width_mm: float = 1.8
@@ -140,9 +140,29 @@ def _build_tpu_gasket(
                             Rectangle(c["w"], c["h"])
             extrude(amount=cut_h, mode=Mode.SUBTRACT)
 
+        # TPU detent bumps — 4 tabs extending outward from the collar, one per wall.
+        # These engage matching pockets on the ASA body inner wall.
+        # Positioned so bump camera-side face is flush with setback (no protrusion past tip).
+        if p.include_friction_ridge and p.friction_ridge_height_mm > 0.0:
+            bump_h = p.friction_ridge_height_mm  # radial protrusion
+            bump_w = 8.0    # tangential width
+            bump_z = 4.0    # extent along Z
+            setback = p.friction_ridge_setback_mm
+            # Place bump so its camera-side face is setback from plug tip.
+            bump_center_z = z_tip - setback - 0.5 * bump_z
+            half_gw = 0.5 * gasket_outer_w
+            half_gh = 0.5 * gasket_outer_h
+            # 4 bump tabs: one centered on each wall face, protruding outward.
+            for sx in (-1.0, 1.0):
+                with Locations((sx * (half_gw + 0.5 * bump_h), 0.0, bump_center_z)):
+                    Box(bump_h, bump_w, bump_z)
+            for sy in (-1.0, 1.0):
+                with Locations((0.0, sy * (half_gh + 0.5 * bump_h), bump_center_z)):
+                    Box(bump_w, bump_h, bump_z)
+
     gasket = _largest_solid(gasket_bp.part)
     try:
-        gasket = fillet(gasket.edges(), 0.4)
+        gasket = fillet(gasket.edges(), 0.15)
     except Exception:
         pass
     gasket = _largest_solid(gasket)
@@ -209,53 +229,22 @@ def build_rear_cap_dual(p: MakiRearCapDualParams):
             pass
         rear_cap.label = "ASA_Back_Cap"
 
-    # Add friction ridge AFTER gasket subtraction so the gasket doesn't erase the ridges.
-    # The gasket hollows the plug interior, so strips that span the shell boundary
-    # can't boolean-fuse cleanly. Instead, build thin strips that sit entirely on
-    # the plug outer surface (no embed needed) and bundle via Compound.
+    # Detent bumps are now on the TPU gasket (not ASA) — softer, won't scratch camera.
     if p.include_friction_ridge and p.friction_ridge_height_mm > 0.0:
-        plug_w = float(derived["plug_w_mm"])
-        plug_h = float(derived["plug_h_mm"])
-        plug_r = float(corner_r["plug"])
         plug_tip_z = p.cap_thickness_mm + p.plug_depth_mm
-        fr_z = plug_tip_z - p.friction_ridge_setback_mm
-        fr_h = p.friction_ridge_height_mm
-        fr_w = p.friction_ridge_width_mm
-        # Shorten strips to stay within flat wall sections (not rounded corners).
-        x_strip_len = max(plug_h - 2.0 * plug_r - 1.0, 4.0)
-        y_strip_len = max(plug_w - 2.0 * plug_r - 1.0, 4.0)
-        half_pw = 0.5 * plug_w
-        half_ph = 0.5 * plug_h
-        # Place strips on the plug outer surface, protruding outward only.
-        with BuildPart() as fr_bp:
-            for sx in (-1.0, 1.0):
-                cx = sx * (half_pw + 0.5 * fr_h)
-                with Locations((cx, 0.0, fr_z)):
-                    Box(fr_h, x_strip_len, fr_w)
-            for sy in (-1.0, 1.0):
-                cy = sy * (half_ph + 0.5 * fr_h)
-                with Locations((0.0, cy, fr_z)):
-                    Box(y_strip_len, fr_h, fr_w)
-        # Bundle as Compound — boolean fuse fails when plug is hollowed by gasket.
-        rear_cap = Compound(
-            children=[rear_cap] + fr_bp.part.solids(),
-            label="ASA_Back_Cap",
-        )
         friction_ridge_info = {
             "enabled": True,
-            "height_mm": float(fr_h),
-            "width_mm": float(fr_w),
+            "type": "tpu_detent_bumps",
+            "bump_count": 4,
+            "bump_protrusion_mm": float(p.friction_ridge_height_mm),
+            "bump_width_mm": 6.0,
+            "bump_z_mm": 3.0,
             "setback_mm": float(p.friction_ridge_setback_mm),
-            "z_mm": float(fr_z),
+            "on_body": "TPU_Back_Gasket",
         }
 
     if gasket is not None:
-        children = [gasket]
-        # Unpack compound cap if needed.
-        if hasattr(rear_cap, "children") and rear_cap.children:
-            children.extend(rear_cap.children)
-        else:
-            children.append(rear_cap)
+        children = [gasket, rear_cap]
         assembly = Compound(children=children, label="Maki_Rear_Cap_Assembly")
         named_bodies = ["ASA_Back_Cap", "TPU_Back_Gasket"]
     else:

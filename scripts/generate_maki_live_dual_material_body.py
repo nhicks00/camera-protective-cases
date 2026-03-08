@@ -15,7 +15,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 
-from build123d import Compound, Location, export_step
+from build123d import Location, export_step
 from generate_maki_live_case import MakiCaseParams, build_case
 from generate_maki_live_tpu_liner import MakiTpuLinerParams, build_liner
 
@@ -43,7 +43,7 @@ class MakiDualBodyParams:
 
     # TPU front face pad
     include_tpu_front_face_pad: bool = True
-    tpu_front_face_pad_thickness_mm: float = 1.2
+    tpu_front_face_pad_thickness_mm: float = 1.5
 
     # Rectangular tripod mount cutout (passed through to ASA + TPU builds)
     tripod_use_rect_cutout: bool = True
@@ -143,9 +143,7 @@ def build_dual_body(p: MakiDualBodyParams):
     asa_shell = _largest_solid(asa_shell)
     tpu_aligned = _largest_solid(tpu_aligned)
     asa_shell.label = "ASA_Shell"
-    tpu_aligned.label = "TPU_Sleeve"
-
-    assembly = Compound(children=[tpu_aligned, asa_shell], label="Maki_Body_Assembly")
+    tpu_aligned.label = "TPU_Frame"
 
     asa_inner_w = float(asa_derived["inner_w_mm"])
     asa_inner_h = float(asa_derived["inner_h_mm"])
@@ -161,7 +159,7 @@ def build_dual_body(p: MakiDualBodyParams):
     bond_grade = "A" if max_abs_radial_gap <= p.interface_gap_tolerance_mm else "B"
 
     report = {
-        "named_bodies": ["TPU_Sleeve", "ASA_Shell"],
+        "named_bodies": ["TPU_Frame", "ASA_Shell"],
         "alignment_mm": {
             "tpu_z_offset_into_asa": float(z_offset),
             "asa_cavity_front_z": float(asa_cavity_front_z),
@@ -214,7 +212,7 @@ def build_dual_body(p: MakiDualBodyParams):
             "TPU-to-ASA radial interface gap exceeds tolerance; fusion quality may be reduced."
         )
 
-    return assembly, report
+    return asa_shell, tpu_aligned, report
 
 
 def main():
@@ -277,12 +275,17 @@ def main():
     reports_dir = args.out / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
 
-    out_step = args.out / f"maki_live_body_dual_material{suffix}.step"
+    # 2 separate output files (rear cap is already a separate script)
+    shell_step = args.out / f"maki_live_asa_shell{suffix}.step"
+    tpu_step = args.out / f"maki_live_tpu_frame{suffix}.step"
     out_json = reports_dir / f"maki_live_dual_material_report{suffix}.json"
-    archived = _archive_existing([out_step, out_json, args.out / f"maki_live_dual_material_report{suffix}.json"], args.out)
+    # Also archive old combined body file
+    legacy_step = args.out / f"maki_live_body_dual_material{suffix}.step"
+    archived = _archive_existing([shell_step, tpu_step, out_json, legacy_step], args.out)
 
-    assembly, report = build_dual_body(params)
-    export_step(assembly, str(out_step))
+    asa_shell, tpu_frame, report = build_dual_body(params)
+    export_step(asa_shell, str(shell_step))
+    export_step(tpu_frame, str(tpu_step))
 
     payload = {"params": asdict(params), "report": report}
     payload["params"]["step_path"] = str(params.step_path)
@@ -290,7 +293,8 @@ def main():
 
     if archived:
         print(f"Archived {len(archived)} previous file(s) to {args.out / 'archive'}")
-    print(f"Wrote {out_step}")
+    print(f"Wrote {shell_step}")
+    print(f"Wrote {tpu_step}")
     print(f"Wrote {out_json}")
 
 

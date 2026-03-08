@@ -19,12 +19,12 @@
     "shell_depth_mm": 127.91999999999999,
     "assumed_cap_thickness_mm": 3.0,
     "selected_flip_axis": "x",
-    "orientation_score": 0.0
+    "orientation_score": 1173.3069147174706
   },
   "fit_metrics": {
     "device_vs_body_asa": {
       "intersection_volume_mm3": 0.0,
-      "min_distance_mm": 1.647380705840686,
+      "min_distance_mm": 2.2985169194599884,
       "hard_collision": false
     },
     "device_vs_body_tpu": {
@@ -38,9 +38,9 @@
       "hard_collision": false
     },
     "cap_asa_vs_body_asa": {
-      "intersection_volume_mm3": 0.0,
+      "intersection_volume_mm3": 0.7365069147174754,
       "min_distance_mm": 0.0,
-      "hard_collision": false
+      "hard_collision": true
     },
     "cap_asa_vs_body_tpu": {
       "intersection_volume_mm3": 0.0,
@@ -53,9 +53,9 @@
       "hard_collision": false
     },
     "cap_tpu_vs_body_asa": {
-      "intersection_volume_mm3": 0.0,
-      "min_distance_mm": 0.27999999999699726,
-      "hard_collision": false
+      "intersection_volume_mm3": 2.1839999999999757,
+      "min_distance_mm": 0.0,
+      "hard_collision": true
     },
     "cap_tpu_vs_body_tpu": {
       "intersection_volume_mm3": 0.0,
@@ -63,7 +63,10 @@
       "hard_collision": false
     }
   },
-  "hard_collision_pairs": [],
+  "hard_collision_pairs": [
+    "cap_asa_vs_body_asa",
+    "cap_tpu_vs_body_asa"
+  ],
   "feature_validation": {
     "all_feature_checks_passed": true,
     "case_openings_vs_device": {
@@ -160,5 +163,7 @@
     },
     "warnings": []
   },
-  "blocking_issues": []
+  "blocking_issues": [
+    "Hard-collision pairs detected."
+  ]
 }

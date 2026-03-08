@@ -13,7 +13,7 @@
     "include_tpu_front_edge_wrap": false,
     "include_tpu_rear_edge_wrap": false,
     "include_tpu_front_face_pad": true,
-    "tpu_front_face_pad_thickness_mm": 1.2,
+    "tpu_front_face_pad_thickness_mm": 1.5,
     "tripod_use_rect_cutout": true,
     "tripod_rect_long_mm": 50.8,
     "tripod_rect_short_mm": 40.64,
@@ -22,7 +22,7 @@
   },
   "report": {
     "named_bodies": [
-      "TPU_Sleeve",
+      "TPU_Frame",
       "ASA_Shell"
     ],
     "alignment_mm": {
@@ -53,7 +53,7 @@
     },
     "tpu_front_face_pad": {
       "enabled": true,
-      "thickness_mm": 1.2,
+      "thickness_mm": 1.5,
       "tpu_z_placement": "front_flush"
     },
     "tpu_edge_wrap": {
@@ -527,11 +527,10 @@
           "front_integrated": true,
           "lens_hood": {
             "enabled": true,
+            "type": "top_visor",
             "depth_mm": 16.0,
-            "drop_mm": 9.0,
-            "span_ratio": 1.18,
-            "side_overwrap_mm": 6.0,
-            "lens_clearance_mm": 0.1,
+            "wall_mm": 2.5,
+            "clearance_mm": 1.0,
             "side": "neg"
           },
           "cavity_front_z_mm": 3.0,
@@ -580,14 +579,14 @@
             "enabled": true,
             "z_center_mm": 107.91999999999999,
             "y_base_mm": 33.795,
-            "boss_height_mm": 4.0,
+            "boss_height_mm": 4.3,
             "boss_length_mm": 22.0,
             "boss_width_mm": 22.0,
-            "slot_width_mm": 18.2,
-            "rail_opening_mm": 12.5,
-            "rail_overhang_mm": 2.85,
+            "slot_width_mm": 18.8,
+            "rail_opening_mm": 13.5,
+            "rail_overhang_mm": 2.65,
             "rail_thickness_mm": 1.8,
-            "slot_depth_mm": 2.0,
+            "slot_depth_mm": 2.5,
             "slide_in_from": "rear"
           },
           "snap_clips": {
@@ -595,13 +594,16 @@
           },
           "friction_ridge": {
             "enabled": true,
-            "height_mm": 0.8,
-            "width_mm": 1.5,
+            "type": "detent_pockets",
+            "pocket_count": 4,
+            "pocket_width_mm": 8.0,
+            "pocket_depth_mm": 1.5,
+            "pocket_z_mm": 4.0,
             "setback_mm": 3.0,
             "z_mm": 124.91999999999999
           },
           "machined_finish_mm": {
-            "sleeve_axis_y_fillet": 0.3
+            "sleeve_axis_y_fillet": 0.0
           },
           "outer_bounds_xy_mm": {
             "min_x": -33.795,
@@ -1066,7 +1068,7 @@
           },
           "front_face_pad": {
             "enabled": true,
-            "thickness_mm": 1.2,
+            "thickness_mm": 1.5,
             "cutouts_applied": 3,
             "cutouts": [
               {
@@ -1105,7 +1107,7 @@
             "edge_wrap_inner_opening_h": 53.49
           },
           "machined_finish_mm": {
-            "liner_axis_y_fillet": 0.8
+            "liner_axis_y_fillet": 0.0
           }
         }
       }

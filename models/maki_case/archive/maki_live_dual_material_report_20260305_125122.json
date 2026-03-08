@@ -1,0 +1,1120 @@
+{
+  "params": {
+    "step_path": "refs/BirdDog_MAKI-Live_3D-file.step",
+    "asa_clearance_mm": 2.3,
+    "asa_wall_mm": 3.0,
+    "tpu_device_clearance_mm": 0.15,
+    "tpu_wall_mm": 2.0,
+    "tpu_end_clearance_mm": 0.2,
+    "target_interface_gap_each_mm": 0.0,
+    "interface_gap_tolerance_mm": 0.02,
+    "tpu_front_edge_wrap_mm": 2.5,
+    "tpu_edge_wrap_radial_mm": 2.0,
+    "include_tpu_front_edge_wrap": false,
+    "include_tpu_rear_edge_wrap": false,
+    "include_tpu_front_face_pad": true,
+    "tpu_front_face_pad_thickness_mm": 1.2,
+    "tripod_use_rect_cutout": true,
+    "tripod_rect_long_mm": 50.8,
+    "tripod_rect_short_mm": 40.64,
+    "tripod_rect_long_along_z": true,
+    "tripod_rect_z_shift_mm": -6.35
+  },
+  "report": {
+    "named_bodies": [
+      "TPU_Sleeve",
+      "ASA_Shell"
+    ],
+    "alignment_mm": {
+      "tpu_z_offset_into_asa": 3.0,
+      "asa_cavity_front_z": 3.0,
+      "asa_inner_depth": 124.91999999999999,
+      "tpu_depth": 120.72,
+      "front_gap": 0.0,
+      "back_gap": 4.199999999999989
+    },
+    "fit_stack_mm": {
+      "radial_gap_each_width": 0.15000000000000213,
+      "radial_gap_each_height": 0.15000000000000213
+    },
+    "bond_interface_mm": {
+      "target_gap_each": 0.0,
+      "tolerance_gap_each": 0.02,
+      "resolved_tpu_device_clearance": 0.15,
+      "max_abs_radial_gap_each": 0.15000000000000213,
+      "bonded_contact_depth": 120.72,
+      "bond_grade": "B"
+    },
+    "print_fusion_guidance": {
+      "assemble_bodies_in_slicer": true,
+      "recommended_outer_walls": 4,
+      "prime_tower": true,
+      "min_flush_volume_mm3": 250
+    },
+    "tpu_front_face_pad": {
+      "enabled": true,
+      "thickness_mm": 1.2,
+      "tpu_z_placement": "front_flush"
+    },
+    "tpu_edge_wrap": {
+      "depth_mm": 2.5,
+      "radial_mm": 2.0,
+      "enabled": {
+        "front": false,
+        "rear": false
+      }
+    },
+    "sources": {
+      "asa_case_report": {
+        "mesh_bounds_mm": {
+          "min": [
+            -28.496482849121094,
+            -28.496482849121094,
+            -120.0999984741211
+          ],
+          "max": [
+            28.496482849121094,
+            28.496482849121094,
+            5.626166512229247e-06
+          ],
+          "extents": [
+            56.99296569824219,
+            56.99296569824219,
+            120.1000041002876
+          ]
+        },
+        "profile_raw_mm": {
+          "width": 55.978282586149206,
+          "height": 55.978282270829695
+        },
+        "profile_scale": {
+          "sx": 1.0180733914495106,
+          "sy": 1.0180733971842062,
+          "sz": 1.001831772624493
+        },
+        "step_side_features": {
+          "resolved_tripod_side": "neg",
+          "vents_detected": 30,
+          "vents_applied": 30,
+          "vents_applied_entries": [
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -13.4000000000014,
+              "y": -33.995000000000005,
+              "z": 109.49007286341823,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 0,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -13.4000000000014,
+              "y": -33.995000000000005,
+              "z": 103.97999811395849,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 0,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -13.4000000000014,
+              "y": -33.995000000000005,
+              "z": 98.46992336452382,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 0,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -13.4000000000014,
+              "y": -33.995000000000005,
+              "z": 92.95984861508909,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 0,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -13.4000000000014,
+              "y": -33.995000000000005,
+              "z": 87.44977386565435,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 0,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -13.4000000000014,
+              "y": -33.995000000000005,
+              "z": 81.93969911621963,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 0,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -13.4000000000014,
+              "y": -33.995000000000005,
+              "z": 76.42962436678492,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 0,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -13.4000000000014,
+              "y": -33.995000000000005,
+              "z": 70.91954961735021,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 0,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -1.3992971876924876e-12,
+              "y": -33.995000000000005,
+              "z": 109.49007286341823,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 1,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -1.3992971876924876e-12,
+              "y": -33.995000000000005,
+              "z": 103.97999811395849,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 1,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -1.3992971876924876e-12,
+              "y": -33.995000000000005,
+              "z": 98.46992336452382,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 1,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -1.3992971876924876e-12,
+              "y": -33.995000000000005,
+              "z": 92.95984861508909,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 1,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -1.3992971876924876e-12,
+              "y": -33.995000000000005,
+              "z": 87.44977386565435,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 1,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -1.3992971876924876e-12,
+              "y": -33.995000000000005,
+              "z": 81.93969911621963,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 1,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -1.3992971876924876e-12,
+              "y": -33.995000000000005,
+              "z": 76.42962436678492,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 1,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -1.3992971876924876e-12,
+              "y": -33.995000000000005,
+              "z": 70.91954961735021,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 1,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": 13.3999999999986,
+              "y": -33.995000000000005,
+              "z": 109.49007286341823,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 2,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": 13.3999999999986,
+              "y": -33.995000000000005,
+              "z": 103.97999811395849,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 2,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": 13.3999999999986,
+              "y": -33.995000000000005,
+              "z": 98.46992336452382,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 2,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": 13.3999999999986,
+              "y": -33.995000000000005,
+              "z": 92.95984861508909,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 2,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": 13.3999999999986,
+              "y": -33.995000000000005,
+              "z": 87.44977386565435,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 2,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": 13.3999999999986,
+              "y": -33.995000000000005,
+              "z": 81.93969911621963,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 2,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": 13.3999999999986,
+              "y": -33.995000000000005,
+              "z": 76.42962436678492,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 2,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": 13.3999999999986,
+              "y": -33.995000000000005,
+              "z": 70.91954961735021,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 2,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "x",
+              "side": "neg",
+              "x": -33.995000000000005,
+              "y": -12.0,
+              "z": 109.47438185155546,
+              "slot_t": 17.35431182651025,
+              "slot_z": 3.9952787506158813,
+              "slot_w": 17.35431182651025,
+              "slot_h": 3.9952787506158813,
+              "pattern_source": "step_side_trio",
+              "vent_family": "side_trio"
+            },
+            {
+              "axis": "x",
+              "side": "neg",
+              "x": -33.995000000000005,
+              "y": 0.0,
+              "z": 109.47438185155546,
+              "slot_t": 17.35431182651025,
+              "slot_z": 3.9952787506158813,
+              "slot_w": 17.35431182651025,
+              "slot_h": 3.9952787506158813,
+              "pattern_source": "step_side_trio",
+              "vent_family": "side_trio"
+            },
+            {
+              "axis": "x",
+              "side": "neg",
+              "x": -33.995000000000005,
+              "y": 12.0,
+              "z": 109.47438185155546,
+              "slot_t": 17.35431182651025,
+              "slot_z": 3.9952787506158813,
+              "slot_w": 17.35431182651025,
+              "slot_h": 3.9952787506158813,
+              "pattern_source": "step_side_trio",
+              "vent_family": "side_trio"
+            },
+            {
+              "axis": "x",
+              "side": "pos",
+              "x": 33.995000000000005,
+              "y": -12.0,
+              "z": 109.47438185155546,
+              "slot_t": 17.35431182651025,
+              "slot_z": 3.9952787506158813,
+              "slot_w": 17.35431182651025,
+              "slot_h": 3.9952787506158813,
+              "pattern_source": "step_side_trio",
+              "vent_family": "side_trio"
+            },
+            {
+              "axis": "x",
+              "side": "pos",
+              "x": 33.995000000000005,
+              "y": 0.0,
+              "z": 109.47438185155546,
+              "slot_t": 17.35431182651025,
+              "slot_z": 3.9952787506158813,
+              "slot_w": 17.35431182651025,
+              "slot_h": 3.9952787506158813,
+              "pattern_source": "step_side_trio",
+              "vent_family": "side_trio"
+            },
+            {
+              "axis": "x",
+              "side": "pos",
+              "x": 33.995000000000005,
+              "y": 12.0,
+              "z": 109.47438185155546,
+              "slot_t": 17.35431182651025,
+              "slot_z": 3.9952787506158813,
+              "slot_w": 17.35431182651025,
+              "slot_h": 3.9952787506158813,
+              "pattern_source": "step_side_trio",
+              "vent_family": "side_trio"
+            }
+          ],
+          "tripanel_vent_layout_enforced": true,
+          "tripod_detected": true,
+          "tripod_source": "cylindrical_face",
+          "tripod_cyl_candidate_count": 1,
+          "tripod_edge_candidate_count": 0,
+          "tripod_detected_raw": {
+            "side": "neg",
+            "x": 0.0,
+            "y": -24.15,
+            "z": -48.0,
+            "r": 3.85,
+            "normal": [
+              -2.4492935982947064e-16,
+              -0.0,
+              -1.0
+            ]
+          },
+          "tripod_applied": {
+            "side": "neg",
+            "detected_side": "neg",
+            "x": 0.0,
+            "z": 47.03793072244803,
+            "cutout_shape": "rect",
+            "diameter": 9.339165114161233,
+            "rect_x_mm": 40.64,
+            "rect_z_mm": 50.8,
+            "source": "cylindrical_face",
+            "detected_radius_raw_mm": 3.85,
+            "from_camera_front_mm_raw": 48.00000562616651,
+            "from_case_front_mm_mapped": 47.03793072244803
+          }
+        },
+        "derived": {
+          "inner_depth_mm": 124.91999999999999,
+          "shell_depth_mm": 127.91999999999999,
+          "open_sleeve": false,
+          "front_integrated": true,
+          "lens_hood": {
+            "enabled": true,
+            "depth_mm": 16.0,
+            "drop_mm": 9.0,
+            "span_ratio": 1.18,
+            "side_overwrap_mm": 6.0,
+            "lens_clearance_mm": 0.1,
+            "side": "neg"
+          },
+          "cavity_front_z_mm": 3.0,
+          "inner_w_mm": 61.59,
+          "inner_h_mm": 61.59,
+          "outer_w_mm": 67.59,
+          "outer_h_mm": 67.59,
+          "end_clearance_each_mm": 2.3,
+          "front_cutouts": {
+            "enabled": true,
+            "detected": 3,
+            "applied": 3,
+            "entries": [
+              {
+                "x": 6.112600315865084e-13,
+                "y": 0.0,
+                "shape": "circle",
+                "d": 52.25685382529972
+              },
+              {
+                "x": -16.900629142096747,
+                "y": 13.031287765727456,
+                "shape": "slot",
+                "w": 5.3607284258910015,
+                "h": 3.1197452927973024
+              },
+              {
+                "x": 16.900629142096747,
+                "y": 13.031287765727456,
+                "shape": "slot",
+                "w": 5.3607284258910015,
+                "h": 3.1197452927973024
+              }
+            ]
+          },
+          "tripod_armor_mm": {
+            "extra_thickness": 0.0,
+            "margin": 0.0
+          },
+          "corner_radius_mm": {
+            "base_section": 16.7871568579467,
+            "inner": 19.087156857946702,
+            "outer": 22.087156857946702
+          },
+          "cold_shoe": {
+            "enabled": true,
+            "z_center_mm": 107.91999999999999,
+            "y_base_mm": 33.795,
+            "boss_height_mm": 4.0,
+            "boss_length_mm": 22.0,
+            "boss_width_mm": 22.0,
+            "slot_width_mm": 18.8,
+            "rail_opening_mm": 13.5,
+            "rail_overhang_mm": 2.65,
+            "rail_thickness_mm": 1.8,
+            "slot_depth_mm": 2.5,
+            "slide_in_from": "rear"
+          },
+          "snap_clips": {
+            "enabled": false
+          },
+          "friction_ridge": {
+            "enabled": true,
+            "type": "detent_pockets",
+            "pocket_count": 4,
+            "pocket_width_mm": 8.0,
+            "pocket_depth_mm": 1.5,
+            "pocket_z_mm": 4.0,
+            "setback_mm": 3.0,
+            "z_mm": 124.91999999999999
+          },
+          "machined_finish_mm": {
+            "sleeve_axis_y_fillet": 0.0
+          },
+          "outer_bounds_xy_mm": {
+            "min_x": -33.795,
+            "max_x": 33.795,
+            "min_y": -33.795,
+            "max_y": 33.795
+          }
+        }
+      },
+      "tpu_sleeve_report": {
+        "mesh_bounds_mm": {
+          "min": [
+            -28.496482849121094,
+            -28.496482849121094,
+            -120.0999984741211
+          ],
+          "max": [
+            28.496482849121094,
+            28.496482849121094,
+            5.626166512229247e-06
+          ],
+          "extents": [
+            56.99296569824219,
+            56.99296569824219,
+            120.1000041002876
+          ]
+        },
+        "profile_raw_mm": {
+          "width": 55.978282586149206,
+          "height": 55.978282270829695
+        },
+        "profile_scale": {
+          "sx": 1.0180733914495106,
+          "sy": 1.0180733971842062,
+          "sz": 1.001831772624493
+        },
+        "step_side_features": {
+          "resolved_tripod_side": "neg",
+          "vents_detected": 30,
+          "vents_applied": 30,
+          "vents_applied_entries": [
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -13.4000000000014,
+              "y": -30.845,
+              "z": 106.49007286341823,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 0,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -13.4000000000014,
+              "y": -30.845,
+              "z": 100.97999811395849,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 0,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -13.4000000000014,
+              "y": -30.845,
+              "z": 95.46992336452382,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 0,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -13.4000000000014,
+              "y": -30.845,
+              "z": 89.95984861508909,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 0,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -13.4000000000014,
+              "y": -30.845,
+              "z": 84.44977386565435,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 0,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -13.4000000000014,
+              "y": -30.845,
+              "z": 78.93969911621963,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 0,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -13.4000000000014,
+              "y": -30.845,
+              "z": 73.42962436678492,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 0,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -13.4000000000014,
+              "y": -30.845,
+              "z": 67.91954961735021,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 0,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -1.3992971876924876e-12,
+              "y": -30.845,
+              "z": 106.49007286341823,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 1,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -1.3992971876924876e-12,
+              "y": -30.845,
+              "z": 100.97999811395849,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 1,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -1.3992971876924876e-12,
+              "y": -30.845,
+              "z": 95.46992336452382,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 1,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -1.3992971876924876e-12,
+              "y": -30.845,
+              "z": 89.95984861508909,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 1,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -1.3992971876924876e-12,
+              "y": -30.845,
+              "z": 84.44977386565435,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 1,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -1.3992971876924876e-12,
+              "y": -30.845,
+              "z": 78.93969911621963,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 1,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -1.3992971876924876e-12,
+              "y": -30.845,
+              "z": 73.42962436678492,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 1,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": -1.3992971876924876e-12,
+              "y": -30.845,
+              "z": 67.91954961735021,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 1,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": 13.3999999999986,
+              "y": -30.845,
+              "z": 106.49007286341823,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 2,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": 13.3999999999986,
+              "y": -30.845,
+              "z": 100.97999811395849,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 2,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": 13.3999999999986,
+              "y": -30.845,
+              "z": 95.46992336452382,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 2,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": 13.3999999999986,
+              "y": -30.845,
+              "z": 89.95984861508909,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 2,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": 13.3999999999986,
+              "y": -30.845,
+              "z": 84.44977386565435,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 2,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": 13.3999999999986,
+              "y": -30.845,
+              "z": 78.93969911621963,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 2,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": 13.3999999999986,
+              "y": -30.845,
+              "z": 73.42962436678492,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 2,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "y",
+              "side": "neg",
+              "x": 13.3999999999986,
+              "y": -30.845,
+              "z": 67.91954961735021,
+              "slot_t": 10.58250126694423,
+              "slot_z": 2.403846822694558,
+              "slot_w": 10.58250126694423,
+              "slot_h": 2.403846822694558,
+              "panel_index": 2,
+              "pattern_source": "step_tripanel_cluster"
+            },
+            {
+              "axis": "x",
+              "side": "neg",
+              "x": -30.845,
+              "y": -12.0,
+              "z": 106.47438185155546,
+              "slot_t": 17.35431182651025,
+              "slot_z": 3.9952787506158813,
+              "slot_w": 17.35431182651025,
+              "slot_h": 3.9952787506158813,
+              "pattern_source": "step_side_trio",
+              "vent_family": "side_trio"
+            },
+            {
+              "axis": "x",
+              "side": "neg",
+              "x": -30.845,
+              "y": 0.0,
+              "z": 106.47438185155546,
+              "slot_t": 17.35431182651025,
+              "slot_z": 3.9952787506158813,
+              "slot_w": 17.35431182651025,
+              "slot_h": 3.9952787506158813,
+              "pattern_source": "step_side_trio",
+              "vent_family": "side_trio"
+            },
+            {
+              "axis": "x",
+              "side": "neg",
+              "x": -30.845,
+              "y": 12.0,
+              "z": 106.47438185155546,
+              "slot_t": 17.35431182651025,
+              "slot_z": 3.9952787506158813,
+              "slot_w": 17.35431182651025,
+              "slot_h": 3.9952787506158813,
+              "pattern_source": "step_side_trio",
+              "vent_family": "side_trio"
+            },
+            {
+              "axis": "x",
+              "side": "pos",
+              "x": 30.845,
+              "y": -12.0,
+              "z": 106.47438185155546,
+              "slot_t": 17.35431182651025,
+              "slot_z": 3.9952787506158813,
+              "slot_w": 17.35431182651025,
+              "slot_h": 3.9952787506158813,
+              "pattern_source": "step_side_trio",
+              "vent_family": "side_trio"
+            },
+            {
+              "axis": "x",
+              "side": "pos",
+              "x": 30.845,
+              "y": 0.0,
+              "z": 106.47438185155546,
+              "slot_t": 17.35431182651025,
+              "slot_z": 3.9952787506158813,
+              "slot_w": 17.35431182651025,
+              "slot_h": 3.9952787506158813,
+              "pattern_source": "step_side_trio",
+              "vent_family": "side_trio"
+            },
+            {
+              "axis": "x",
+              "side": "pos",
+              "x": 30.845,
+              "y": 12.0,
+              "z": 106.47438185155546,
+              "slot_t": 17.35431182651025,
+              "slot_z": 3.9952787506158813,
+              "slot_w": 17.35431182651025,
+              "slot_h": 3.9952787506158813,
+              "pattern_source": "step_side_trio",
+              "vent_family": "side_trio"
+            }
+          ],
+          "tripod_detected": true,
+          "tripod_source": "cylindrical_face",
+          "tripod_cyl_candidate_count": 1,
+          "tripod_edge_candidate_count": 0,
+          "tripod_applied": {
+            "side": "neg",
+            "detected_side": "neg",
+            "x": 0.0,
+            "z": 44.03793072244804,
+            "cutout_shape": "rect",
+            "diameter": 9.339165114161233
+          }
+        },
+        "derived": {
+          "open_sleeve": true,
+          "inner_depth_mm": 120.72,
+          "shell_depth_mm": 120.72,
+          "nominal_asa_fit_mm": {
+            "asa_clearance_each_side": 2.3,
+            "expected_radial_gap_each_side": 0.1499999999999999,
+            "expected_axial_gap_each_end": 2.0999999999999996,
+            "expected_cap_budget_each_end": 0.2999999999999996,
+            "expected_cap_budget_total_two_caps": 0.5999999999999992
+          },
+          "edge_wrap_depth_mm": 2.5,
+          "edge_wrap_radial_mm": 2.0,
+          "edge_wrap_enabled": {
+            "front": false,
+            "rear": false
+          },
+          "front_face_pad": {
+            "enabled": true,
+            "thickness_mm": 1.2,
+            "cutouts_applied": 3,
+            "cutouts": [
+              {
+                "x": 6.112600315865084e-13,
+                "y": 0.0,
+                "shape": "circle",
+                "d": 52.25685382529972
+              },
+              {
+                "x": -16.900629142096747,
+                "y": 13.031287765727456,
+                "shape": "slot",
+                "w": 5.3607284258910015,
+                "h": 3.1197452927973024
+              },
+              {
+                "x": 16.900629142096747,
+                "y": 13.031287765727456,
+                "shape": "slot",
+                "w": 5.3607284258910015,
+                "h": 3.1197452927973024
+              }
+            ]
+          },
+          "corner_radius_mm": {
+            "base_section": 16.7871568579467,
+            "inner": 16.9371568579467,
+            "outer": 18.9371568579467
+          },
+          "dimensions_mm": {
+            "inner_w": 57.29,
+            "inner_h": 57.29,
+            "outer_w": 61.29,
+            "outer_h": 61.29,
+            "edge_wrap_inner_opening_w": 53.29,
+            "edge_wrap_inner_opening_h": 53.49
+          },
+          "machined_finish_mm": {
+            "liner_axis_y_fillet": 0.8
+          }
+        }
+      }
+    },
+    "warnings": [
+      "TPU-to-ASA radial interface gap exceeds tolerance; fusion quality may be reduced."
+    ]
+  }
+}

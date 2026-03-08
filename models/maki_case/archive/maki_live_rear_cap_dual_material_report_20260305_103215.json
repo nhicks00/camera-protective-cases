@@ -1,0 +1,249 @@
+{
+  "params": {
+    "step_path": "refs/BirdDog_MAKI-Live_3D-file.step",
+    "cutout_extra_mm": 1.5,
+    "cap_thickness_mm": 3.0,
+    "plug_depth_mm": 1.8,
+    "plug_clearance_mm": 0.28,
+    "include_tpu_gasket": true,
+    "tpu_gasket_thickness_mm": 1.2,
+    "tpu_gasket_outer_inset_mm": 0.0,
+    "tpu_edge_wrap_depth_mm": 1.8,
+    "tpu_edge_wrap_width_mm": 1.8,
+    "include_snap_ridge": false,
+    "snap_ridge_height_mm": 1.0,
+    "snap_ridge_depth_mm": 1.0,
+    "snap_ridge_width_mm": 4.0,
+    "snap_ridge_setback_mm": 3.0,
+    "include_friction_ridge": true,
+    "friction_ridge_height_mm": 0.4,
+    "friction_ridge_width_mm": 1.0,
+    "friction_ridge_setback_mm": 0.5
+  },
+  "report": {
+    "named_bodies": [
+      "ASA_Back_Cap",
+      "TPU_Back_Gasket"
+    ],
+    "rear_cap_source": {
+      "mesh_bounds_mm": {
+        "min": [
+          -28.496482849121094,
+          -28.496482849121094,
+          -120.0999984741211
+        ],
+        "max": [
+          28.496482849121094,
+          28.496482849121094,
+          5.626166512229247e-06
+        ],
+        "extents": [
+          56.99296569824219,
+          56.99296569824219,
+          120.1000041002876
+        ]
+      },
+      "profile_raw_mm": {
+        "width": 55.978282586149206,
+        "height": 55.978282270829695
+      },
+      "profile_scale": {
+        "sx": 1.0180733914495106,
+        "sy": 1.0180733971842062
+      },
+      "derived": {
+        "sleeve_outer_w_mm": 67.59,
+        "sleeve_outer_h_mm": 67.59,
+        "plate_w_mm": 67.59,
+        "plate_h_mm": 67.59,
+        "inner_w_mm": 61.59,
+        "inner_h_mm": 61.59,
+        "plug_w_mm": 61.03,
+        "plug_h_mm": 61.03,
+        "corner_radius_mm": {
+          "base_section": 16.7871568579467,
+          "inner": 19.087156857946702,
+          "sleeve_outer": 22.087156857946702,
+          "plate_outer": 22.087156857946702,
+          "plug": 18.8071568579467
+        },
+        "front_bezel_mm": {
+          "recess_depth": 1.2,
+          "recess_inset": 3.0
+        }
+      },
+      "cutouts": {
+        "end_planes": {
+          "front_plane_z_mm": -5.717472393966527e-21,
+          "rear_plane_z_mm": -120.1,
+          "end_plane_tol_mm": 3.0
+        },
+        "front_count": 17,
+        "rear_count": 5,
+        "front": [
+          {
+            "x": -7.672840141026427e-11,
+            "y": -19.009236484543884,
+            "shape": "slot",
+            "w": 9.831535722922817,
+            "h": 7.72834082213098
+          },
+          {
+            "x": 6.004086117172847e-13,
+            "y": 0.0,
+            "shape": "circle",
+            "d": 53.50685382529972
+          },
+          {
+            "x": -11.024349659906399,
+            "y": -18.983144368787308,
+            "shape": "circle",
+            "d": 2.748620578003938
+          },
+          {
+            "x": 11.024346745975649,
+            "y": -18.983158433260748,
+            "shape": "circle",
+            "d": 2.7486471479898515
+          },
+          {
+            "x": -16.6,
+            "y": -1.9999999999998095,
+            "shape": "circle",
+            "d": 4.054968676130662
+          },
+          {
+            "x": 13.0,
+            "y": 14.3000000000002,
+            "shape": "circle",
+            "d": 4.054968676130674
+          },
+          {
+            "x": -16.6006,
+            "y": 12.7999491999,
+            "shape": "slot",
+            "w": 6.6107284258910015,
+            "h": 4.369745292797303
+          },
+          {
+            "x": 16.6006,
+            "y": 12.7999491999,
+            "shape": "slot",
+            "w": 6.6107284258910015,
+            "h": 4.369745292797303
+          },
+          {
+            "x": 21.0,
+            "y": -12.0,
+            "shape": "circle",
+            "d": 3.237378700029346
+          },
+          {
+            "x": 21.5,
+            "y": 11.0,
+            "shape": "circle",
+            "d": 3.0329812060040657
+          },
+          {
+            "x": 9.2,
+            "y": 20.9999999999989,
+            "shape": "circle",
+            "d": 3.8505711821040673
+          },
+          {
+            "x": -22.8,
+            "y": 4.5,
+            "shape": "circle",
+            "d": 3.0329812060040657
+          },
+          {
+            "x": -22.8,
+            "y": -5.0000000000011005,
+            "shape": "circle",
+            "d": 3.850571182104069
+          },
+          {
+            "x": -4.0,
+            "y": -15.900000000000102,
+            "shape": "circle",
+            "d": 3.8505711821050865
+          },
+          {
+            "x": 4.0,
+            "y": -15.900000000000102,
+            "shape": "circle",
+            "d": 3.8505711821050865
+          },
+          {
+            "x": -13.2,
+            "y": -14.5,
+            "shape": "circle",
+            "d": 3.437850106280003
+          },
+          {
+            "x": 13.5,
+            "y": -14.5,
+            "shape": "circle",
+            "d": 3.0329812060040657
+          }
+        ],
+        "rear": [
+          {
+            "x": -13.000076200152492,
+            "y": -14.36999997174499,
+            "shape": "slot",
+            "w": 11.014710141794895,
+            "h": 5.150566808219859
+          },
+          {
+            "x": 0.0,
+            "y": 5.0,
+            "shape": "circle",
+            "d": 14.172644630381871
+          },
+          {
+            "x": -1.1238729505258505e-05,
+            "y": 20.26180267334,
+            "shape": "rect",
+            "w": 11.627269844771115,
+            "h": 3.5079733357352163
+          },
+          {
+            "x": -13.0,
+            "y": -7.67,
+            "shape": "circle",
+            "d": 5.128055519763194
+          },
+          {
+            "x": 13.000238109522348,
+            "y": -12.63101485072514,
+            "shape": "slot",
+            "w": 19.188907939858467,
+            "h": 9.685436971003213
+          }
+        ]
+      }
+    },
+    "snap_ridge": {
+      "enabled": false
+    },
+    "friction_ridge": {
+      "enabled": true,
+      "type": "detent_bumps",
+      "bump_count": 4,
+      "bump_protrusion_mm": 0.4,
+      "bump_width_mm": 3.5,
+      "bump_z_mm": 1.5,
+      "setback_mm": 0.5,
+      "z_mm": 4.3
+    },
+    "tpu_gasket_mm": {
+      "enabled": true,
+      "thickness": 1.2,
+      "outer_inset": 0.0,
+      "edge_wrap_depth": 1.8,
+      "edge_wrap_width": 1.8,
+      "contact_plane_z": 4.8
+    }
+  }
+}

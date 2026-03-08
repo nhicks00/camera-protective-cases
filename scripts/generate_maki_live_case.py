@@ -30,6 +30,7 @@ from build123d import (
     BuildPart,
     BuildSketch,
     Circle,
+    Cylinder,
     GeomType,
     Locations,
     Mode,
@@ -73,26 +74,23 @@ class MakiCaseParams:
 
     # Front optics opening
     lens_center_y_mm: float = 4.5
-    lens_diameter_mm: float = 30.0
+    lens_diameter_mm: float = 42.7        # 30.0 + 12.7 mm (0.5")
     front_bezel_extra_mm: float = 1.0
     front_bezel_height_mm: float = 1.1
     lens_hood_enabled: bool = True
     lens_hood_depth_mm: float = 16.0
-    lens_hood_drop_mm: float = 9.0
-    lens_hood_span_ratio: float = 1.18
-    lens_hood_side_overwrap_mm: float = 6.0
-    lens_hood_lens_clearance_mm: float = 0.1
-    lens_hood_full_perimeter: bool = True
+    lens_hood_wall_mm: float = 2.5
+    lens_hood_clearance_mm: float = 1.0
 
     # Cold shoe mount (ISO 518 female receptor)
     cold_shoe_enabled: bool = True
     cold_shoe_boss_height_mm: float = 4.0      # Boss protrusion above outer shell surface
     cold_shoe_boss_length_mm: float = 22.0     # Along Z (slightly longer than slot for walls)
     cold_shoe_boss_width_mm: float = 22.0      # Along X (slightly wider than slot for walls)
-    cold_shoe_slot_width_mm: float = 18.2      # ISO 518 foot width
-    cold_shoe_rail_overhang_mm: float = 2.85   # Each side lip ((18.2-12.5)/2)
+    cold_shoe_slot_width_mm: float = 18.8      # +0.4mm/side clearance for foot flange
+    cold_shoe_rail_overhang_mm: float = 2.65   # reduced for looser stem fit
     cold_shoe_rail_thickness_mm: float = 1.8   # Vertical rail height
-    cold_shoe_slot_depth_mm: float = 2.0       # Below rail to floor
+    cold_shoe_slot_depth_mm: float = 2.5       # Below rail to floor (deeper C-channel)
     cold_shoe_z_from_rear_mm: float = 20.0     # Center distance from rear edge
     cold_shoe_fillet_mm: float = 0.8           # Edge fillet on boss
 
@@ -108,7 +106,7 @@ class MakiCaseParams:
 
     # Continuous friction ridge around plug perimeter
     include_friction_ridge: bool = True
-    friction_ridge_height_mm: float = 0.8
+    friction_ridge_height_mm: float = 0.6
     friction_ridge_width_mm: float = 1.5
     friction_ridge_setback_mm: float = 3.0
 
@@ -831,63 +829,25 @@ def build_case(p: MakiCaseParams):
             extrude(amount=p.front_wall_mm + 0.6, mode=Mode.SUBTRACT)
             front_cutouts_applied = list(front_cutouts_detected)
 
-        # Curved duck-bill shade extension integrated to front perimeter.
-        if p.front_integrated and p.lens_hood_enabled and p.lens_hood_depth_mm > 0.0 and p.lens_hood_drop_mm > 0.0:
-            hood_span = max(
-                min(
-                    max(outer_w * p.lens_hood_span_ratio, outer_w),
-                    outer_w + 2.0 * max(p.lens_hood_side_overwrap_mm, 0.0),
-                ),
-                8.0,
-            )
-            tripod_on_neg = resolved_tripod_side == "neg"
-            hood_on_neg = tripod_on_neg
-            hood_anchor_y = min_y if hood_on_neg else max_y
-            # Place hood circle center outside the body profile to create a true overhang.
-            hood_center_y = hood_anchor_y - p.lens_hood_drop_mm if hood_on_neg else hood_anchor_y + p.lens_hood_drop_mm
-            hood_r = math.sqrt((0.5 * hood_span) ** 2 + p.lens_hood_drop_mm**2)
-            hood_clear = max(p.lens_hood_lens_clearance_mm, 0.0)
-            hood_cutouts = (
-                front_cutouts_applied
-                if front_cutouts_applied
-                else [{"x": 0.0, "y": p.lens_center_y_mm, "shape": "circle", "d": p.lens_diameter_mm}]
-            )
-            with BuildSketch(Plane.XY):
-                _add_rounded_rectangle(outer_w, outer_h, outer_corner_r)
-                if not p.lens_hood_full_perimeter:
-                    with Locations((0.0, hood_center_y)):
-                        Circle(hood_r, mode=Mode.INTERSECT)
-                # Never let hood material intrude into the optical opening path.
-                for c in hood_cutouts:
-                    with Locations((c["x"], c["y"])):
-                        if c["shape"] == "circle":
-                            Circle(max(0.5 * c["d"] + hood_clear, 0.1), mode=Mode.SUBTRACT)
-                        elif c["shape"] == "slot":
-                            SlotOverall(
-                                max(c["w"] + 2.0 * hood_clear, 0.4),
-                                max(c["h"] + 2.0 * hood_clear, 0.4),
-                                mode=Mode.SUBTRACT,
-                            )
-                        else:
-                            Rectangle(
-                                max(c["w"] + 2.0 * hood_clear, 0.4),
-                                max(c["h"] + 2.0 * hood_clear, 0.4),
-                                mode=Mode.SUBTRACT,
-                            )
-            extrude(amount=-p.lens_hood_depth_mm)
+        # Hood is built separately after main BuildPart and unioned (visor clip).
+        _build_maki_hood = (p.front_integrated and p.lens_hood_enabled
+                            and p.lens_hood_depth_mm > 0.0)
+        if _build_maki_hood:
+            _maki_hood_inner_r = 0.5 * p.lens_diameter_mm + p.lens_hood_clearance_mm
+            _maki_hood_outer_r = _maki_hood_inner_r + p.lens_hood_wall_mm
 
         # Cold shoe mount (ISO 518 female receptor) on top (Y+) side, near rear.
         cold_shoe_info = None
         if p.cold_shoe_enabled:
             cs_z_center = shell_depth - p.cold_shoe_z_from_rear_mm
-            cs_boss_h = p.cold_shoe_boss_height_mm
             cs_boss_l = p.cold_shoe_boss_length_mm
             cs_boss_w = p.cold_shoe_boss_width_mm
             cs_slot_w = p.cold_shoe_slot_width_mm
             cs_rail_oh = p.cold_shoe_rail_overhang_mm
             cs_rail_t = p.cold_shoe_rail_thickness_mm
             cs_slot_d = p.cold_shoe_slot_depth_mm
-            cs_opening = cs_slot_w - 2.0 * cs_rail_oh  # 12.5 mm rail opening
+            cs_boss_h = cs_slot_d + cs_rail_t  # derive boss height so rail_thickness controls geometry
+            cs_opening = cs_slot_w - 2.0 * cs_rail_oh
 
             # 1) Raised boss on top surface (Y+ face)
             with BuildSketch(Plane.XZ.offset(max_y)):
@@ -902,17 +862,17 @@ def build_case(p: MakiCaseParams):
             cs_slot_len = shell_depth + 0.2 - cs_front_z  # extend past rear edge
             cs_slot_mid_z = cs_front_z + cs_slot_len * 0.5
 
-            # 2a) Floor slot: full foot width, slot_depth from top
-            with BuildSketch(Plane.XZ.offset(boss_top_y + 0.1)):
-                with Locations((0.0, cs_slot_mid_z)):
-                    Rectangle(cs_slot_w, cs_slot_len)
-            extrude(amount=-(cs_slot_d + 0.1), mode=Mode.SUBTRACT)
-
-            # 2b) Rail opening: narrower cut through boss (not into sleeve wall)
+            # 2a) Narrow opening through entire boss height (shoe stem passage)
             with BuildSketch(Plane.XZ.offset(boss_top_y + 0.1)):
                 with Locations((0.0, cs_slot_mid_z)):
                     Rectangle(cs_opening, cs_slot_len)
-            extrude(amount=-(cs_boss_h + 0.05), mode=Mode.SUBTRACT)
+            extrude(amount=-(cs_boss_h + 0.2), mode=Mode.SUBTRACT)
+
+            # 2b) Wide floor pocket from boss bottom upward (flange pocket + rails at top)
+            with BuildSketch(Plane.XZ.offset(max_y - 0.1)):
+                with Locations((0.0, cs_slot_mid_z)):
+                    Rectangle(cs_slot_w, cs_slot_len)
+            extrude(amount=cs_slot_d + 0.1, mode=Mode.SUBTRACT)
 
             cold_shoe_info = {
                 "enabled": True,
@@ -961,30 +921,35 @@ def build_case(p: MakiCaseParams):
                 "setback_mm": float(p.snap_clip_setback_mm),
             }
 
-        # Continuous friction ridge: 4 box strips along inner walls for distributed cap holding force.
-        # Strips are shortened to avoid rounded corners so no geometry floats in open space.
+        # Detent pockets: 4 discrete pockets (one per wall center) for snap-in cap retention.
+        # Oversized vs cap bumps for insertion tolerance.
         friction_ridge_info = None
         if p.include_friction_ridge and p.friction_ridge_height_mm > 0.0:
             fr_z = shell_depth - p.friction_ridge_setback_mm
-            fr_h = p.friction_ridge_height_mm
-            fr_w = p.friction_ridge_width_mm
+            fr_h = p.friction_ridge_height_mm  # pocket depth (radial)
+            fr_w = p.friction_ridge_width_mm   # pocket extent along Z
             half_iw = 0.5 * inner_w
             half_ih = 0.5 * inner_h
-            # Keep strips within straight wall sections (avoid corner radius zones).
-            x_strip_len = max(inner_h - 2.0 * inner_corner_r - 1.0, 4.0)
-            y_strip_len = max(inner_w - 2.0 * inner_corner_r - 1.0, 4.0)
+            pocket_w = 8.0   # pocket width (tangential)
+            pocket_d = 1.5   # pocket radial depth into wall
+            pocket_z = 4.0   # pocket extent along Z
+            # 2 pockets on X walls (at Y=0), 2 on Y walls (at X=0)
+            # Position so pocket extends INTO the wall from inner surface outward.
             for sx_sign in (-1.0, 1.0):
-                bx = sx_sign * (half_iw - 0.5 * fr_h)
-                with Locations((bx, 0.0, fr_z)):
-                    Box(fr_h, x_strip_len, fr_w)
+                px = sx_sign * (half_iw + 0.5 * pocket_d)
+                with Locations((px, 0.0, fr_z)):
+                    Box(pocket_d, pocket_w, pocket_z, mode=Mode.SUBTRACT)
             for sy_sign in (-1.0, 1.0):
-                by = sy_sign * (half_ih - 0.5 * fr_h)
-                with Locations((0.0, by, fr_z)):
-                    Box(y_strip_len, fr_h, fr_w)
+                py = sy_sign * (half_ih + 0.5 * pocket_d)
+                with Locations((0.0, py, fr_z)):
+                    Box(pocket_w, pocket_d, pocket_z, mode=Mode.SUBTRACT)
             friction_ridge_info = {
                 "enabled": True,
-                "height_mm": float(fr_h),
-                "width_mm": float(fr_w),
+                "type": "detent_pockets",
+                "pocket_count": 4,
+                "pocket_width_mm": float(pocket_w),
+                "pocket_depth_mm": float(pocket_d),
+                "pocket_z_mm": float(pocket_z),
                 "setback_mm": float(p.friction_ridge_setback_mm),
                 "z_mm": float(fr_z),
             }
@@ -1229,6 +1194,36 @@ def build_case(p: MakiCaseParams):
             }
 
     sleeve = _largest_solid(sleeve_bp.part)
+
+    # Build top-visor lens hood (arc over top of lens opening), then union.
+    if _build_maki_hood:
+        with BuildPart() as hood_bp:
+            with Locations((0.0, p.lens_center_y_mm, 0.0)):
+                Cylinder(_maki_hood_outer_r, p.lens_hood_depth_mm, rotation=(180, 0, 0),
+                         align=(Align.CENTER, Align.CENTER, Align.MIN))
+            with Locations((0.0, p.lens_center_y_mm, 0.1)):
+                Cylinder(_maki_hood_inner_r, p.lens_hood_depth_mm + 0.2, rotation=(180, 0, 0),
+                         align=(Align.CENTER, Align.CENTER, Align.MIN),
+                         mode=Mode.SUBTRACT)
+        clip_w = outer_w
+        clip_h = _maki_hood_outer_r + 1.0
+        with BuildPart() as clip_bp:
+            with Locations((0.0,
+                            p.lens_center_y_mm + 0.5 * clip_h,
+                            -0.5 * p.lens_hood_depth_mm)):
+                Box(clip_w, clip_h, p.lens_hood_depth_mm + 1.0)
+        hood_solid = hood_bp.part & clip_bp.part
+        for fillet_r in (2.0, 1.5, 1.0, 0.5):
+            try:
+                hood_solid = fillet(hood_solid.edges(), fillet_r)
+                break
+            except Exception:
+                continue
+        try:
+            sleeve = _largest_solid(sleeve + hood_solid)
+        except Exception:
+            pass
+
     sleeve, sleeve_fillet_y = _apply_axis_fillet(sleeve, Axis.Y, (0.8, 0.6, 0.45, 0.3, 0.2))
 
     report = {
@@ -1259,11 +1254,10 @@ def build_case(p: MakiCaseParams):
             "front_integrated": bool(p.front_integrated),
             "lens_hood": {
                 "enabled": bool(p.front_integrated and p.lens_hood_enabled),
+                "type": "top_visor",
                 "depth_mm": float(max(p.lens_hood_depth_mm, 0.0)),
-                "drop_mm": float(max(p.lens_hood_drop_mm, 0.0)),
-                "span_ratio": float(p.lens_hood_span_ratio),
-                "side_overwrap_mm": float(max(p.lens_hood_side_overwrap_mm, 0.0)),
-                "lens_clearance_mm": float(max(p.lens_hood_lens_clearance_mm, 0.0)),
+                "wall_mm": float(p.lens_hood_wall_mm),
+                "clearance_mm": float(p.lens_hood_clearance_mm),
                 "side": "neg" if resolved_tripod_side == "neg" else "pos",
             },
             "cavity_front_z_mm": float(cavity_front_z),
@@ -1321,7 +1315,7 @@ def main():
     parser.add_argument("--lens-d", type=float, default=None, help="Front lens opening diameter (mm)")
     parser.add_argument("--no-lens-hood", action="store_true", help="Disable integrated top-front glare hood.")
     parser.add_argument("--lens-hood-depth", type=float, default=None, help="Integrated glare hood projection depth (mm)")
-    parser.add_argument("--lens-hood-drop", type=float, default=None, help="Integrated glare hood vertical drop (mm)")
+
     parser.add_argument("--tripod-z", type=float, default=None, help="Fallback tripod opening center from front (mm)")
     parser.add_argument("--no-cold-shoe", action="store_true", help="Disable cold shoe mount on top rear")
     parser.add_argument("--no-snap-clips", action="store_true", help="Disable snap-latch flexure clips")
@@ -1348,8 +1342,6 @@ def main():
         params.lens_hood_enabled = False
     if args.lens_hood_depth is not None:
         params.lens_hood_depth_mm = max(float(args.lens_hood_depth), 0.0)
-    if args.lens_hood_drop is not None:
-        params.lens_hood_drop_mm = max(float(args.lens_hood_drop), 0.0)
     if args.tripod_z is not None:
         params.tripod_center_from_front_mm = args.tripod_z
     if args.no_cold_shoe:

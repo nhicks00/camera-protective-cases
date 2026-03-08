@@ -68,7 +68,7 @@ class MakiTpuLinerParams:
 
     # Front face pad (shock absorption between ASA front wall and camera face)
     include_front_face_pad: bool = True
-    front_face_pad_thickness_mm: float = 1.2
+    front_face_pad_thickness_mm: float = 1.5
 
     # Keep side vent/tripod regions open through TPU
     use_step_side_features: bool = True
@@ -116,6 +116,11 @@ class MakiTpuLinerParams:
     tripod_rect_short_mm: float = 40.64  # 1.6 inches
     tripod_rect_long_along_z: bool = True  # True = long side along case length
     tripod_rect_z_shift_mm: float = -6.35  # negative = toward front/lens (1/4")
+
+    # Skeleton TPU frame (corner bumpers + edge rails instead of solid walls)
+    skeleton_frame: bool = True
+    skeleton_corner_bumper_w_mm: float = 12.0   # width of each corner bumper along wall
+    skeleton_edge_rail_w_mm: float = 4.0        # width of connecting rails along each edge
 
     # Processing
     section_z_ratio: float = 0.50
@@ -704,6 +709,43 @@ def build_liner(p: MakiTpuLinerParams):
         with BuildSketch(Plane.XY.offset(-0.2)):
             _add_rounded_rectangle(inner_w, inner_h, inner_corner_r)
         extrude(amount=shell_depth + 0.4, mode=Mode.SUBTRACT)
+
+        # Skeleton frame: cut rectangular windows from each flat wall face,
+        # leaving corner bumpers at each vertical edge and edge rails at top/bottom.
+        if p.skeleton_frame:
+            bumper_w = p.skeleton_corner_bumper_w_mm
+            rail_w = p.skeleton_edge_rail_w_mm
+            skel_cut_depth = p.shell_thickness_mm + 1.0
+
+            # X walls (left/right): wall runs along Y axis
+            x_wall_clear_h = max(outer_h - 2.0 * bumper_w, 0.0)
+            x_wall_clear_z = max(shell_depth - 2.0 * rail_w, 0.0)
+            if x_wall_clear_h > 1.0 and x_wall_clear_z > 1.0:
+                x_cut_z = 0.5 * shell_depth
+                for side in (-1.0, 1.0):
+                    x_face = side * (0.5 * outer_w + 0.2)
+                    with BuildSketch(Plane.YZ.offset(x_face)):
+                        with Locations((0.0, x_cut_z)):
+                            Rectangle(x_wall_clear_h, x_wall_clear_z)
+                    extrude(
+                        amount=skel_cut_depth if side < 0 else -skel_cut_depth,
+                        mode=Mode.SUBTRACT,
+                    )
+
+            # Y walls (top/bottom): wall runs along X axis
+            y_wall_clear_w = max(outer_w - 2.0 * bumper_w, 0.0)
+            y_wall_clear_z = max(shell_depth - 2.0 * rail_w, 0.0)
+            if y_wall_clear_w > 1.0 and y_wall_clear_z > 1.0:
+                y_cut_z = 0.5 * shell_depth
+                for side in (-1.0, 1.0):
+                    y_face = side * (0.5 * outer_h + 0.2)
+                    with BuildSketch(Plane.XZ.offset(-y_face)):
+                        with Locations((0.0, y_cut_z)):
+                            Rectangle(y_wall_clear_w, y_wall_clear_z)
+                    extrude(
+                        amount=skel_cut_depth if side > 0 else -skel_cut_depth,
+                        mode=Mode.SUBTRACT,
+                    )
 
         # Front face pad — full-face TPU between ASA front wall and camera.
         front_pad_cutouts_used = []
