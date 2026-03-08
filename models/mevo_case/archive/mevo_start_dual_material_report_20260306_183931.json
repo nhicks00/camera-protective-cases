@@ -165,7 +165,7 @@
       "sun_hood_depth": 3.0,
       "lens_hood": {
         "enabled": true,
-        "type": "top_visor",
+        "type": "circular_tube",
         "depth": 16.0,
         "wall": 2.5,
         "clearance": 1.0
@@ -244,11 +244,13 @@
       },
       "friction_ridge": {
         "enabled": true,
-        "type": "flush_bumps",
+        "type": "latch_pockets",
         "pocket_count": 4,
         "pocket_width_mm": 8.0,
         "pocket_depth_mm": 0.8,
         "pocket_z_mm": 4.0,
+        "notch_depth_mm": 0.6,
+        "notch_z_mm": 1.5,
         "setback_mm": 3.0,
         "z_mm": 97.325
       }
@@ -332,6 +334,6 @@
   "collision_check": {
     "cap_asa_vs_body_asa_mm3": 0.0,
     "collision_pass": true,
-    "cap_seated_z_mm": 100.425
+    "cap_seated_z_mm": 97.325
   }
 }

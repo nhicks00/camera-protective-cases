@@ -11,23 +11,22 @@
     "interface_gap_mm": 0.0,
     "bond_interface_tolerance_mm": 0.02,
     "enforce_capsule_profile": true,
-    "skeleton_frame": true,
-    "skeleton_corner_bumper_w_mm": 12.0,
-    "skeleton_edge_rail_w_mm": 4.0,
     "open_front_ovular": false,
     "include_front_lens_led_cutouts": true,
     "sun_hood_depth_mm": 3.0,
-    "lens_cutout_d_mm": 42.2,
+    "lens_cutout_d_mm": 29.5,
     "lens_center_x_mm": 0.0,
     "lens_center_y_mm": 20.0,
     "led_hole_d_mm": 5.5,
     "use_led_hole_from_bottom": true,
     "led_hole_center_from_bottom_mm": 17.875,
     "led_hole_offset_from_lens_y_mm": 12.0,
-    "include_lens_hood": true,
-    "lens_hood_depth_mm": 16.0,
-    "lens_hood_wall_mm": 2.5,
-    "lens_hood_clearance_mm": 1.0,
+    "include_front_duckbill_hood": true,
+    "duckbill_depth_mm": 16.0,
+    "duckbill_drop_mm": 9.0,
+    "duckbill_span_ratio": 1.18,
+    "duckbill_side_overwrap_mm": 6.0,
+    "duckbill_lens_clearance_mm": 0.1,
     "tpu_front_edge_wrap_depth_mm": 2.5,
     "tpu_front_edge_wrap_radial_mm": 2.0,
     "include_tpu_front_edge_wrap": true,
@@ -154,7 +153,7 @@
     "features_mm": {
       "open_front_ovular": false,
       "include_front_lens_led_cutouts": true,
-      "lens_cutout_d": 42.2,
+      "lens_cutout_d": 29.5,
       "lens_center_x": 0.0,
       "lens_center_y": 20.0,
       "led_hole_d": 5.5,
@@ -163,12 +162,13 @@
       "led_hole_from_bottom_mode": true,
       "led_hole_offset_from_lens_y": 12.0,
       "sun_hood_depth": 3.0,
-      "lens_hood": {
+      "duckbill_hood": {
         "enabled": true,
-        "type": "top_visor",
         "depth": 16.0,
-        "wall": 2.5,
-        "clearance": 1.0
+        "drop": 9.0,
+        "span_ratio": 1.18,
+        "side_overwrap": 6.0,
+        "lens_clearance": 0.1
       },
       "tripod_cutout": {
         "shape": "rect",
@@ -244,11 +244,13 @@
       },
       "friction_ridge": {
         "enabled": true,
-        "type": "flush_bumps",
+        "type": "latch_pockets",
         "pocket_count": 4,
         "pocket_width_mm": 8.0,
         "pocket_depth_mm": 0.8,
         "pocket_z_mm": 4.0,
+        "notch_depth_mm": 0.6,
+        "notch_z_mm": 1.5,
         "setback_mm": 3.0,
         "z_mm": 97.325
       }
@@ -269,7 +271,7 @@
       "min_flush_volume_mm3": 250
     },
     "named_bodies": [
-      "TPU_Frame",
+      "TPU_Sleeve",
       "ASA_Shell"
     ],
     "warnings": []
@@ -332,6 +334,6 @@
   "collision_check": {
     "cap_asa_vs_body_asa_mm3": 0.0,
     "collision_pass": true,
-    "cap_seated_z_mm": 100.425
+    "cap_seated_z_mm": 97.325
   }
 }
