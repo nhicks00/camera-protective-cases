@@ -59,7 +59,7 @@ class MevoCoreParams:
     device_nominal_l_mm: float = 69.85  # 2.75 inches
 
     # TPU clearance and wall
-    extra_length_mm: float = 3.0        # extra axial room for easy insertion
+    extra_length_mm: float = 1.5        # extra axial room for easy insertion
     tpu_clearance_mm: float = 0.15      # per side
     tpu_wall_mm: float = 1.8
 

@@ -3,7 +3,7 @@
     "device_nominal_w_mm": 90.0,
     "device_nominal_h_mm": 90.0,
     "device_nominal_l_mm": 69.85,
-    "extra_length_mm": 1.5,
+    "extra_length_mm": 3.0,
     "tpu_clearance_mm": 0.15,
     "tpu_wall_mm": 1.8,
     "asa_wall_mm": 2.2,
@@ -80,16 +80,16 @@
     "derived_mm": {
       "tpu_inner_w_mm": 90.3,
       "tpu_inner_h_mm": 90.3,
-      "tpu_inner_depth_mm": 71.64999999999999,
+      "tpu_inner_depth_mm": 73.14999999999999,
       "tpu_outer_w_mm": 93.89999999999999,
       "tpu_outer_h_mm": 93.89999999999999,
       "asa_inner_w_mm": 94.39999999999999,
       "asa_inner_h_mm": 94.39999999999999,
       "asa_outer_w_mm": 98.8,
       "asa_outer_h_mm": 98.8,
-      "asa_cavity_depth_mm": 76.64999999999999,
+      "asa_cavity_depth_mm": 78.14999999999999,
       "cavity_start_z_mm": 3.0,
-      "body_depth_mm": 79.64999999999999,
+      "body_depth_mm": 81.14999999999999,
       "lip_tip_w_mm": 94.11999999999999,
       "lip_tip_h_mm": 94.11999999999999
     },
@@ -114,20 +114,20 @@
         "side_slots": {
           "count_per_side": 5,
           "z_centers": [
-            21.824999999999996,
-            30.824999999999996,
-            39.824999999999996,
-            48.824999999999996,
-            57.824999999999996
+            22.574999999999996,
+            31.574999999999996,
+            40.574999999999996,
+            49.574999999999996,
+            58.574999999999996
           ]
         },
         "top_slots": {
           "count": 4,
           "z_centers": [
-            21.824999999999996,
-            30.824999999999996,
-            39.824999999999996,
-            48.824999999999996
+            22.574999999999996,
+            31.574999999999996,
+            40.574999999999996,
+            49.574999999999996
           ]
         }
       },
@@ -137,7 +137,7 @@
           "top_Y+",
           "left_X-"
         ],
-        "pad_z_center_mm": 64.64999999999999,
+        "pad_z_center_mm": 66.14999999999999,
         "boss_height_mm": 4.3,
         "slot_width_mm": 18.8,
         "rail_opening_mm": 13.5,
@@ -148,7 +148,7 @@
         "type": "flush_bumps",
         "pocket_count": 4,
         "setback_mm": 3.0,
-        "z_mm": 76.64999999999999
+        "z_mm": 78.14999999999999
       }
     }
   },
@@ -189,17 +189,17 @@
   "fit_alignment": {
     "radial_gap_w_each_mm": 0.25,
     "radial_gap_h_each_mm": 0.25,
-    "asa_cavity_depth_mm": 76.64999999999999,
-    "tpu_depth_mm": 71.64999999999999,
+    "asa_cavity_depth_mm": 78.14999999999999,
+    "tpu_depth_mm": 73.14999999999999,
     "cap_plug_intrusion_mm": 5.0,
     "axial_gap_behind_tpu_mm": 0.0,
-    "effective_camera_space_mm": 71.64999999999999,
+    "effective_camera_space_mm": 73.14999999999999,
     "device_length_mm": 69.85,
     "camera_fits": true
   },
   "collision_check": {
     "cap_vs_body_mm3": 0.0,
     "collision_pass": true,
-    "cap_seated_z_mm": 79.74999999999999
+    "cap_seated_z_mm": 81.24999999999999
   }
 }
