@@ -158,6 +158,23 @@ class MevoCoreParams:
     friction_ridge_height_mm: float = 0.8
     friction_ridge_setback_mm: float = 3.0
 
+    # Snap-fit clips (cantilever beams on inner ASA walls)
+    include_snap_clips: bool = True
+    snap_clip_beam_length_mm: float = 8.0    # cantilever length (along Z)
+    snap_clip_beam_width_mm: float = 6.0     # width along wall (along X or Y)
+    snap_clip_beam_thickness_mm: float = 1.5  # radial thickness
+    snap_clip_catch_height_mm: float = 1.0   # nub protrusion inward
+    snap_clip_catch_depth_mm: float = 1.0    # nub extent along Z
+    snap_clip_setback_mm: float = 3.0        # tip distance from rear edge
+    snap_clips_per_wall: int = 2             # clips per wall (8 total for 4 walls)
+    snap_clip_spread_mm: float = 30.0        # spacing between 2 clips on same wall
+
+    # Snap ridge on back cap plug (matches clip catch)
+    include_snap_ridge: bool = True
+    snap_ridge_height_mm: float = 1.0        # protrusion outward from plug
+    snap_ridge_depth_mm: float = 1.0         # extent along Z
+    snap_ridge_setback_mm: float = 3.0       # from plug tip
+
     # Rear TPU relief
     tpu_rear_cap_relief_depth_mm: float = 5.4
     tpu_rear_cap_relief_radial_mm: float = 0.3
@@ -331,6 +348,59 @@ def build_asa_shell(p: MevoCoreParams):
                 "pocket_count": 4,
                 "setback_mm": float(p.friction_ridge_setback_mm),
                 "z_mm": float(fr_z),
+            }
+
+        # Cantilever snap-fit clips on inner walls (8 total: 2 per wall)
+        snap_clip_info = None
+        if p.include_snap_clips:
+            clip_tip_z = body_depth - p.snap_clip_setback_mm
+            clip_base_z = clip_tip_z - p.snap_clip_beam_length_mm
+            clip_mid_z = 0.5 * (clip_base_z + clip_tip_z)
+            half_iw = 0.5 * asa_inner_w
+            half_ih = 0.5 * asa_inner_h
+            beam_t = p.snap_clip_beam_thickness_mm
+            catch_h = p.snap_clip_catch_height_mm
+            beam_w = p.snap_clip_beam_width_mm
+            beam_l = p.snap_clip_beam_length_mm
+            catch_d = p.snap_clip_catch_depth_mm
+            spread = 0.5 * p.snap_clip_spread_mm
+
+            # Y-offsets for 2 clips per wall (symmetric about center)
+            clip_offsets = [-spread, spread] if p.snap_clips_per_wall >= 2 else [0.0]
+
+            # X walls (left/right): beams protrude inward from inner X face
+            for sx in (-1.0, 1.0):
+                beam_x = sx * (half_iw - 0.5 * beam_t)
+                nub_x = sx * (half_iw - beam_t - 0.5 * catch_h)
+                for dy in clip_offsets:
+                    with Locations((beam_x, dy, clip_mid_z)):
+                        Box(beam_t, beam_w, beam_l)
+                    nub_z = clip_tip_z - 0.5 * catch_d
+                    with Locations((nub_x, dy, nub_z)):
+                        Box(catch_h, beam_w, catch_d)
+
+            # Y walls (top/bottom): beams protrude inward from inner Y face
+            for sy in (-1.0, 1.0):
+                beam_y = sy * (half_ih - 0.5 * beam_t)
+                nub_y = sy * (half_ih - beam_t - 0.5 * catch_h)
+                for dx in clip_offsets:
+                    with Locations((dx, beam_y, clip_mid_z)):
+                        Box(beam_w, beam_t, beam_l)
+                    nub_z = clip_tip_z - 0.5 * catch_d
+                    with Locations((dx, nub_y, nub_z)):
+                        Box(beam_w, catch_h, catch_d)
+
+            snap_clip_info = {
+                "enabled": True,
+                "total_clips": 4 * len(clip_offsets),
+                "beam_length_mm": float(beam_l),
+                "beam_width_mm": float(beam_w),
+                "beam_thickness_mm": float(beam_t),
+                "catch_height_mm": float(catch_h),
+                "catch_depth_mm": float(catch_d),
+                "clip_tip_z_mm": float(clip_tip_z),
+                "setback_mm": float(p.snap_clip_setback_mm),
+                "spread_mm": float(p.snap_clip_spread_mm),
             }
 
         # Front lens cutout
@@ -549,6 +619,7 @@ def build_asa_shell(p: MevoCoreParams):
             },
             "cold_shoe": cold_shoe_info if cold_shoe_info else {"enabled": False},
             "friction_ridge": friction_ridge_info if friction_ridge_info else {"enabled": False},
+            "snap_clips": snap_clip_info if snap_clip_info else {"enabled": False},
         },
     }
 
@@ -781,6 +852,45 @@ def build_back_cap(p: MevoCoreParams):
         except Exception:
             pass
 
+    # Snap ridges on plug outer surface (matching shell snap clips)
+    snap_ridge_info = None
+    if p.include_snap_ridge and p.snap_ridge_height_mm > 0.0:
+        plug_tip_z = p.back_cap_thickness_mm + p.back_cap_lip_depth_mm
+        ridge_z = plug_tip_z - p.snap_ridge_setback_mm
+        ridge_h = p.snap_ridge_height_mm
+        ridge_d = p.snap_ridge_depth_mm
+        half_lw = 0.5 * lip_tip_w
+        half_lh = 0.5 * lip_tip_h
+        spread = 0.5 * p.snap_clip_spread_mm
+        clip_offsets = [-spread, spread] if p.snap_clips_per_wall >= 2 else [0.0]
+
+        with BuildPart() as ridge_bp:
+            # X wall ridges (left/right)
+            for sx in (-1.0, 1.0):
+                ridge_x = sx * (half_lw + 0.5 * ridge_h)
+                for dy in clip_offsets:
+                    with Locations((ridge_x, dy, ridge_z)):
+                        Box(ridge_h, p.snap_clip_beam_width_mm, ridge_d)
+            # Y wall ridges (top/bottom)
+            for sy in (-1.0, 1.0):
+                ridge_y = sy * (half_lh + 0.5 * ridge_h)
+                for dx in clip_offsets:
+                    with Locations((dx, ridge_y, ridge_z)):
+                        Box(p.snap_clip_beam_width_mm, ridge_h, ridge_d)
+        try:
+            cap = _largest_solid(cap + ridge_bp.part)
+        except Exception:
+            pass
+
+        snap_ridge_info = {
+            "enabled": True,
+            "ridge_count": 4 * len(clip_offsets),
+            "ridge_height_mm": float(ridge_h),
+            "ridge_depth_mm": float(ridge_d),
+            "ridge_z_mm": float(ridge_z),
+            "setback_mm": float(p.snap_ridge_setback_mm),
+        }
+
     cap.label = "ASA_Back_Cap"
 
     report = {
@@ -805,6 +915,7 @@ def build_back_cap(p: MevoCoreParams):
                 "center_y_mm": float(p.power_cutout_center_y_mm),
             },
         },
+        "snap_ridge": snap_ridge_info if snap_ridge_info else {"enabled": False},
         "named_bodies": ["ASA_Back_Cap"],
     }
 
@@ -819,6 +930,8 @@ def main():
                         help="Output directory")
     parser.add_argument("--no-cold-shoe", action="store_true")
     parser.add_argument("--no-friction-ridge", action="store_true")
+    parser.add_argument("--no-snap-clips", action="store_true")
+    parser.add_argument("--no-snap-ridge", action="store_true")
     parser.add_argument("--no-hood", action="store_true")
     parser.add_argument("--no-vents", action="store_true")
     parser.add_argument("--lens-diameter", type=float, default=None)
@@ -831,6 +944,10 @@ def main():
         p.include_cold_shoe = False
     if args.no_friction_ridge:
         p.include_friction_ridge = False
+    if args.no_snap_clips:
+        p.include_snap_clips = False
+    if args.no_snap_ridge:
+        p.include_snap_ridge = False
     if args.no_hood:
         p.include_lens_hood = False
     if args.no_vents:
