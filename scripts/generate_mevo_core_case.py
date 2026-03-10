@@ -33,6 +33,7 @@ from build123d import (
     BuildSketch,
     Circle,
     Compound,
+    Cone,
     Cylinder,
     Location,
     Locations,
@@ -87,6 +88,8 @@ class MevoCoreParams:
     lens_hood_depth_mm: float = 63.5    # 2.5 inches
     lens_hood_wall_mm: float = 2.5
     lens_hood_clearance_mm: float = 0.0  # hood starts at lens cutout edge
+    lens_hood_base_flare_mm: float = 6.0   # extra outer radius at root for strength
+    lens_hood_base_depth_mm: float = 8.0   # axial depth of the taper zone
 
     # Skeleton TPU frame
     tpu_corner_bumper_w_mm: float = 12.0
@@ -554,15 +557,25 @@ def build_asa_shell(p: MevoCoreParams):
 
     asa_shell = _largest_solid(asa_bp.part)
 
-    # Build full circular tube lens hood, then union
+    # Build full circular tube lens hood with flared base, then union
     if p.include_lens_hood and p.lens_hood_depth_mm > 0.0:
         hood_inner_r = 0.5 * p.lens_cutout_d_mm + p.lens_hood_clearance_mm
         hood_outer_r = hood_inner_r + p.lens_hood_wall_mm
+        cx, cy = p.lens_center_x_mm, p.lens_center_y_mm
+        flare_r = hood_outer_r + p.lens_hood_base_flare_mm
+        flare_d = min(p.lens_hood_base_depth_mm, p.lens_hood_depth_mm * 0.4)
         with BuildPart() as hood_bp:
-            with Locations((p.lens_center_x_mm, p.lens_center_y_mm, 0.0)):
+            # Main straight tube
+            with Locations((cx, cy, 0.0)):
                 Cylinder(hood_outer_r, p.lens_hood_depth_mm, rotation=(180, 0, 0),
                          align=(Align.CENTER, Align.CENTER, Align.MIN))
-            with Locations((p.lens_center_x_mm, p.lens_center_y_mm, 0.1)):
+            # Flared base cone: wider at Z=0, tapers to hood_outer_r at flare_d depth
+            if p.lens_hood_base_flare_mm > 0.0 and flare_d > 0.0:
+                with Locations((cx, cy, 0.0)):
+                    Cone(flare_r, hood_outer_r, flare_d, rotation=(180, 0, 0),
+                         align=(Align.CENTER, Align.CENTER, Align.MIN))
+            # Subtract inner bore through full depth (constant inner radius)
+            with Locations((cx, cy, 0.1)):
                 Cylinder(hood_inner_r, p.lens_hood_depth_mm + 0.2, rotation=(180, 0, 0),
                          align=(Align.CENTER, Align.CENTER, Align.MIN),
                          mode=Mode.SUBTRACT)

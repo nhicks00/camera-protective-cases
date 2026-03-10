@@ -21,8 +21,6 @@
     "lens_hood_depth_mm": 63.5,
     "lens_hood_wall_mm": 2.5,
     "lens_hood_clearance_mm": 0.0,
-    "lens_hood_base_flare_mm": 6.0,
-    "lens_hood_base_depth_mm": 8.0,
     "tpu_corner_bumper_w_mm": 12.0,
     "tpu_edge_rail_w_mm": 4.0,
     "tpu_front_edge_wrap_depth_mm": 5.0,
