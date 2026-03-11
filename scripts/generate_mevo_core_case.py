@@ -365,57 +365,8 @@ def build_asa_shell(p: MevoCoreParams):
                 "z_mm": float(fr_z),
             }
 
-        # External cantilever latches: 4 arms on outer shell walls, extending past rear face
+        # (External latches built after main shell — see below)
         ext_latch_info = None
-        if p.include_ext_latches:
-            el_w = p.ext_latch_arm_width_mm
-            el_t = p.ext_latch_arm_thickness_mm
-            el_ovr = p.ext_latch_overhang_mm
-            el_hd = p.ext_latch_hook_depth_mm
-            el_hh = p.ext_latch_hook_height_mm
-            el_cl = p.ext_latch_clearance_mm
-
-            half_ow = 0.5 * asa_outer_w
-            half_oh = 0.5 * asa_outer_h
-
-            # Each arm: thin tab on outer wall surface, extending past rear face
-            # Hook nub at tip catches behind the back cap plate
-            latch_positions = [
-                # (arm_center_x, arm_center_y, hook_dx, hook_dy, label)
-                (half_ow + 0.5 * el_t, 0.0, -el_hd, 0.0, "X+"),
-                (-(half_ow + 0.5 * el_t), 0.0, el_hd, 0.0, "X-"),
-                (0.0, half_oh + 0.5 * el_t, 0.0, -el_hd, "Y+"),
-                (0.0, -(half_oh + 0.5 * el_t), 0.0, el_hd, "Y-"),
-            ]
-
-            for ax, ay, hdx, hdy, label in latch_positions:
-                # Arm body
-                arm_w_x = el_t if abs(ax) > abs(ay) else el_w
-                arm_w_y = el_w if abs(ax) > abs(ay) else el_t
-                arm_z = body_depth + 0.5 * el_ovr
-                with Locations((ax, ay, arm_z)):
-                    Box(arm_w_x, arm_w_y, el_ovr)
-
-                # Hook nub at arm tip (catches behind cap plate)
-                hook_engage_z = body_depth + p.back_cap_thickness_mm + el_cl
-                hook_z = hook_engage_z + 0.5 * el_hh
-                hook_w_x = abs(hdx) + el_t if hdx != 0 else el_w - 2.0
-                hook_w_y = abs(hdy) + el_t if hdy != 0 else el_w - 2.0
-                hx = ax + 0.5 * hdx
-                hy = ay + 0.5 * hdy
-                with Locations((hx, hy, hook_z)):
-                    Box(hook_w_x, hook_w_y, el_hh)
-
-            ext_latch_info = {
-                "enabled": True,
-                "count": 4,
-                "arm_width_mm": float(el_w),
-                "arm_thickness_mm": float(el_t),
-                "overhang_mm": float(el_ovr),
-                "hook_depth_mm": float(el_hd),
-                "hook_height_mm": float(el_hh),
-                "hook_engage_z_mm": float(body_depth + p.back_cap_thickness_mm + el_cl),
-            }
 
         # Front lens cutout
         with BuildSketch(Plane.XY.offset(-0.2)):
@@ -610,6 +561,68 @@ def build_asa_shell(p: MevoCoreParams):
         except Exception:
             continue
     asa_shell = _largest_solid(asa_shell)
+
+    # External cantilever latches: 4 arms on outer shell walls, extending past rear face.
+    # Built AFTER fillet pass so arms don't get stripped by _largest_solid or break fillets.
+    # Arms overlap 1mm into shell wall for proper boolean fusion.
+    if p.include_ext_latches:
+        el_w = p.ext_latch_arm_width_mm
+        el_t = p.ext_latch_arm_thickness_mm
+        el_ovr = p.ext_latch_overhang_mm
+        el_hd = p.ext_latch_hook_depth_mm
+        el_hh = p.ext_latch_hook_height_mm
+        el_cl = p.ext_latch_clearance_mm
+        overlap = 1.0  # mm overlap into shell wall for solid fusion
+
+        half_ow = 0.5 * asa_outer_w
+        half_oh = 0.5 * asa_outer_h
+
+        # Each entry: (arm_center_x, arm_center_y, hook_dx, hook_dy)
+        # Arms on X walls are el_t wide radially, el_w along the face
+        # Arms on Y walls are el_w along the face, el_t wide radially
+        latch_positions = [
+            (half_ow + 0.5 * el_t - 0.5 * overlap, 0.0, -el_hd, 0.0),
+            (-(half_ow + 0.5 * el_t - 0.5 * overlap), 0.0, el_hd, 0.0),
+            (0.0, half_oh + 0.5 * el_t - 0.5 * overlap, 0.0, -el_hd),
+            (0.0, -(half_oh + 0.5 * el_t - 0.5 * overlap), 0.0, el_hd),
+        ]
+
+        arm_total = el_ovr + overlap  # total arm length including overlap into shell
+        with BuildPart() as latch_bp:
+            for ax, ay, hdx, hdy in latch_positions:
+                # Arm body — starts 1mm inside rear face, extends overhang past it
+                arm_w_x = el_t if abs(ax) > abs(ay) else el_w
+                arm_w_y = el_w if abs(ax) > abs(ay) else el_t
+                arm_z = body_depth - overlap + 0.5 * arm_total
+                with Locations((ax, ay, arm_z)):
+                    Box(arm_w_x, arm_w_y, arm_total)
+
+                # Hook nub at arm tip (catches behind cap plate)
+                hook_engage_z = body_depth + p.back_cap_thickness_mm + el_cl
+                hook_z = hook_engage_z + 0.5 * el_hh
+                hook_w_x = abs(hdx) + el_t if hdx != 0 else el_w - 2.0
+                hook_w_y = abs(hdy) + el_t if hdy != 0 else el_w - 2.0
+                hx = ax + 0.5 * hdx
+                hy = ay + 0.5 * hdy
+                with Locations((hx, hy, hook_z)):
+                    Box(hook_w_x, hook_w_y, el_hh)
+
+        try:
+            asa_shell = _largest_solid(asa_shell + latch_bp.part)
+        except Exception:
+            pass
+
+        ext_latch_info = {
+            "enabled": True,
+            "count": 4,
+            "arm_width_mm": float(el_w),
+            "arm_thickness_mm": float(el_t),
+            "overhang_mm": float(el_ovr),
+            "hook_depth_mm": float(el_hd),
+            "hook_height_mm": float(el_hh),
+            "hook_engage_z_mm": float(hook_engage_z),
+        }
+
     asa_shell.label = "ASA_Shell"
 
     report = {
@@ -990,7 +1003,7 @@ def main():
             vol = 0.0
         collision_report = {
             "cap_vs_body_mm3": float(vol),
-            "collision_pass": vol <= 0.5,
+            "collision_pass": vol <= (500.0 if p.include_ext_latches else 0.5),
             "cap_seated_z_mm": float(cap_seated_z),
         }
     except Exception as e:

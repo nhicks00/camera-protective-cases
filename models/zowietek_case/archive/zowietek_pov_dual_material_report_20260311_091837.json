@@ -202,7 +202,7 @@
     ]
   },
   "collision_check": {
-    "cap_vs_body_mm3": 153.1608600162267,
+    "cap_vs_body_mm3": 81.16086001622652,
     "collision_pass": true,
     "cap_seated_z_mm": 72.89999999999999
   }

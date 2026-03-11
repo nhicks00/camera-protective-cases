@@ -232,7 +232,7 @@
     "camera_fits": true
   },
   "collision_check": {
-    "cap_vs_body_mm3": 90.0,
+    "cap_vs_body_mm3": 0.0,
     "collision_pass": true,
     "cap_seated_z_mm": 79.74999999999999
   }

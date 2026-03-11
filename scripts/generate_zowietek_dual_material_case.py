@@ -469,7 +469,8 @@ def build_dual_material_body(p: ZowietekParams):
         except Exception:
             pass
 
-    # External cantilever latches: 4 arms on outer shell walls
+    # External cantilever latches: 4 arms on outer shell walls, extending past rear face.
+    # Arms overlap 1mm into shell wall for proper boolean fusion.
     ext_latch_info = None
     if p.include_ext_latches:
         el_w = p.ext_latch_arm_width_mm
@@ -478,23 +479,25 @@ def build_dual_material_body(p: ZowietekParams):
         el_hd = p.ext_latch_hook_depth_mm
         el_hh = p.ext_latch_hook_height_mm
         el_cl = p.ext_latch_clearance_mm
+        overlap = 1.0  # mm overlap into shell wall for solid fusion
 
         half_ow = 0.5 * asa_outer_w
         half_oh = 0.5 * asa_outer_h
 
+        arm_total = el_ovr + overlap
         with BuildPart() as latch_bp:
             latch_positions = [
-                (half_ow + 0.5 * el_t, 0.0, -el_hd, 0.0),
-                (-(half_ow + 0.5 * el_t), 0.0, el_hd, 0.0),
-                (0.0, half_oh + 0.5 * el_t, 0.0, -el_hd),
-                (0.0, -(half_oh + 0.5 * el_t), 0.0, el_hd),
+                (half_ow + 0.5 * el_t - 0.5 * overlap, 0.0, -el_hd, 0.0),
+                (-(half_ow + 0.5 * el_t - 0.5 * overlap), 0.0, el_hd, 0.0),
+                (0.0, half_oh + 0.5 * el_t - 0.5 * overlap, 0.0, -el_hd),
+                (0.0, -(half_oh + 0.5 * el_t - 0.5 * overlap), 0.0, el_hd),
             ]
             for ax, ay, hdx, hdy in latch_positions:
                 arm_w_x = el_t if abs(ax) > abs(ay) else el_w
                 arm_w_y = el_w if abs(ax) > abs(ay) else el_t
-                arm_z = body_depth + 0.5 * el_ovr
+                arm_z = body_depth - overlap + 0.5 * arm_total
                 with Locations((ax, ay, arm_z)):
-                    Box(arm_w_x, arm_w_y, el_ovr)
+                    Box(arm_w_x, arm_w_y, arm_total)
 
                 hook_engage_z = body_depth + p.back_cap_thickness_mm + el_cl
                 hook_z = hook_engage_z + 0.5 * el_hh
