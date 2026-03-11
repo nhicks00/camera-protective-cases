@@ -795,22 +795,43 @@ def build_tpu_frame(p: MevoCoreParams, side_slot_z_centers, top_vent_z_centers, 
                 fillet(vertices(), tripod_tpu_corner_r)
         extrude(amount=tripod_tpu_cut_depth, mode=Mode.SUBTRACT)
 
-        # Rear corner bumpers: small wraps at each corner that protect rear edges
+        # Rear corner bumpers: L-shaped wraps at each of 4 corners that protect
+        # the rear edges of the camera. They extend from inside the surviving
+        # corner leg (overlapping 2mm for fusion) through the relief zone to
+        # the rear face, forming a small bumper shelf at each corner.
         if p.include_rear_tpu_bumpers and p.tpu_rear_bumper_depth_mm > 0.0:
-            rb_depth = p.tpu_rear_bumper_depth_mm
+            rb_wrap = p.tpu_rear_bumper_depth_mm   # how far bumper wraps onto rear face (inward)
             rb_wall = p.tpu_rear_bumper_wall_mm
-            bumper_extent = p.tpu_corner_bumper_w_mm  # same width as front corner bumpers
-            rear_z = cavity_start_z + cavity_depth  # rear face of TPU
+            bumper_extent = p.tpu_corner_bumper_w_mm
+            rear_z = cavity_start_z + cavity_depth
+            # Total axial span = relief depth + 2mm overlap into surviving corner leg
+            rb_overlap = 2.0
+            rb_total_z = rear_relief + rb_overlap
+            rb_z_center = rear_z - 0.5 * rb_total_z
 
-            # 4 corner bumper wraps at rear face
+            half_tw = 0.5 * tpu_outer_w
+            half_th = 0.5 * tpu_outer_h
+
             for sx in (-1.0, 1.0):
                 for sy in (-1.0, 1.0):
-                    cx = sx * (0.5 * tpu_inner_w + 0.5 * rb_wall)
-                    cy = sy * (0.5 * tpu_inner_h + 0.5 * rb_wall)
-                    with Locations((cx, cy, rear_z - 0.5 * rb_depth)):
-                        Box(bumper_extent, rb_wall, rb_depth)
-                    with Locations((cx, cy, rear_z - 0.5 * rb_depth)):
-                        Box(rb_wall, bumper_extent, rb_depth)
+                    # Wall-parallel pieces (continuation of corner leg to rear face)
+                    # X-wall leg piece at this corner
+                    wx = sx * (half_tw - 0.5 * rb_wall)
+                    wy = sy * (half_th - 0.5 * bumper_extent)
+                    with Locations((wx, wy, rb_z_center)):
+                        Box(rb_wall, bumper_extent, rb_total_z)
+                    # Y-wall leg piece at this corner
+                    wx2 = sx * (half_tw - 0.5 * bumper_extent)
+                    wy2 = sy * (half_th - 0.5 * rb_wall)
+                    with Locations((wx2, wy2, rb_z_center)):
+                        Box(bumper_extent, rb_wall, rb_total_z)
+
+                    # Rear face wrap piece (bumper shelf on rear face at this corner)
+                    # Small pad on the inner cavity rear face
+                    rx = sx * (0.5 * tpu_inner_w + 0.5 * rb_wrap)
+                    ry = sy * (0.5 * tpu_inner_h + 0.5 * rb_wrap)
+                    with Locations((rx, ry, rear_z - 0.5 * rb_wall)):
+                        Box(rb_wrap + rb_wall, rb_wrap + rb_wall, rb_wall)
 
     tpu_frame = _largest_solid(tpu_bp.part)
 

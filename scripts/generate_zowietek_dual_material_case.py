@@ -646,21 +646,35 @@ def build_dual_material_body(p: ZowietekParams):
             with Locations((0.0, half_tpu_outer_h - 0.5 * tripod_tpu_cut_depth + 0.2, tripod_z_top)):
                 Box(tpu_rect_w, tripod_tpu_cut_depth, tpu_rect_l, mode=Mode.SUBTRACT)
 
-        # Rear corner bumpers: small wraps at each corner protecting rear edges
+        # Rear corner bumpers: L-shaped wraps at each of 4 corners that protect
+        # the rear edges. Extend from surviving corner leg (2mm overlap) through
+        # the relief zone to the rear face, plus a small shelf on the rear face.
         if p.include_rear_tpu_bumpers and p.tpu_rear_bumper_depth_mm > 0.0:
-            rb_depth = p.tpu_rear_bumper_depth_mm
+            rb_wrap = p.tpu_rear_bumper_depth_mm
             rb_wall = p.tpu_rear_bumper_wall_mm
             bumper_extent = p.tpu_corner_bumper_w_mm
             rear_z = cavity_start_z + cavity_depth
+            rb_overlap = 2.0
+            rb_total_z = rear_relief_depth + rb_overlap if rear_relief_depth > 0 else rb_wrap + rb_overlap
+            rb_z_center = rear_z - 0.5 * rb_total_z
 
             for sx in (-1.0, 1.0):
                 for sy in (-1.0, 1.0):
-                    cx = sx * (0.5 * tpu_inner_w + 0.5 * rb_wall)
-                    cy = sy * (0.5 * tpu_inner_h + 0.5 * rb_wall)
-                    with Locations((cx, cy, rear_z - 0.5 * rb_depth)):
-                        Box(bumper_extent, rb_wall, rb_depth)
-                    with Locations((cx, cy, rear_z - 0.5 * rb_depth)):
-                        Box(rb_wall, bumper_extent, rb_depth)
+                    # Wall-parallel pieces (continuation of corner leg to rear face)
+                    wx = sx * (half_tpu_outer_w - 0.5 * rb_wall)
+                    wy = sy * (half_tpu_outer_h - 0.5 * bumper_extent)
+                    with Locations((wx, wy, rb_z_center)):
+                        Box(rb_wall, bumper_extent, rb_total_z)
+                    wx2 = sx * (half_tpu_outer_w - 0.5 * bumper_extent)
+                    wy2 = sy * (half_tpu_outer_h - 0.5 * rb_wall)
+                    with Locations((wx2, wy2, rb_z_center)):
+                        Box(bumper_extent, rb_wall, rb_total_z)
+
+                    # Rear face wrap piece (bumper shelf at corner)
+                    rx = sx * (0.5 * tpu_inner_w + 0.5 * rb_wrap)
+                    ry = sy * (0.5 * tpu_inner_h + 0.5 * rb_wrap)
+                    with Locations((rx, ry, rear_z - 0.5 * rb_wall)):
+                        Box(rb_wrap + rb_wall, rb_wrap + rb_wall, rb_wall)
 
     tpu_frame = _largest_solid(tpu_bp.part)
     tpu_frame.label = "TPU_Frame"
