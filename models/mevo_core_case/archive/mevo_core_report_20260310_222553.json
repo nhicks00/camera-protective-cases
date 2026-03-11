@@ -20,7 +20,7 @@
     "include_lens_hood": true,
     "lens_hood_depth_mm": 63.5,
     "lens_hood_wall_mm": 2.5,
-    "lens_hood_clearance_mm": 2.5,
+    "lens_hood_clearance_mm": 0.0,
     "lens_hood_base_flare_mm": 6.0,
     "lens_hood_base_depth_mm": 8.0,
     "tpu_corner_bumper_w_mm": 12.0,
@@ -34,13 +34,13 @@
     "tripod_rect_l_mm": 50.8,
     "tripod_center_from_front_mm": 34.925,
     "include_thermal_vents": true,
-    "side_vent_count": 7,
+    "side_vent_count": 5,
     "side_vent_slot_h_mm": 20.0,
     "side_vent_slot_w_mm": 3.0,
     "side_vent_pitch_z_mm": 9.0,
     "side_vent_center_y_mm": 0.0,
     "side_vent_cut_depth_mm": 6.0,
-    "top_vent_count": 7,
+    "top_vent_count": 5,
     "top_vent_slot_width_mm": 24.0,
     "top_vent_slot_height_mm": 3.5,
     "top_vent_pitch_z_mm": 9.0,
@@ -72,7 +72,7 @@
     "power_cutout_center_y_mm": 33.1,
     "power_cutout_corner_r_mm": 2.0,
     "cutout_oversize_mm": 1.0,
-    "include_friction_ridge": false,
+    "include_friction_ridge": true,
     "friction_ridge_height_mm": 0.8,
     "friction_ridge_setback_mm": 3.0,
     "include_snap_clips": true,
@@ -118,7 +118,7 @@
         "type": "full_tube",
         "depth_mm": 63.5,
         "wall_mm": 2.5,
-        "clearance_mm": 2.5
+        "clearance_mm": 0.0
       },
       "tripod_cutout": {
         "rect_w_mm": 63.5,
@@ -127,21 +127,18 @@
       },
       "thermal_vents": {
         "side_slots": {
-          "count_per_side": 7,
+          "count_per_side": 5,
           "z_centers": [
-            12.824999999999996,
             21.824999999999996,
             30.824999999999996,
             39.824999999999996,
             48.824999999999996,
-            57.824999999999996,
-            66.82499999999999
+            57.824999999999996
           ]
         },
         "top_slots": {
-          "count": 5,
+          "count": 4,
           "z_centers": [
-            15.0,
             21.824999999999996,
             30.824999999999996,
             39.824999999999996,
@@ -162,7 +159,11 @@
         "slide_in_from": "rear"
       },
       "friction_ridge": {
-        "enabled": false
+        "enabled": true,
+        "type": "flush_bumps",
+        "pocket_count": 4,
+        "setback_mm": 3.0,
+        "z_mm": 76.64999999999999
       },
       "snap_clips": {
         "enabled": true,

@@ -40,7 +40,7 @@
     "side_vent_pitch_z_mm": 9.0,
     "side_vent_center_y_mm": 0.0,
     "side_vent_cut_depth_mm": 6.0,
-    "top_vent_count": 7,
+    "top_vent_count": 6,
     "top_vent_slot_width_mm": 24.0,
     "top_vent_slot_height_mm": 3.5,
     "top_vent_pitch_z_mm": 9.0,
@@ -139,13 +139,12 @@
           ]
         },
         "top_slots": {
-          "count": 5,
+          "count": 4,
           "z_centers": [
-            15.0,
-            21.824999999999996,
-            30.824999999999996,
-            39.824999999999996,
-            48.824999999999996
+            17.324999999999996,
+            26.324999999999996,
+            35.324999999999996,
+            44.324999999999996
           ]
         }
       },

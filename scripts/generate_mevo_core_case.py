@@ -87,7 +87,7 @@ class MevoCoreParams:
     include_lens_hood: bool = True
     lens_hood_depth_mm: float = 63.5    # 2.5 inches
     lens_hood_wall_mm: float = 2.5
-    lens_hood_clearance_mm: float = 0.0  # hood starts at lens cutout edge
+    lens_hood_clearance_mm: float = 2.5  # hood bore wider than front face hole for ledge/strength
     lens_hood_base_flare_mm: float = 6.0   # extra outer radius at root for strength
     lens_hood_base_depth_mm: float = 8.0   # axial depth of the taper zone
 
@@ -108,13 +108,13 @@ class MevoCoreParams:
 
     # Thermal vents
     include_thermal_vents: bool = True
-    side_vent_count: int = 5
+    side_vent_count: int = 7              # non-cold-shoe side gets all 7; cold-shoe side filtered
     side_vent_slot_h_mm: float = 20.0
     side_vent_slot_w_mm: float = 3.0
     side_vent_pitch_z_mm: float = 9.0
     side_vent_center_y_mm: float = 0.0
     side_vent_cut_depth_mm: float = 6.0
-    top_vent_count: int = 5
+    top_vent_count: int = 7               # cold-shoe filter removes 2 rear slots; net +1 vs old 5
     top_vent_slot_width_mm: float = 24.0
     top_vent_slot_height_mm: float = 3.5
     top_vent_pitch_z_mm: float = 9.0
@@ -156,8 +156,8 @@ class MevoCoreParams:
     # Oversize for cutouts (cable boot clearance)
     cutout_oversize_mm: float = 1.0
 
-    # Retention: bump pockets (4x)
-    include_friction_ridge: bool = True
+    # Retention: bump pockets — disabled; snap clips handle retention, bumps create ejection force
+    include_friction_ridge: bool = False
     friction_ridge_height_mm: float = 0.8
     friction_ridge_setback_mm: float = 3.0
 
