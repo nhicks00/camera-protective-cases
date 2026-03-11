@@ -109,13 +109,13 @@ class MevoCoreParams:
     # Thermal vents
     include_thermal_vents: bool = True
     side_vent_count: int = 7              # non-cold-shoe side gets all 7; cold-shoe side filtered
-    side_vent_slot_h_mm: float = 20.0
+    side_vent_slot_h_mm: float = 26.0     # +30% longer
     side_vent_slot_w_mm: float = 3.0
     side_vent_pitch_z_mm: float = 9.0
     side_vent_center_y_mm: float = 0.0
     side_vent_cut_depth_mm: float = 6.0
     top_vent_count: int = 7               # cold-shoe filter removes 2 rear slots; net +1 vs old 5
-    top_vent_slot_width_mm: float = 24.0
+    top_vent_slot_width_mm: float = 31.0  # +30% longer
     top_vent_slot_height_mm: float = 3.5
     top_vent_pitch_z_mm: float = 9.0
     top_vent_cut_depth_mm: float = 6.0
@@ -176,13 +176,14 @@ class MevoCoreParams:
     snap_ridge_depth_mm: float = 1.0
     snap_ridge_setback_mm: float = 3.0
 
-    # Bayonet twist-lock: insert straight, rotate CW (viewed from rear) to lock
-    # 4 L-channels in shell walls + 4 matching tabs on cap plug
+    # Bayonet twist-lock: insert straight, rotate CW (viewed from rear) to lock.
+    # Channels on X+ (right) and Y- (bottom) ONLY — cold-shoe-free walls.
+    # tab_h 0.8mm leaves 1.0mm of ASA wall backing — printable and strong in shear.
     include_twist_lock: bool = True
-    twist_lock_tab_h_mm: float = 1.5    # radial depth of tab into wall
-    twist_lock_tab_w_mm: float = 9.0    # tangential width of tab
-    twist_lock_tab_t_mm: float = 2.5    # axial thickness of tab
-    twist_lock_travel_mm: float = 14.0  # channel travel distance (rotation arc)
+    twist_lock_tab_h_mm: float = 0.8    # radial depth into wall (leaves 1.0mm backing)
+    twist_lock_tab_w_mm: float = 12.0   # tangential width (wider for more shear area)
+    twist_lock_tab_t_mm: float = 3.0    # axial thickness of tab
+    twist_lock_travel_mm: float = 16.0  # channel travel distance (rotation arc)
     twist_lock_clearance_mm: float = 0.4  # sliding clearance for easy rotation
 
     # Rear TPU relief
@@ -360,56 +361,40 @@ def build_asa_shell(p: MevoCoreParams):
                 "z_mm": float(fr_z),
             }
 
-        # Bayonet twist-lock: L-shaped channel cuts (entry slot + horizontal channel) on each wall
-        # Insert with tabs at y=0 (X walls) / x=0 (Y walls), rotate CW from rear to lock.
+        # Bayonet twist-lock: L-channels on X+ (right) and Y- (bottom) ONLY.
+        # These are the two cold-shoe-free walls — no interference, adequate wall backing.
+        # tab_h=0.8mm leaves 1.0mm of ASA wall; wide tab (12mm) compensates in shear area.
+        # Insert with X+ tab at y=0, Y- tab at x=0; rotate CW (from rear) to lock.
         twist_lock_info = None
         if p.include_twist_lock:
-            tl_h = p.twist_lock_tab_h_mm        # radial depth into wall
-            tl_w = p.twist_lock_tab_w_mm        # tangential tab width
-            tl_t = p.twist_lock_tab_t_mm        # axial tab thickness
-            tl_tr = p.twist_lock_travel_mm      # channel travel
-            tl_cl = p.twist_lock_clearance_mm   # clearance
+            tl_h = p.twist_lock_tab_h_mm
+            tl_w = p.twist_lock_tab_w_mm
+            tl_t = p.twist_lock_tab_t_mm
+            tl_tr = p.twist_lock_travel_mm
+            tl_cl = p.twist_lock_clearance_mm
 
             half_iw = 0.5 * asa_inner_w
             half_ih = 0.5 * asa_inner_h
 
-            # Tab Z center when cap is fully seated (cap local: plate_t + lip_depth/2)
-            tab_z_local = p.back_cap_thickness_mm + 0.5 * p.back_cap_lip_depth_mm  # = 5.5 mm
-            tab_z_shell = body_depth - tab_z_local  # shell frame Z of tab center
+            tab_z_local = p.back_cap_thickness_mm + 0.5 * p.back_cap_lip_depth_mm
+            tab_z_shell = body_depth - tab_z_local
 
-            # Entry slot: opens at rear face, sized for tab insertion (with clearance)
-            slot_rad = tl_h + tl_cl          # radial slot size (into wall)
-            slot_tang = tl_w + tl_cl         # tangential slot size
-            # slot depth from rear = enough to fully admit tab as cap seats
-            slot_depth = tab_z_local + 0.5 * tl_t + 1.0  # = 5.5 + 1.25 + 1.0 = 7.75 mm
+            slot_rad = tl_h + tl_cl
+            slot_tang = tl_w + tl_cl
+            slot_depth = tab_z_local + 0.5 * tl_t + 1.0
+            ch_tang = tl_tr + slot_tang
+            ch_z = tl_t + 2.0 * tl_cl
+            eps = 0.2
 
-            # Channel: horizontal run at tab Z, size = travel + entry_width in tang, tab_t+clear in Z
-            ch_tang = tl_tr + slot_tang     # total tangential extent (travel + entry overlap)
-            ch_z = tl_t + 2.0 * tl_cl      # axial clearance
-
-            eps = 0.2  # boolean overlap epsilon
-
-            # X+ wall: tab travels -Y on CW rotation
+            # X+ wall only (right side, no cold shoe): tab travels -Y on CW rotation
             rx = half_iw + 0.5 * slot_rad
             with Locations((rx, 0.0, body_depth - 0.5 * slot_depth)):
                 Box(slot_rad + eps, slot_tang, slot_depth + eps, mode=Mode.SUBTRACT)
             with Locations((rx, -0.5 * ch_tang, tab_z_shell)):
                 Box(slot_rad + eps, ch_tang, ch_z, mode=Mode.SUBTRACT)
 
-            # X- wall: tab travels +Y
-            with Locations((-rx, 0.0, body_depth - 0.5 * slot_depth)):
-                Box(slot_rad + eps, slot_tang, slot_depth + eps, mode=Mode.SUBTRACT)
-            with Locations((-rx, +0.5 * ch_tang, tab_z_shell)):
-                Box(slot_rad + eps, ch_tang, ch_z, mode=Mode.SUBTRACT)
-
-            # Y+ wall: tab travels +X
+            # Y- wall only (bottom, no cold shoe): tab travels -X on CW rotation
             ry = half_ih + 0.5 * slot_rad
-            with Locations((0.0, ry, body_depth - 0.5 * slot_depth)):
-                Box(slot_tang, slot_rad + eps, slot_depth + eps, mode=Mode.SUBTRACT)
-            with Locations((+0.5 * ch_tang, ry, tab_z_shell)):
-                Box(ch_tang, slot_rad + eps, ch_z, mode=Mode.SUBTRACT)
-
-            # Y- wall: tab travels -X
             with Locations((0.0, -ry, body_depth - 0.5 * slot_depth)):
                 Box(slot_tang, slot_rad + eps, slot_depth + eps, mode=Mode.SUBTRACT)
             with Locations((-0.5 * ch_tang, -ry, tab_z_shell)):
@@ -417,11 +402,13 @@ def build_asa_shell(p: MevoCoreParams):
 
             twist_lock_info = {
                 "enabled": True,
+                "walls": ["X+_right", "Y-_bottom"],
                 "tab_h_mm": float(tl_h),
                 "tab_w_mm": float(tl_w),
                 "tab_t_mm": float(tl_t),
                 "travel_mm": float(tl_tr),
                 "clearance_mm": float(tl_cl),
+                "remaining_wall_mm": float(p.asa_wall_mm - slot_rad),
                 "tab_z_shell_mm": float(tab_z_shell),
                 "slot_depth_from_rear_mm": float(slot_depth),
                 "rotation": "CW_from_rear_to_lock",
@@ -899,14 +886,12 @@ def build_back_cap(p: MevoCoreParams):
         tab_z = p.back_cap_thickness_mm + 0.5 * p.back_cap_lip_depth_mm
 
         with BuildPart() as tl_bp:
-            # X wall tabs
-            for sx in (-1.0, 1.0):
-                with Locations((sx * (half_lw + 0.5 * tl_h), 0.0, tab_z)):
-                    Box(tl_h, tl_w, tl_t)
-            # Y wall tabs
-            for sy in (-1.0, 1.0):
-                with Locations((0.0, sy * (half_lh + 0.5 * tl_h), tab_z)):
-                    Box(tl_w, tl_h, tl_t)
+            # X+ tab only (right wall, matches shell X+ channel)
+            with Locations((half_lw + 0.5 * tl_h, 0.0, tab_z)):
+                Box(tl_h, tl_w, tl_t)
+            # Y- tab only (bottom wall, matches shell Y- channel)
+            with Locations((0.0, -(half_lh + 0.5 * tl_h), tab_z)):
+                Box(tl_w, tl_h, tl_t)
         try:
             cap = _largest_solid(cap + tl_bp.part)
         except Exception:
@@ -914,7 +899,7 @@ def build_back_cap(p: MevoCoreParams):
 
         twist_lock_info = {
             "enabled": True,
-            "tab_count": 4,
+            "tab_count": 2,
             "tab_h_mm": float(tl_h),
             "tab_w_mm": float(tl_w),
             "tab_t_mm": float(tl_t),

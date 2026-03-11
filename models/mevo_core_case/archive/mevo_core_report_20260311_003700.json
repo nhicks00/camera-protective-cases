@@ -35,13 +35,13 @@
     "tripod_center_from_front_mm": 34.925,
     "include_thermal_vents": true,
     "side_vent_count": 7,
-    "side_vent_slot_h_mm": 26.0,
+    "side_vent_slot_h_mm": 20.0,
     "side_vent_slot_w_mm": 3.0,
     "side_vent_pitch_z_mm": 9.0,
     "side_vent_center_y_mm": 0.0,
     "side_vent_cut_depth_mm": 6.0,
     "top_vent_count": 7,
-    "top_vent_slot_width_mm": 31.0,
+    "top_vent_slot_width_mm": 24.0,
     "top_vent_slot_height_mm": 3.5,
     "top_vent_pitch_z_mm": 9.0,
     "top_vent_cut_depth_mm": 6.0,
@@ -89,10 +89,10 @@
     "snap_ridge_depth_mm": 1.0,
     "snap_ridge_setback_mm": 3.0,
     "include_twist_lock": true,
-    "twist_lock_tab_h_mm": 0.8,
-    "twist_lock_tab_w_mm": 12.0,
-    "twist_lock_tab_t_mm": 3.0,
-    "twist_lock_travel_mm": 16.0,
+    "twist_lock_tab_h_mm": 1.5,
+    "twist_lock_tab_w_mm": 9.0,
+    "twist_lock_tab_t_mm": 2.5,
+    "twist_lock_travel_mm": 14.0,
     "twist_lock_clearance_mm": 0.4,
     "tpu_rear_cap_relief_depth_mm": 5.4,
     "tpu_rear_cap_relief_radial_mm": 0.3
@@ -147,7 +147,7 @@
         "top_slots": {
           "count": 5,
           "z_centers": [
-            18.5,
+            15.0,
             21.824999999999996,
             30.824999999999996,
             39.824999999999996,
@@ -172,18 +172,13 @@
       },
       "twist_lock": {
         "enabled": true,
-        "walls": [
-          "X+_right",
-          "Y-_bottom"
-        ],
-        "tab_h_mm": 0.8,
-        "tab_w_mm": 12.0,
-        "tab_t_mm": 3.0,
-        "travel_mm": 16.0,
+        "tab_h_mm": 1.5,
+        "tab_w_mm": 9.0,
+        "tab_t_mm": 2.5,
+        "travel_mm": 14.0,
         "clearance_mm": 0.4,
-        "remaining_wall_mm": 1.0,
         "tab_z_shell_mm": 74.14999999999999,
-        "slot_depth_from_rear_mm": 8.0,
+        "slot_depth_from_rear_mm": 7.75,
         "rotation": "CW_from_rear_to_lock"
       }
     }
@@ -220,10 +215,10 @@
     },
     "twist_lock": {
       "enabled": true,
-      "tab_count": 2,
-      "tab_h_mm": 0.8,
-      "tab_w_mm": 12.0,
-      "tab_t_mm": 3.0,
+      "tab_count": 4,
+      "tab_h_mm": 1.5,
+      "tab_w_mm": 9.0,
+      "tab_t_mm": 2.5,
       "tab_z_local_mm": 5.5
     },
     "named_bodies": [
