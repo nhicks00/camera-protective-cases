@@ -32,6 +32,7 @@ from build123d import (
     BuildPart,
     BuildSketch,
     Circle,
+    Cone,
     Cylinder,
     Locations,
     Mode,
@@ -81,6 +82,8 @@ class ZowietekParams:
     lens_hood_depth_mm: float = 14.0      # how far hood extends from front face
     lens_hood_wall_mm: float = 2.5        # wall thickness of hood tube
     lens_hood_clearance_mm: float = 1.0   # gap between lens cutout edge and hood inner wall
+    lens_hood_base_flare_mm: float = 4.0    # extra outer radius at root for strength
+    lens_hood_base_depth_mm: float = 6.0    # axial depth of the taper zone
 
     # Skeleton TPU frame params
     tpu_corner_bumper_w_mm: float = 12.0  # width of each corner bumper along wall
@@ -94,19 +97,19 @@ class ZowietekParams:
     tripod_rect_l_mm: float = 25.4        # 1 inch along Z
     tripod_bottom_center_from_front_mm: float = 34.3  # roughly centered along L
     # Top tripod cutout (mirrored)
-    include_top_tripod: bool = True
+    include_top_tripod: bool = False
     tripod_top_center_from_front_mm: float = 34.3
 
     # Thermal vents
     include_thermal_vents: bool = True
     side_vent_count: int = 5
-    side_vent_slot_h_mm: float = 18.0     # vertical extent
+    side_vent_slot_h_mm: float = 25.2     # vertical extent
     side_vent_slot_w_mm: float = 3.0      # width (rounded ends)
     side_vent_pitch_z_mm: float = 9.0
     side_vent_center_y_mm: float = 0.0    # vertically centered
     side_vent_cut_depth_mm: float = 6.0
     top_vent_count: int = 4
-    top_vent_slot_width_mm: float = 22.0  # long axis (X)
+    top_vent_slot_width_mm: float = 30.8  # long axis (X)
     top_vent_slot_height_mm: float = 3.0  # short axis
     top_vent_pitch_z_mm: float = 12.0
     top_vent_cut_depth_mm: float = 6.0
@@ -133,21 +136,23 @@ class ZowietekParams:
     bumper_ring_inset_mm: float = 3.0     # inset from device edge per side for opening
     bumper_ring_corner_r_mm: float = 3.0
 
-    # Retention: latch pockets/bumps (4x)
-    include_friction_ridge: bool = True
-    friction_ridge_height_mm: float = 0.8
-    friction_ridge_width_mm: float = 1.0
-    friction_ridge_setback_mm: float = 3.0
-    latch_side_gap_mm: float = 1.0
-    latch_tip_gap_z_mm: float = 1.5
-    latch_catch_height_mm: float = 0.6
-    latch_catch_ramp_mm: float = 1.5
-    latch_notch_depth_mm: float = 0.6
-    latch_notch_z_mm: float = 1.5
+    # External cantilever latches (arms on outer shell, hook over cap plate)
+    include_ext_latches: bool = True
+    ext_latch_arm_width_mm: float = 12.0    # width along wall face
+    ext_latch_arm_thickness_mm: float = 2.0  # radial thickness (outward from wall)
+    ext_latch_overhang_mm: float = 8.0       # how far arms extend past rear face
+    ext_latch_hook_depth_mm: float = 1.5     # how far hook extends inward
+    ext_latch_hook_height_mm: float = 2.0    # axial extent of hook nub
+    ext_latch_clearance_mm: float = 0.3      # gap between hook and cap plate face
 
     # Rear TPU relief
     tpu_rear_cap_relief_depth_mm: float = 5.4
     tpu_rear_cap_relief_radial_mm: float = 0.3
+
+    # Rear TPU corner bumpers
+    include_rear_tpu_bumpers: bool = True
+    tpu_rear_bumper_depth_mm: float = 3.0    # how far bumper wraps around rear corners
+    tpu_rear_bumper_wall_mm: float = 1.8     # wall thickness of rear bumper
 
 
 def _largest_solid(shape):
@@ -301,32 +306,7 @@ def build_dual_material_body(p: ZowietekParams):
             fillet(vertices(), max(p.asa_inner_corner_r_mm - 0.5, 0.5))
         extrude(amount=groove_depth + 0.2, mode=Mode.SUBTRACT)
 
-        # Simple bump pockets (4x) on inner walls — matching cap bumps
         friction_ridge_info = None
-        if p.include_friction_ridge and p.friction_ridge_height_mm > 0.0:
-            fr_z = body_depth - p.friction_ridge_setback_mm
-            pocket_w = 8.0
-            pocket_d = 0.8
-            pocket_z = 4.0
-            half_iw = 0.5 * asa_inner_w
-            half_ih = 0.5 * asa_inner_h
-
-            for sx in (-1.0, 1.0):
-                px = sx * (half_iw + 0.5 * pocket_d)
-                with Locations((px, 0.0, fr_z)):
-                    Box(pocket_d, pocket_w, pocket_z, mode=Mode.SUBTRACT)
-            for sy in (-1.0, 1.0):
-                py = sy * (half_ih + 0.5 * pocket_d)
-                with Locations((0.0, py, fr_z)):
-                    Box(pocket_w, pocket_d, pocket_z, mode=Mode.SUBTRACT)
-
-            friction_ridge_info = {
-                "enabled": True,
-                "type": "latch_pockets",
-                "pocket_count": 4,
-                "setback_mm": float(p.friction_ridge_setback_mm),
-                "z_mm": float(fr_z),
-            }
 
         # Front lens + LED cutouts
         if p.include_front_lens_led_cutouts:
@@ -453,11 +433,21 @@ def build_dual_material_body(p: ZowietekParams):
 
     # Build top-visor lens hood (arc over top of lens opening)
     if _build_hood:
+        cx, cy = p.lens_center_x_mm, p.lens_center_y_mm
+        flare_r = hood_outer_r + p.lens_hood_base_flare_mm
+        flare_d = min(p.lens_hood_base_depth_mm, p.lens_hood_depth_mm * 0.4)
         with BuildPart() as hood_bp:
-            with Locations((p.lens_center_x_mm, p.lens_center_y_mm, 0.0)):
+            # Main straight tube
+            with Locations((cx, cy, 0.0)):
                 Cylinder(hood_outer_r, p.lens_hood_depth_mm, rotation=(180, 0, 0),
                          align=(Align.CENTER, Align.CENTER, Align.MIN))
-            with Locations((p.lens_center_x_mm, p.lens_center_y_mm, 0.1)):
+            # Flared base cone: wider at Z=0, tapers to hood_outer_r at flare_d depth
+            if p.lens_hood_base_flare_mm > 0.0 and flare_d > 0.0:
+                with Locations((cx, cy, 0.0)):
+                    Cone(flare_r, hood_outer_r, flare_d, rotation=(180, 0, 0),
+                         align=(Align.CENTER, Align.CENTER, Align.MIN))
+            # Subtract inner bore
+            with Locations((cx, cy, 0.1)):
                 Cylinder(hood_inner_r, p.lens_hood_depth_mm + 0.2, rotation=(180, 0, 0),
                          align=(Align.CENTER, Align.CENTER, Align.MIN),
                          mode=Mode.SUBTRACT)
@@ -465,9 +455,7 @@ def build_dual_material_body(p: ZowietekParams):
         clip_w = d["asa_outer_w_mm"]
         clip_h = hood_outer_r + 1.0
         with BuildPart() as clip_bp:
-            with Locations((p.lens_center_x_mm,
-                            p.lens_center_y_mm + 0.5 * clip_h,
-                            -0.5 * p.lens_hood_depth_mm)):
+            with Locations((cx, cy + 0.5 * clip_h, -0.5 * p.lens_hood_depth_mm)):
                 Box(clip_w, clip_h, p.lens_hood_depth_mm + 1.0)
         hood_solid = hood_bp.part & clip_bp.part
         for fillet_r in (2.0, 1.5, 1.0, 0.5):
@@ -480,6 +468,57 @@ def build_dual_material_body(p: ZowietekParams):
             asa_shell = _largest_solid(asa_shell + hood_solid)
         except Exception:
             pass
+
+    # External cantilever latches: 4 arms on outer shell walls
+    ext_latch_info = None
+    if p.include_ext_latches:
+        el_w = p.ext_latch_arm_width_mm
+        el_t = p.ext_latch_arm_thickness_mm
+        el_ovr = p.ext_latch_overhang_mm
+        el_hd = p.ext_latch_hook_depth_mm
+        el_hh = p.ext_latch_hook_height_mm
+        el_cl = p.ext_latch_clearance_mm
+
+        half_ow = 0.5 * asa_outer_w
+        half_oh = 0.5 * asa_outer_h
+
+        with BuildPart() as latch_bp:
+            latch_positions = [
+                (half_ow + 0.5 * el_t, 0.0, -el_hd, 0.0),
+                (-(half_ow + 0.5 * el_t), 0.0, el_hd, 0.0),
+                (0.0, half_oh + 0.5 * el_t, 0.0, -el_hd),
+                (0.0, -(half_oh + 0.5 * el_t), 0.0, el_hd),
+            ]
+            for ax, ay, hdx, hdy in latch_positions:
+                arm_w_x = el_t if abs(ax) > abs(ay) else el_w
+                arm_w_y = el_w if abs(ax) > abs(ay) else el_t
+                arm_z = body_depth + 0.5 * el_ovr
+                with Locations((ax, ay, arm_z)):
+                    Box(arm_w_x, arm_w_y, el_ovr)
+
+                hook_engage_z = body_depth + p.back_cap_thickness_mm + el_cl
+                hook_z = hook_engage_z + 0.5 * el_hh
+                hook_w_x = abs(hdx) + el_t if hdx != 0 else el_w - 2.0
+                hook_w_y = abs(hdy) + el_t if hdy != 0 else el_w - 2.0
+                hx = ax + 0.5 * hdx
+                hy = ay + 0.5 * hdy
+                with Locations((hx, hy, hook_z)):
+                    Box(hook_w_x, hook_w_y, el_hh)
+
+        try:
+            asa_shell = _largest_solid(asa_shell + latch_bp.part)
+        except Exception:
+            pass
+
+        ext_latch_info = {
+            "enabled": True,
+            "count": 4,
+            "arm_width_mm": float(el_w),
+            "arm_thickness_mm": float(el_t),
+            "overhang_mm": float(el_ovr),
+            "hook_depth_mm": float(el_hd),
+            "hook_height_mm": float(el_hh),
+        }
 
     asa_shell.label = "ASA_Shell"
 
@@ -604,6 +643,22 @@ def build_dual_material_body(p: ZowietekParams):
             with Locations((0.0, half_tpu_outer_h - 0.5 * tripod_tpu_cut_depth + 0.2, tripod_z_top)):
                 Box(tpu_rect_w, tripod_tpu_cut_depth, tpu_rect_l, mode=Mode.SUBTRACT)
 
+        # Rear corner bumpers: small wraps at each corner protecting rear edges
+        if p.include_rear_tpu_bumpers and p.tpu_rear_bumper_depth_mm > 0.0:
+            rb_depth = p.tpu_rear_bumper_depth_mm
+            rb_wall = p.tpu_rear_bumper_wall_mm
+            bumper_extent = p.tpu_corner_bumper_w_mm
+            rear_z = cavity_start_z + cavity_depth
+
+            for sx in (-1.0, 1.0):
+                for sy in (-1.0, 1.0):
+                    cx = sx * (0.5 * tpu_inner_w + 0.5 * rb_wall)
+                    cy = sy * (0.5 * tpu_inner_h + 0.5 * rb_wall)
+                    with Locations((cx, cy, rear_z - 0.5 * rb_depth)):
+                        Box(bumper_extent, rb_wall, rb_depth)
+                    with Locations((cx, cy, rear_z - 0.5 * rb_depth)):
+                        Box(rb_wall, bumper_extent, rb_depth)
+
     tpu_frame = _largest_solid(tpu_bp.part)
     tpu_frame.label = "TPU_Frame"
 
@@ -659,7 +714,8 @@ def build_dual_material_body(p: ZowietekParams):
                 "wall_thickness_mm": float(p.tpu_wall_mm),
             },
             "cold_shoe": cold_shoe_info if cold_shoe_info else {"enabled": False},
-            "friction_ridge": friction_ridge_info if friction_ridge_info else {"enabled": False},
+            "friction_ridge": {"enabled": False},
+            "ext_latches": ext_latch_info if ext_latch_info else {"enabled": False},
         },
         "bond_interface_mm": {
             "target_gap_each": float(p.interface_gap_mm),
@@ -718,27 +774,7 @@ def build_back_cap(p: ZowietekParams):
         pass
     cap = _largest_solid(cap)
 
-    # Add retention bumps (4x cantilever flex-tabs)
-    if p.include_friction_ridge and p.friction_ridge_height_mm > 0.0:
-        fr_z = p.back_cap_thickness_mm + (p.back_cap_lip_depth_mm - p.friction_ridge_setback_mm)
-        fr_h = p.friction_ridge_height_mm
-        half_lw = 0.5 * lip_tip_w
-        half_lh = 0.5 * lip_tip_h
-        bump_w = 8.0
-        bump_z = 4.0
-
-        # Simple flush bumps on plug outer surface (4x: 2 on X walls, 2 on Y walls)
-        with BuildPart() as fr_bp:
-            for sx in (-1.0, 1.0):
-                with Locations((sx * (half_lw + 0.5 * fr_h), 0.0, fr_z)):
-                    Box(fr_h, bump_w, bump_z)
-            for sy in (-1.0, 1.0):
-                with Locations((0.0, sy * (half_lh + 0.5 * fr_h), fr_z)):
-                    Box(bump_w, fr_h, bump_z)
-        try:
-            cap = _largest_solid(cap + fr_bp.part)
-        except Exception:
-            pass
+    # No cap-side features needed for external latches — hooks catch plate face directly
 
     cap.label = "ASA_Back_Cap"
 
@@ -767,7 +803,7 @@ def main():
     )
     parser.add_argument("--out", type=Path, default=Path("models/zowietek_case"), help="Output directory")
     parser.add_argument("--no-cold-shoe", action="store_true", help="Disable cold shoe mount")
-    parser.add_argument("--no-friction-ridge", action="store_true", help="Disable retention latches")
+    parser.add_argument("--no-ext-latches", action="store_true", help="Disable external cantilever latches")
     parser.add_argument("--no-top-tripod", action="store_true", help="Disable top tripod cutout")
     parser.add_argument("--no-hood", action="store_true", help="Disable lens hood")
     parser.add_argument("--no-vents", action="store_true", help="Disable thermal vents")
@@ -779,8 +815,8 @@ def main():
     p = ZowietekParams()
     if args.no_cold_shoe:
         p.include_cold_shoe = False
-    if args.no_friction_ridge:
-        p.include_friction_ridge = False
+    if args.no_ext_latches:
+        p.include_ext_latches = False
     if args.no_top_tripod:
         p.include_top_tripod = False
     if args.no_hood:

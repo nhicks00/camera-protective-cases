@@ -23,8 +23,6 @@
     "lens_hood_depth_mm": 14.0,
     "lens_hood_wall_mm": 2.5,
     "lens_hood_clearance_mm": 1.0,
-    "lens_hood_base_flare_mm": 4.0,
-    "lens_hood_base_depth_mm": 6.0,
     "tpu_corner_bumper_w_mm": 12.0,
     "tpu_edge_rail_w_mm": 4.0,
     "tpu_front_edge_wrap_depth_mm": 2.5,
@@ -33,17 +31,17 @@
     "tripod_rect_w_mm": 31.75,
     "tripod_rect_l_mm": 25.4,
     "tripod_bottom_center_from_front_mm": 34.3,
-    "include_top_tripod": false,
+    "include_top_tripod": true,
     "tripod_top_center_from_front_mm": 34.3,
     "include_thermal_vents": true,
     "side_vent_count": 5,
-    "side_vent_slot_h_mm": 25.2,
+    "side_vent_slot_h_mm": 18.0,
     "side_vent_slot_w_mm": 3.0,
     "side_vent_pitch_z_mm": 9.0,
     "side_vent_center_y_mm": 0.0,
     "side_vent_cut_depth_mm": 6.0,
     "top_vent_count": 4,
-    "top_vent_slot_width_mm": 30.8,
+    "top_vent_slot_width_mm": 22.0,
     "top_vent_slot_height_mm": 3.0,
     "top_vent_pitch_z_mm": 12.0,
     "top_vent_cut_depth_mm": 6.0,
@@ -65,18 +63,18 @@
     "back_cap_edge_fillet_mm": 0.6,
     "bumper_ring_inset_mm": 3.0,
     "bumper_ring_corner_r_mm": 3.0,
-    "include_ext_latches": true,
-    "ext_latch_arm_width_mm": 12.0,
-    "ext_latch_arm_thickness_mm": 2.0,
-    "ext_latch_overhang_mm": 8.0,
-    "ext_latch_hook_depth_mm": 1.5,
-    "ext_latch_hook_height_mm": 2.0,
-    "ext_latch_clearance_mm": 0.3,
+    "include_friction_ridge": true,
+    "friction_ridge_height_mm": 0.8,
+    "friction_ridge_width_mm": 1.0,
+    "friction_ridge_setback_mm": 3.0,
+    "latch_side_gap_mm": 1.0,
+    "latch_tip_gap_z_mm": 1.5,
+    "latch_catch_height_mm": 0.6,
+    "latch_catch_ramp_mm": 1.5,
+    "latch_notch_depth_mm": 0.6,
+    "latch_notch_z_mm": 1.5,
     "tpu_rear_cap_relief_depth_mm": 5.4,
-    "tpu_rear_cap_relief_radial_mm": 0.3,
-    "include_rear_tpu_bumpers": true,
-    "tpu_rear_bumper_depth_mm": 3.0,
-    "tpu_rear_bumper_wall_mm": 1.8
+    "tpu_rear_cap_relief_radial_mm": 0.3
   },
   "body_report": {
     "derived_mm": {
@@ -118,7 +116,7 @@
           "center_from_front_mm": 34.3
         },
         "top": {
-          "enabled": false,
+          "enabled": true,
           "rect_w_mm": 31.75,
           "rect_l_mm": 25.4,
           "center_from_front_mm": 34.3
@@ -138,7 +136,7 @@
         "top_slots": {
           "count": 3,
           "z_centers": [
-            18.4,
+            18.199999999999996,
             30.199999999999996,
             42.199999999999996
           ]
@@ -159,16 +157,11 @@
         "slide_in_from": "rear"
       },
       "friction_ridge": {
-        "enabled": false
-      },
-      "ext_latches": {
         "enabled": true,
-        "count": 4,
-        "arm_width_mm": 12.0,
-        "arm_thickness_mm": 2.0,
-        "overhang_mm": 8.0,
-        "hook_depth_mm": 1.5,
-        "hook_height_mm": 2.0
+        "type": "latch_pockets",
+        "pocket_count": 4,
+        "setback_mm": 3.0,
+        "z_mm": 69.39999999999999
       }
     },
     "bond_interface_mm": {
@@ -202,7 +195,7 @@
     ]
   },
   "collision_check": {
-    "cap_vs_body_mm3": 81.16086001622652,
+    "cap_vs_body_mm3": 78.16086001622651,
     "collision_pass": true,
     "cap_seated_z_mm": 72.89999999999999
   }

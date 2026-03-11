@@ -88,16 +88,12 @@
     "snap_ridge_height_mm": 1.0,
     "snap_ridge_depth_mm": 1.0,
     "snap_ridge_setback_mm": 3.0,
-    "include_ext_latches": true,
-    "ext_latch_arm_width_mm": 15.0,
-    "ext_latch_arm_thickness_mm": 2.0,
-    "ext_latch_overhang_mm": 8.0,
-    "ext_latch_hook_depth_mm": 1.5,
-    "ext_latch_hook_height_mm": 2.0,
-    "ext_latch_clearance_mm": 0.3,
-    "include_rear_tpu_bumpers": true,
-    "tpu_rear_bumper_depth_mm": 3.0,
-    "tpu_rear_bumper_wall_mm": 1.8,
+    "include_twist_lock": true,
+    "twist_lock_tab_h_mm": 0.8,
+    "twist_lock_tab_w_mm": 12.0,
+    "twist_lock_tab_t_mm": 3.0,
+    "twist_lock_travel_mm": 16.0,
+    "twist_lock_clearance_mm": 0.4,
     "tpu_rear_cap_relief_depth_mm": 5.4,
     "tpu_rear_cap_relief_radial_mm": 0.3
   },
@@ -174,15 +170,21 @@
       "friction_ridge": {
         "enabled": false
       },
-      "ext_latches": {
+      "twist_lock": {
         "enabled": true,
-        "count": 4,
-        "arm_width_mm": 15.0,
-        "arm_thickness_mm": 2.0,
-        "overhang_mm": 8.0,
-        "hook_depth_mm": 1.5,
-        "hook_height_mm": 2.0,
-        "hook_engage_z_mm": 82.94999999999999
+        "walls": [
+          "X+_right",
+          "Y-_bottom"
+        ],
+        "tab_h_mm": 0.8,
+        "tab_w_mm": 12.0,
+        "tab_t_mm": 3.0,
+        "travel_mm": 16.0,
+        "clearance_mm": 0.4,
+        "remaining_wall_mm": 1.0,
+        "tab_z_shell_mm": 74.14999999999999,
+        "slot_depth_from_rear_mm": 8.0,
+        "rotation": "CW_from_rear_to_lock"
       }
     }
   },
@@ -215,6 +217,14 @@
         "center_x_mm": 0.0,
         "center_y_mm": 33.1
       }
+    },
+    "twist_lock": {
+      "enabled": true,
+      "tab_count": 2,
+      "tab_h_mm": 0.8,
+      "tab_w_mm": 12.0,
+      "tab_t_mm": 3.0,
+      "tab_z_local_mm": 5.5
     },
     "named_bodies": [
       "ASA_Back_Cap"

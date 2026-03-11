@@ -161,7 +161,7 @@ class MevoCoreParams:
     friction_ridge_height_mm: float = 0.8
     friction_ridge_setback_mm: float = 3.0
 
-    # Snap-fit clips — disabled (replaced by twist-lock)
+    # Snap-fit clips — disabled
     include_snap_clips: bool = False
     snap_clip_beam_length_mm: float = 8.0
     snap_clip_beam_width_mm: float = 6.0
@@ -176,15 +176,19 @@ class MevoCoreParams:
     snap_ridge_depth_mm: float = 1.0
     snap_ridge_setback_mm: float = 3.0
 
-    # Bayonet twist-lock: insert straight, rotate CW (viewed from rear) to lock.
-    # Channels on X+ (right) and Y- (bottom) ONLY — cold-shoe-free walls.
-    # tab_h 0.8mm leaves 1.0mm of ASA wall backing — printable and strong in shear.
-    include_twist_lock: bool = True
-    twist_lock_tab_h_mm: float = 0.8    # radial depth into wall (leaves 1.0mm backing)
-    twist_lock_tab_w_mm: float = 12.0   # tangential width (wider for more shear area)
-    twist_lock_tab_t_mm: float = 3.0    # axial thickness of tab
-    twist_lock_travel_mm: float = 16.0  # channel travel distance (rotation arc)
-    twist_lock_clearance_mm: float = 0.4  # sliding clearance for easy rotation
+    # External cantilever latches (arms on outer shell, hook over cap plate)
+    include_ext_latches: bool = True
+    ext_latch_arm_width_mm: float = 15.0    # width along wall face
+    ext_latch_arm_thickness_mm: float = 2.0  # radial thickness (outward from wall)
+    ext_latch_overhang_mm: float = 8.0       # how far arms extend past rear face
+    ext_latch_hook_depth_mm: float = 1.5     # how far hook extends inward
+    ext_latch_hook_height_mm: float = 2.0    # axial extent of hook nub
+    ext_latch_clearance_mm: float = 0.3      # gap between hook and cap plate face
+
+    # Rear TPU corner bumpers
+    include_rear_tpu_bumpers: bool = True
+    tpu_rear_bumper_depth_mm: float = 3.0    # how far bumper wraps around rear corners
+    tpu_rear_bumper_wall_mm: float = 1.8     # wall thickness of rear bumper (same as TPU wall)
 
     # Rear TPU relief
     tpu_rear_cap_relief_depth_mm: float = 5.4
@@ -361,57 +365,56 @@ def build_asa_shell(p: MevoCoreParams):
                 "z_mm": float(fr_z),
             }
 
-        # Bayonet twist-lock: L-channels on X+ (right) and Y- (bottom) ONLY.
-        # These are the two cold-shoe-free walls — no interference, adequate wall backing.
-        # tab_h=0.8mm leaves 1.0mm of ASA wall; wide tab (12mm) compensates in shear area.
-        # Insert with X+ tab at y=0, Y- tab at x=0; rotate CW (from rear) to lock.
-        twist_lock_info = None
-        if p.include_twist_lock:
-            tl_h = p.twist_lock_tab_h_mm
-            tl_w = p.twist_lock_tab_w_mm
-            tl_t = p.twist_lock_tab_t_mm
-            tl_tr = p.twist_lock_travel_mm
-            tl_cl = p.twist_lock_clearance_mm
+        # External cantilever latches: 4 arms on outer shell walls, extending past rear face
+        ext_latch_info = None
+        if p.include_ext_latches:
+            el_w = p.ext_latch_arm_width_mm
+            el_t = p.ext_latch_arm_thickness_mm
+            el_ovr = p.ext_latch_overhang_mm
+            el_hd = p.ext_latch_hook_depth_mm
+            el_hh = p.ext_latch_hook_height_mm
+            el_cl = p.ext_latch_clearance_mm
 
-            half_iw = 0.5 * asa_inner_w
-            half_ih = 0.5 * asa_inner_h
+            half_ow = 0.5 * asa_outer_w
+            half_oh = 0.5 * asa_outer_h
 
-            tab_z_local = p.back_cap_thickness_mm + 0.5 * p.back_cap_lip_depth_mm
-            tab_z_shell = body_depth - tab_z_local
+            # Each arm: thin tab on outer wall surface, extending past rear face
+            # Hook nub at tip catches behind the back cap plate
+            latch_positions = [
+                # (arm_center_x, arm_center_y, hook_dx, hook_dy, label)
+                (half_ow + 0.5 * el_t, 0.0, -el_hd, 0.0, "X+"),
+                (-(half_ow + 0.5 * el_t), 0.0, el_hd, 0.0, "X-"),
+                (0.0, half_oh + 0.5 * el_t, 0.0, -el_hd, "Y+"),
+                (0.0, -(half_oh + 0.5 * el_t), 0.0, el_hd, "Y-"),
+            ]
 
-            slot_rad = tl_h + tl_cl
-            slot_tang = tl_w + tl_cl
-            slot_depth = tab_z_local + 0.5 * tl_t + 1.0
-            ch_tang = tl_tr + slot_tang
-            ch_z = tl_t + 2.0 * tl_cl
-            eps = 0.2
+            for ax, ay, hdx, hdy, label in latch_positions:
+                # Arm body
+                arm_w_x = el_t if abs(ax) > abs(ay) else el_w
+                arm_w_y = el_w if abs(ax) > abs(ay) else el_t
+                arm_z = body_depth + 0.5 * el_ovr
+                with Locations((ax, ay, arm_z)):
+                    Box(arm_w_x, arm_w_y, el_ovr)
 
-            # X+ wall only (right side, no cold shoe): tab travels -Y on CW rotation
-            rx = half_iw + 0.5 * slot_rad
-            with Locations((rx, 0.0, body_depth - 0.5 * slot_depth)):
-                Box(slot_rad + eps, slot_tang, slot_depth + eps, mode=Mode.SUBTRACT)
-            with Locations((rx, -0.5 * ch_tang, tab_z_shell)):
-                Box(slot_rad + eps, ch_tang, ch_z, mode=Mode.SUBTRACT)
+                # Hook nub at arm tip (catches behind cap plate)
+                hook_engage_z = body_depth + p.back_cap_thickness_mm + el_cl
+                hook_z = hook_engage_z + 0.5 * el_hh
+                hook_w_x = abs(hdx) + el_t if hdx != 0 else el_w - 2.0
+                hook_w_y = abs(hdy) + el_t if hdy != 0 else el_w - 2.0
+                hx = ax + 0.5 * hdx
+                hy = ay + 0.5 * hdy
+                with Locations((hx, hy, hook_z)):
+                    Box(hook_w_x, hook_w_y, el_hh)
 
-            # Y- wall only (bottom, no cold shoe): tab travels -X on CW rotation
-            ry = half_ih + 0.5 * slot_rad
-            with Locations((0.0, -ry, body_depth - 0.5 * slot_depth)):
-                Box(slot_tang, slot_rad + eps, slot_depth + eps, mode=Mode.SUBTRACT)
-            with Locations((-0.5 * ch_tang, -ry, tab_z_shell)):
-                Box(ch_tang, slot_rad + eps, ch_z, mode=Mode.SUBTRACT)
-
-            twist_lock_info = {
+            ext_latch_info = {
                 "enabled": True,
-                "walls": ["X+_right", "Y-_bottom"],
-                "tab_h_mm": float(tl_h),
-                "tab_w_mm": float(tl_w),
-                "tab_t_mm": float(tl_t),
-                "travel_mm": float(tl_tr),
-                "clearance_mm": float(tl_cl),
-                "remaining_wall_mm": float(p.asa_wall_mm - slot_rad),
-                "tab_z_shell_mm": float(tab_z_shell),
-                "slot_depth_from_rear_mm": float(slot_depth),
-                "rotation": "CW_from_rear_to_lock",
+                "count": 4,
+                "arm_width_mm": float(el_w),
+                "arm_thickness_mm": float(el_t),
+                "overhang_mm": float(el_ovr),
+                "hook_depth_mm": float(el_hd),
+                "hook_height_mm": float(el_hh),
+                "hook_engage_z_mm": float(body_depth + p.back_cap_thickness_mm + el_cl),
             }
 
         # Front lens cutout
@@ -640,7 +643,7 @@ def build_asa_shell(p: MevoCoreParams):
             },
             "cold_shoe": cold_shoe_info if cold_shoe_info else {"enabled": False},
             "friction_ridge": friction_ridge_info if friction_ridge_info else {"enabled": False},
-            "twist_lock": twist_lock_info if twist_lock_info else {"enabled": False},
+            "ext_latches": ext_latch_info if ext_latch_info else {"enabled": False},
         },
     }
 
@@ -779,6 +782,23 @@ def build_tpu_frame(p: MevoCoreParams, side_slot_z_centers, top_vent_z_centers, 
                 fillet(vertices(), tripod_tpu_corner_r)
         extrude(amount=tripod_tpu_cut_depth, mode=Mode.SUBTRACT)
 
+        # Rear corner bumpers: small wraps at each corner that protect rear edges
+        if p.include_rear_tpu_bumpers and p.tpu_rear_bumper_depth_mm > 0.0:
+            rb_depth = p.tpu_rear_bumper_depth_mm
+            rb_wall = p.tpu_rear_bumper_wall_mm
+            bumper_extent = p.tpu_corner_bumper_w_mm  # same width as front corner bumpers
+            rear_z = cavity_start_z + cavity_depth  # rear face of TPU
+
+            # 4 corner bumper wraps at rear face
+            for sx in (-1.0, 1.0):
+                for sy in (-1.0, 1.0):
+                    cx = sx * (0.5 * tpu_inner_w + 0.5 * rb_wall)
+                    cy = sy * (0.5 * tpu_inner_h + 0.5 * rb_wall)
+                    with Locations((cx, cy, rear_z - 0.5 * rb_depth)):
+                        Box(bumper_extent, rb_wall, rb_depth)
+                    with Locations((cx, cy, rear_z - 0.5 * rb_depth)):
+                        Box(rb_wall, bumper_extent, rb_depth)
+
     tpu_frame = _largest_solid(tpu_bp.part)
 
     # Global edge fillet for smooth rounded feel on all edges.
@@ -873,38 +893,7 @@ def build_back_cap(p: MevoCoreParams):
         except Exception:
             pass
 
-    # Bayonet twist-lock tabs on plug perimeter (match shell L-channels)
-    # Insert straight with tabs at entry slot positions, rotate CW from rear to lock.
-    twist_lock_info = None
-    if p.include_twist_lock:
-        tl_h = p.twist_lock_tab_h_mm
-        tl_w = p.twist_lock_tab_w_mm
-        tl_t = p.twist_lock_tab_t_mm
-        half_lw = 0.5 * lip_tip_w
-        half_lh = 0.5 * lip_tip_h
-        # Tab centered axially within the plug (same Z as shell channel)
-        tab_z = p.back_cap_thickness_mm + 0.5 * p.back_cap_lip_depth_mm
-
-        with BuildPart() as tl_bp:
-            # X+ tab only (right wall, matches shell X+ channel)
-            with Locations((half_lw + 0.5 * tl_h, 0.0, tab_z)):
-                Box(tl_h, tl_w, tl_t)
-            # Y- tab only (bottom wall, matches shell Y- channel)
-            with Locations((0.0, -(half_lh + 0.5 * tl_h), tab_z)):
-                Box(tl_w, tl_h, tl_t)
-        try:
-            cap = _largest_solid(cap + tl_bp.part)
-        except Exception:
-            pass
-
-        twist_lock_info = {
-            "enabled": True,
-            "tab_count": 2,
-            "tab_h_mm": float(tl_h),
-            "tab_w_mm": float(tl_w),
-            "tab_t_mm": float(tl_t),
-            "tab_z_local_mm": float(tab_z),
-        }
+    # No cap-side features needed for external latches — hooks catch plate face directly
 
     cap.label = "ASA_Back_Cap"
 
@@ -930,7 +919,6 @@ def build_back_cap(p: MevoCoreParams):
                 "center_y_mm": float(p.power_cutout_center_y_mm),
             },
         },
-        "twist_lock": twist_lock_info if twist_lock_info else {"enabled": False},
         "named_bodies": ["ASA_Back_Cap"],
     }
 
@@ -947,7 +935,7 @@ def main():
     parser.add_argument("--no-friction-ridge", action="store_true")
     parser.add_argument("--no-snap-clips", action="store_true")
     parser.add_argument("--no-snap-ridge", action="store_true")
-    parser.add_argument("--no-twist-lock", action="store_true")
+    parser.add_argument("--no-ext-latches", action="store_true", help="Disable external cantilever latches")
     parser.add_argument("--no-hood", action="store_true")
     parser.add_argument("--no-vents", action="store_true")
     parser.add_argument("--lens-diameter", type=float, default=None)
@@ -964,8 +952,8 @@ def main():
         p.include_snap_clips = False
     if args.no_snap_ridge:
         p.include_snap_ridge = False
-    if args.no_twist_lock:
-        p.include_twist_lock = False
+    if args.no_ext_latches:
+        p.include_ext_latches = False
     if args.no_hood:
         p.include_lens_hood = False
     if args.no_vents:
