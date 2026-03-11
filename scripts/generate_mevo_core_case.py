@@ -156,27 +156,34 @@ class MevoCoreParams:
     # Oversize for cutouts (cable boot clearance)
     cutout_oversize_mm: float = 1.0
 
-    # Retention: bump pockets — disabled; snap clips handle retention, bumps create ejection force
+    # Retention: bump pockets — disabled
     include_friction_ridge: bool = False
     friction_ridge_height_mm: float = 0.8
     friction_ridge_setback_mm: float = 3.0
 
-    # Snap-fit clips (cantilever beams on inner ASA walls)
-    include_snap_clips: bool = True
-    snap_clip_beam_length_mm: float = 8.0    # cantilever length (along Z)
-    snap_clip_beam_width_mm: float = 6.0     # width along wall (along X or Y)
-    snap_clip_beam_thickness_mm: float = 1.5  # radial thickness
-    snap_clip_catch_height_mm: float = 1.0   # nub protrusion inward
-    snap_clip_catch_depth_mm: float = 1.0    # nub extent along Z
-    snap_clip_setback_mm: float = 3.0        # tip distance from rear edge
-    snap_clips_per_wall: int = 2             # clips per wall (8 total for 4 walls)
-    snap_clip_spread_mm: float = 30.0        # spacing between 2 clips on same wall
+    # Snap-fit clips — disabled (replaced by twist-lock)
+    include_snap_clips: bool = False
+    snap_clip_beam_length_mm: float = 8.0
+    snap_clip_beam_width_mm: float = 6.0
+    snap_clip_beam_thickness_mm: float = 1.5
+    snap_clip_catch_height_mm: float = 1.0
+    snap_clip_catch_depth_mm: float = 1.0
+    snap_clip_setback_mm: float = 3.0
+    snap_clips_per_wall: int = 2
+    snap_clip_spread_mm: float = 30.0
+    include_snap_ridge: bool = False
+    snap_ridge_height_mm: float = 1.0
+    snap_ridge_depth_mm: float = 1.0
+    snap_ridge_setback_mm: float = 3.0
 
-    # Snap ridge on back cap plug (matches clip catch)
-    include_snap_ridge: bool = True
-    snap_ridge_height_mm: float = 1.0        # protrusion outward from plug
-    snap_ridge_depth_mm: float = 1.0         # extent along Z
-    snap_ridge_setback_mm: float = 3.0       # from plug tip
+    # Bayonet twist-lock: insert straight, rotate CW (viewed from rear) to lock
+    # 4 L-channels in shell walls + 4 matching tabs on cap plug
+    include_twist_lock: bool = True
+    twist_lock_tab_h_mm: float = 1.5    # radial depth of tab into wall
+    twist_lock_tab_w_mm: float = 9.0    # tangential width of tab
+    twist_lock_tab_t_mm: float = 2.5    # axial thickness of tab
+    twist_lock_travel_mm: float = 14.0  # channel travel distance (rotation arc)
+    twist_lock_clearance_mm: float = 0.4  # sliding clearance for easy rotation
 
     # Rear TPU relief
     tpu_rear_cap_relief_depth_mm: float = 5.4
@@ -353,57 +360,71 @@ def build_asa_shell(p: MevoCoreParams):
                 "z_mm": float(fr_z),
             }
 
-        # Cantilever snap-fit clips on inner walls (8 total: 2 per wall)
-        snap_clip_info = None
-        if p.include_snap_clips:
-            clip_tip_z = body_depth - p.snap_clip_setback_mm
-            clip_base_z = clip_tip_z - p.snap_clip_beam_length_mm
-            clip_mid_z = 0.5 * (clip_base_z + clip_tip_z)
+        # Bayonet twist-lock: L-shaped channel cuts (entry slot + horizontal channel) on each wall
+        # Insert with tabs at y=0 (X walls) / x=0 (Y walls), rotate CW from rear to lock.
+        twist_lock_info = None
+        if p.include_twist_lock:
+            tl_h = p.twist_lock_tab_h_mm        # radial depth into wall
+            tl_w = p.twist_lock_tab_w_mm        # tangential tab width
+            tl_t = p.twist_lock_tab_t_mm        # axial tab thickness
+            tl_tr = p.twist_lock_travel_mm      # channel travel
+            tl_cl = p.twist_lock_clearance_mm   # clearance
+
             half_iw = 0.5 * asa_inner_w
             half_ih = 0.5 * asa_inner_h
-            beam_t = p.snap_clip_beam_thickness_mm
-            catch_h = p.snap_clip_catch_height_mm
-            beam_w = p.snap_clip_beam_width_mm
-            beam_l = p.snap_clip_beam_length_mm
-            catch_d = p.snap_clip_catch_depth_mm
-            spread = 0.5 * p.snap_clip_spread_mm
 
-            # Y-offsets for 2 clips per wall (symmetric about center)
-            clip_offsets = [-spread, spread] if p.snap_clips_per_wall >= 2 else [0.0]
+            # Tab Z center when cap is fully seated (cap local: plate_t + lip_depth/2)
+            tab_z_local = p.back_cap_thickness_mm + 0.5 * p.back_cap_lip_depth_mm  # = 5.5 mm
+            tab_z_shell = body_depth - tab_z_local  # shell frame Z of tab center
 
-            # X walls (left/right): beams protrude inward from inner X face
-            for sx in (-1.0, 1.0):
-                beam_x = sx * (half_iw - 0.5 * beam_t)
-                nub_x = sx * (half_iw - beam_t - 0.5 * catch_h)
-                for dy in clip_offsets:
-                    with Locations((beam_x, dy, clip_mid_z)):
-                        Box(beam_t, beam_w, beam_l)
-                    nub_z = clip_tip_z - 0.5 * catch_d
-                    with Locations((nub_x, dy, nub_z)):
-                        Box(catch_h, beam_w, catch_d)
+            # Entry slot: opens at rear face, sized for tab insertion (with clearance)
+            slot_rad = tl_h + tl_cl          # radial slot size (into wall)
+            slot_tang = tl_w + tl_cl         # tangential slot size
+            # slot depth from rear = enough to fully admit tab as cap seats
+            slot_depth = tab_z_local + 0.5 * tl_t + 1.0  # = 5.5 + 1.25 + 1.0 = 7.75 mm
 
-            # Y walls (top/bottom): beams protrude inward from inner Y face
-            for sy in (-1.0, 1.0):
-                beam_y = sy * (half_ih - 0.5 * beam_t)
-                nub_y = sy * (half_ih - beam_t - 0.5 * catch_h)
-                for dx in clip_offsets:
-                    with Locations((dx, beam_y, clip_mid_z)):
-                        Box(beam_w, beam_t, beam_l)
-                    nub_z = clip_tip_z - 0.5 * catch_d
-                    with Locations((dx, nub_y, nub_z)):
-                        Box(beam_w, catch_h, catch_d)
+            # Channel: horizontal run at tab Z, size = travel + entry_width in tang, tab_t+clear in Z
+            ch_tang = tl_tr + slot_tang     # total tangential extent (travel + entry overlap)
+            ch_z = tl_t + 2.0 * tl_cl      # axial clearance
 
-            snap_clip_info = {
+            eps = 0.2  # boolean overlap epsilon
+
+            # X+ wall: tab travels -Y on CW rotation
+            rx = half_iw + 0.5 * slot_rad
+            with Locations((rx, 0.0, body_depth - 0.5 * slot_depth)):
+                Box(slot_rad + eps, slot_tang, slot_depth + eps, mode=Mode.SUBTRACT)
+            with Locations((rx, -0.5 * ch_tang, tab_z_shell)):
+                Box(slot_rad + eps, ch_tang, ch_z, mode=Mode.SUBTRACT)
+
+            # X- wall: tab travels +Y
+            with Locations((-rx, 0.0, body_depth - 0.5 * slot_depth)):
+                Box(slot_rad + eps, slot_tang, slot_depth + eps, mode=Mode.SUBTRACT)
+            with Locations((-rx, +0.5 * ch_tang, tab_z_shell)):
+                Box(slot_rad + eps, ch_tang, ch_z, mode=Mode.SUBTRACT)
+
+            # Y+ wall: tab travels +X
+            ry = half_ih + 0.5 * slot_rad
+            with Locations((0.0, ry, body_depth - 0.5 * slot_depth)):
+                Box(slot_tang, slot_rad + eps, slot_depth + eps, mode=Mode.SUBTRACT)
+            with Locations((+0.5 * ch_tang, ry, tab_z_shell)):
+                Box(ch_tang, slot_rad + eps, ch_z, mode=Mode.SUBTRACT)
+
+            # Y- wall: tab travels -X
+            with Locations((0.0, -ry, body_depth - 0.5 * slot_depth)):
+                Box(slot_tang, slot_rad + eps, slot_depth + eps, mode=Mode.SUBTRACT)
+            with Locations((-0.5 * ch_tang, -ry, tab_z_shell)):
+                Box(ch_tang, slot_rad + eps, ch_z, mode=Mode.SUBTRACT)
+
+            twist_lock_info = {
                 "enabled": True,
-                "total_clips": 4 * len(clip_offsets),
-                "beam_length_mm": float(beam_l),
-                "beam_width_mm": float(beam_w),
-                "beam_thickness_mm": float(beam_t),
-                "catch_height_mm": float(catch_h),
-                "catch_depth_mm": float(catch_d),
-                "clip_tip_z_mm": float(clip_tip_z),
-                "setback_mm": float(p.snap_clip_setback_mm),
-                "spread_mm": float(p.snap_clip_spread_mm),
+                "tab_h_mm": float(tl_h),
+                "tab_w_mm": float(tl_w),
+                "tab_t_mm": float(tl_t),
+                "travel_mm": float(tl_tr),
+                "clearance_mm": float(tl_cl),
+                "tab_z_shell_mm": float(tab_z_shell),
+                "slot_depth_from_rear_mm": float(slot_depth),
+                "rotation": "CW_from_rear_to_lock",
             }
 
         # Front lens cutout
@@ -632,7 +653,7 @@ def build_asa_shell(p: MevoCoreParams):
             },
             "cold_shoe": cold_shoe_info if cold_shoe_info else {"enabled": False},
             "friction_ridge": friction_ridge_info if friction_ridge_info else {"enabled": False},
-            "snap_clips": snap_clip_info if snap_clip_info else {"enabled": False},
+            "twist_lock": twist_lock_info if twist_lock_info else {"enabled": False},
         },
     }
 
@@ -865,43 +886,39 @@ def build_back_cap(p: MevoCoreParams):
         except Exception:
             pass
 
-    # Snap ridges on plug outer surface (matching shell snap clips)
-    snap_ridge_info = None
-    if p.include_snap_ridge and p.snap_ridge_height_mm > 0.0:
-        plug_tip_z = p.back_cap_thickness_mm + p.back_cap_lip_depth_mm
-        ridge_z = plug_tip_z - p.snap_ridge_setback_mm
-        ridge_h = p.snap_ridge_height_mm
-        ridge_d = p.snap_ridge_depth_mm
+    # Bayonet twist-lock tabs on plug perimeter (match shell L-channels)
+    # Insert straight with tabs at entry slot positions, rotate CW from rear to lock.
+    twist_lock_info = None
+    if p.include_twist_lock:
+        tl_h = p.twist_lock_tab_h_mm
+        tl_w = p.twist_lock_tab_w_mm
+        tl_t = p.twist_lock_tab_t_mm
         half_lw = 0.5 * lip_tip_w
         half_lh = 0.5 * lip_tip_h
-        spread = 0.5 * p.snap_clip_spread_mm
-        clip_offsets = [-spread, spread] if p.snap_clips_per_wall >= 2 else [0.0]
+        # Tab centered axially within the plug (same Z as shell channel)
+        tab_z = p.back_cap_thickness_mm + 0.5 * p.back_cap_lip_depth_mm
 
-        with BuildPart() as ridge_bp:
-            # X wall ridges (left/right)
+        with BuildPart() as tl_bp:
+            # X wall tabs
             for sx in (-1.0, 1.0):
-                ridge_x = sx * (half_lw + 0.5 * ridge_h)
-                for dy in clip_offsets:
-                    with Locations((ridge_x, dy, ridge_z)):
-                        Box(ridge_h, p.snap_clip_beam_width_mm, ridge_d)
-            # Y wall ridges (top/bottom)
+                with Locations((sx * (half_lw + 0.5 * tl_h), 0.0, tab_z)):
+                    Box(tl_h, tl_w, tl_t)
+            # Y wall tabs
             for sy in (-1.0, 1.0):
-                ridge_y = sy * (half_lh + 0.5 * ridge_h)
-                for dx in clip_offsets:
-                    with Locations((dx, ridge_y, ridge_z)):
-                        Box(p.snap_clip_beam_width_mm, ridge_h, ridge_d)
+                with Locations((0.0, sy * (half_lh + 0.5 * tl_h), tab_z)):
+                    Box(tl_w, tl_h, tl_t)
         try:
-            cap = _largest_solid(cap + ridge_bp.part)
+            cap = _largest_solid(cap + tl_bp.part)
         except Exception:
             pass
 
-        snap_ridge_info = {
+        twist_lock_info = {
             "enabled": True,
-            "ridge_count": 4 * len(clip_offsets),
-            "ridge_height_mm": float(ridge_h),
-            "ridge_depth_mm": float(ridge_d),
-            "ridge_z_mm": float(ridge_z),
-            "setback_mm": float(p.snap_ridge_setback_mm),
+            "tab_count": 4,
+            "tab_h_mm": float(tl_h),
+            "tab_w_mm": float(tl_w),
+            "tab_t_mm": float(tl_t),
+            "tab_z_local_mm": float(tab_z),
         }
 
     cap.label = "ASA_Back_Cap"
@@ -928,7 +945,7 @@ def build_back_cap(p: MevoCoreParams):
                 "center_y_mm": float(p.power_cutout_center_y_mm),
             },
         },
-        "snap_ridge": snap_ridge_info if snap_ridge_info else {"enabled": False},
+        "twist_lock": twist_lock_info if twist_lock_info else {"enabled": False},
         "named_bodies": ["ASA_Back_Cap"],
     }
 
@@ -945,6 +962,7 @@ def main():
     parser.add_argument("--no-friction-ridge", action="store_true")
     parser.add_argument("--no-snap-clips", action="store_true")
     parser.add_argument("--no-snap-ridge", action="store_true")
+    parser.add_argument("--no-twist-lock", action="store_true")
     parser.add_argument("--no-hood", action="store_true")
     parser.add_argument("--no-vents", action="store_true")
     parser.add_argument("--lens-diameter", type=float, default=None)
@@ -961,6 +979,8 @@ def main():
         p.include_snap_clips = False
     if args.no_snap_ridge:
         p.include_snap_ridge = False
+    if args.no_twist_lock:
+        p.include_twist_lock = False
     if args.no_hood:
         p.include_lens_hood = False
     if args.no_vents:

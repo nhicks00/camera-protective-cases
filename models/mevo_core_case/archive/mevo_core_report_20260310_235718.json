@@ -75,7 +75,7 @@
     "include_friction_ridge": false,
     "friction_ridge_height_mm": 0.8,
     "friction_ridge_setback_mm": 3.0,
-    "include_snap_clips": false,
+    "include_snap_clips": true,
     "snap_clip_beam_length_mm": 8.0,
     "snap_clip_beam_width_mm": 6.0,
     "snap_clip_beam_thickness_mm": 1.5,
@@ -84,16 +84,10 @@
     "snap_clip_setback_mm": 3.0,
     "snap_clips_per_wall": 2,
     "snap_clip_spread_mm": 30.0,
-    "include_snap_ridge": false,
+    "include_snap_ridge": true,
     "snap_ridge_height_mm": 1.0,
     "snap_ridge_depth_mm": 1.0,
     "snap_ridge_setback_mm": 3.0,
-    "include_twist_lock": true,
-    "twist_lock_tab_h_mm": 1.5,
-    "twist_lock_tab_w_mm": 9.0,
-    "twist_lock_tab_t_mm": 2.5,
-    "twist_lock_travel_mm": 14.0,
-    "twist_lock_clearance_mm": 0.4,
     "tpu_rear_cap_relief_depth_mm": 5.4,
     "tpu_rear_cap_relief_radial_mm": 0.3
   },
@@ -170,16 +164,17 @@
       "friction_ridge": {
         "enabled": false
       },
-      "twist_lock": {
+      "snap_clips": {
         "enabled": true,
-        "tab_h_mm": 1.5,
-        "tab_w_mm": 9.0,
-        "tab_t_mm": 2.5,
-        "travel_mm": 14.0,
-        "clearance_mm": 0.4,
-        "tab_z_shell_mm": 74.14999999999999,
-        "slot_depth_from_rear_mm": 7.75,
-        "rotation": "CW_from_rear_to_lock"
+        "total_clips": 8,
+        "beam_length_mm": 8.0,
+        "beam_width_mm": 6.0,
+        "beam_thickness_mm": 1.5,
+        "catch_height_mm": 1.0,
+        "catch_depth_mm": 1.0,
+        "clip_tip_z_mm": 76.64999999999999,
+        "setback_mm": 3.0,
+        "spread_mm": 30.0
       }
     }
   },
@@ -213,13 +208,13 @@
         "center_y_mm": 33.1
       }
     },
-    "twist_lock": {
+    "snap_ridge": {
       "enabled": true,
-      "tab_count": 4,
-      "tab_h_mm": 1.5,
-      "tab_w_mm": 9.0,
-      "tab_t_mm": 2.5,
-      "tab_z_local_mm": 5.5
+      "ridge_count": 8,
+      "ridge_height_mm": 1.0,
+      "ridge_depth_mm": 1.0,
+      "ridge_z_mm": 5.0,
+      "setback_mm": 3.0
     },
     "named_bodies": [
       "ASA_Back_Cap"
