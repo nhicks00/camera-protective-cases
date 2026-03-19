@@ -910,6 +910,23 @@ def build_dual_material_body(p: ZowietekParams):
             print(f"  Rear edge wrap (full rim): added (Z to {rear_z:.1f})")
         except Exception:
             print("  WARNING: rear edge wrap failed to fuse")
+
+    # Final rear cap relief must be applied after any rear wrap geometry is added,
+    # otherwise the wrap simply fills the cap-entry zone back in.
+    if rear_relief_depth > 0.0:
+        relief_start_z = cavity_start_z + cavity_depth - rear_relief_depth
+        relief_w = tpu_outer_w + 2.0 * max(p.tpu_rear_cap_relief_radial_mm, 0.0)
+        relief_h = tpu_outer_h + 2.0 * max(p.tpu_rear_cap_relief_radial_mm, 0.0)
+        relief_corner_r = max(p.tpu_outer_corner_r_mm + 0.3, 0.5)
+        with BuildPart() as rear_relief_bp:
+            with BuildSketch(Plane.XY.offset(relief_start_z - 0.2)):
+                Rectangle(relief_w, relief_h)
+                fillet(vertices(), relief_corner_r)
+            extrude(amount=rear_relief_depth + 0.4)
+        try:
+            tpu_frame = _largest_solid(tpu_frame - rear_relief_bp.part)
+        except Exception:
+            print("  WARNING: final rear cap relief subtraction failed")
     tpu_frame.label = "TPU_Frame"
 
     interface_gap_w_each = 0.5 * (asa_inner_w - tpu_outer_w)
