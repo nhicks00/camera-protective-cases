@@ -277,5 +277,28 @@
     "cap_vs_body_mm3": 0.0,
     "collision_pass": true,
     "cap_seated_z_mm": 77.89999999999999
+  },
+  "export_verification": {
+    "asa_shell": {
+      "path": "models/zowietek_case/zowietek_pov_asa_shell.step",
+      "solids": 1,
+      "volume_mm3": 85459.36813257779,
+      "size_bytes": 878664,
+      "modified_at": "2026-03-18T21:45:19"
+    },
+    "tpu_frame": {
+      "path": "models/zowietek_case/zowietek_pov_tpu_frame.step",
+      "solids": 1,
+      "volume_mm3": 15206.079697657657,
+      "size_bytes": 182592,
+      "modified_at": "2026-03-18T21:45:19"
+    },
+    "back_cap": {
+      "path": "models/zowietek_case/zowietek_pov_back_cap.step",
+      "solids": 1,
+      "volume_mm3": 10387.191768667466,
+      "size_bytes": 301135,
+      "modified_at": "2026-03-18T21:45:19"
+    }
   }
 }

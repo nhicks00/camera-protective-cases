@@ -43,6 +43,7 @@ from build123d import (
     export_step,
     extrude,
     fillet,
+    import_step,
     loft,
     vertices,
 )
@@ -199,6 +200,25 @@ def _archive_existing(paths: list[Path], out_dir: Path) -> list[tuple[str, str]]
         shutil.move(str(path), str(target))
         moved.append((str(path), str(target)))
     return moved
+
+
+def _verify_exported_step(path: Path) -> dict:
+    if not path.exists():
+        raise FileNotFoundError(f"Expected STEP output missing: {path}")
+
+    part = import_step(str(path))
+    solids = part.solids() if hasattr(part, "solids") else []
+    if len(solids) != 1:
+        raise RuntimeError(f"Expected 1 solid in {path.name}, found {len(solids)}")
+
+    stat = path.stat()
+    return {
+        "path": str(path),
+        "solids": int(len(solids)),
+        "volume_mm3": float(part.volume),
+        "size_bytes": int(stat.st_size),
+        "modified_at": datetime.fromtimestamp(stat.st_mtime).isoformat(timespec="seconds"),
+    }
 
 
 def _resolved_wrap_depth(requested_depth: float, cavity_depth: float, enabled: bool) -> float:
@@ -1281,11 +1301,18 @@ def main():
     export_step(tpu_frame, str(tpu_step))
     export_step(back_cap, str(cap_step))
 
+    export_verification = {
+        "asa_shell": _verify_exported_step(shell_step),
+        "tpu_frame": _verify_exported_step(tpu_step),
+        "back_cap": _verify_exported_step(cap_step),
+    }
+
     payload = {
         "params": asdict(p),
         "body_report": body_report,
         "back_cap_report": cap_report,
         "collision_check": collision_report,
+        "export_verification": export_verification,
     }
     report_json.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
@@ -1295,6 +1322,11 @@ def main():
     print(f"Wrote {tpu_step}")
     print(f"Wrote {cap_step}")
     print(f"Wrote {report_json}")
+    for label, info in export_verification.items():
+        print(
+            f"Verified {label}: {info['solids']} solid, "
+            f"{info['size_bytes']} bytes, mtime {info['modified_at']}"
+        )
 
 
 if __name__ == "__main__":
