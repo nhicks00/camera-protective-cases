@@ -64,8 +64,9 @@ class ZowietekParams:
 
     # ASA shell
     asa_wall_mm: float = 2.2
-    interface_gap_mm: float = 0.0         # coincident bond
-    bond_interface_tolerance_mm: float = 0.02
+    interface_gap_mm: float = 0.15        # per-side assembly gap so TPU can slide into ASA
+    bond_interface_tolerance_mm: float = 0.20
+    rear_cap_seat_depth_mm: float = 8.5   # extra shell-only depth behind TPU for cap insertion/snap seating
 
     # Corner fillets (rounded-rectangle profile)
     asa_outer_corner_r_mm: float = 8.0
@@ -353,7 +354,9 @@ def _derived(p: ZowietekParams) -> dict:
     asa_outer_h = asa_inner_h + 2.0 * p.asa_wall_mm
 
     cavity_start_z = p.sun_hood_depth_mm
-    body_depth = p.sun_hood_depth_mm + tpu_inner_depth
+    shell_inner_depth = tpu_inner_depth + max(p.rear_cap_seat_depth_mm, 0.0)
+    rear_cap_fit_margin = max(shell_inner_depth - tpu_inner_depth - p.back_cap_lip_depth_mm, 0.0)
+    body_depth = p.sun_hood_depth_mm + shell_inner_depth
 
     # Back cap plug dimensions
     lip_tip_w = max(asa_inner_w - p.back_cap_lip_undersize_total_mm, 2.0)
@@ -378,6 +381,9 @@ def _derived(p: ZowietekParams) -> dict:
         "asa_outer_w_mm": asa_outer_w,
         "asa_outer_h_mm": asa_outer_h,
         "cavity_start_z_mm": cavity_start_z,
+        "shell_inner_depth_mm": shell_inner_depth,
+        "rear_cap_seat_depth_mm": float(max(p.rear_cap_seat_depth_mm, 0.0)),
+        "rear_cap_fit_margin_mm": rear_cap_fit_margin,
         "body_depth_mm": body_depth,
         "lip_tip_w_mm": lip_tip_w,
         "lip_tip_h_mm": lip_tip_h,
@@ -405,6 +411,7 @@ def build_dual_material_body(p: ZowietekParams):
 
     cavity_start_z = d["cavity_start_z_mm"]
     cavity_depth = d["tpu_inner_depth_mm"]
+    shell_inner_depth = d["shell_inner_depth_mm"]
     body_depth = d["body_depth_mm"]
 
     # Vent Z centers
@@ -454,7 +461,7 @@ def build_dual_material_body(p: ZowietekParams):
         with BuildSketch(Plane.XY.offset(cavity_start_z)):
             Rectangle(asa_inner_w, asa_inner_h)
             fillet(vertices(), p.asa_inner_corner_r_mm)
-        extrude(amount=cavity_depth + 0.2, mode=Mode.SUBTRACT)
+        extrude(amount=shell_inner_depth + 0.2, mode=Mode.SUBTRACT)
 
         # Rear groove for cap plug
         groove_clearance = 0.08
