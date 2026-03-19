@@ -168,32 +168,19 @@
         "type": "skeleton",
         "corner_bumper_w_mm": 12.0,
         "edge_rail_w_mm": 4.0,
-        "wall_thickness_mm": 1.8,
-        "front_face_wrap": {
-          "enabled": true,
-          "depth_mm": 2.5,
-          "rail_thickness_mm": 2.0
-        },
-        "rear_face_wrap": {
-          "enabled": true,
-          "depth_mm": 2.5,
-          "rail_thickness_mm": 2.0
-        }
+        "wall_thickness_mm": 1.8
       },
       "cold_shoe": {
         "enabled": true,
         "locations": [
-          "top",
-          "left",
-          "right"
+          "top"
         ],
         "pad_z_center_mm": 65.39999999999999,
         "boss_height_mm": 4.3,
         "slot_width_mm": 18.8,
         "rail_opening_mm": 13.5,
         "slide_in_from": "rear",
-        "mounted_on": "shade_hood",
-        "style": "open_dual_rail"
+        "mounted_on": "shade_hood"
       },
       "friction_ridge": {
         "enabled": false

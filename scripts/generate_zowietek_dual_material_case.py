@@ -205,6 +205,81 @@ def _resolved_wrap_depth(requested_depth: float, cavity_depth: float, enabled: b
     return max(min(requested_depth, 0.45 * cavity_depth), 0.6)
 
 
+def _build_face_wrap_ring(
+    outer_w: float,
+    outer_h: float,
+    outer_r: float,
+    inner_w: float,
+    inner_h: float,
+    inner_r: float,
+    z_start: float,
+    depth: float,
+):
+    with BuildPart() as wrap_bp:
+        with BuildSketch(Plane.XY.offset(z_start)):
+            Rectangle(outer_w, outer_h)
+            fillet(vertices(), outer_r)
+        extrude(amount=depth)
+        with BuildSketch(Plane.XY.offset(z_start - 0.2)):
+            Rectangle(inner_w, inner_h)
+            fillet(vertices(), inner_r)
+        extrude(amount=depth + 0.4, mode=Mode.SUBTRACT)
+    return _largest_solid(wrap_bp.part)
+
+
+def _build_top_cold_shoe_rails(
+    roof_y: float,
+    z_center: float,
+    boss_l: float,
+    boss_w: float,
+    slot_w: float,
+    opening_w: float,
+    slot_d: float,
+    rail_t: float,
+    rail_oh: float,
+    overlap: float,
+):
+    outer_wall_w = max(0.5 * (boss_w - slot_w), 0.8)
+    boss_h = slot_d + rail_t
+    wall_center_y = roof_y + 0.5 * (boss_h - overlap)
+    overhang_center_y = roof_y + slot_d + 0.5 * rail_t
+
+    with BuildPart() as shoe_bp:
+        for sx in (-1.0, 1.0):
+            with Locations((sx * (0.5 * slot_w + 0.5 * outer_wall_w), wall_center_y, z_center)):
+                Box(outer_wall_w, boss_h + overlap, boss_l)
+            with Locations((sx * (0.5 * opening_w + 0.5 * rail_oh), overhang_center_y, z_center)):
+                Box(rail_oh, rail_t, boss_l)
+    return _largest_solid(shoe_bp.part)
+
+
+def _build_side_cold_shoe_rails(
+    side_x: float,
+    outward_sign: float,
+    z_center: float,
+    boss_l: float,
+    boss_w: float,
+    slot_w: float,
+    opening_w: float,
+    slot_d: float,
+    rail_t: float,
+    rail_oh: float,
+    overlap: float,
+):
+    outer_wall_w = max(0.5 * (boss_w - slot_w), 0.8)
+    boss_h = slot_d + rail_t
+    wall_center_x = side_x + outward_sign * 0.5 * (boss_h - overlap)
+    overhang_center_x = side_x + outward_sign * (slot_d + 0.5 * rail_t)
+
+    with BuildPart() as shoe_bp:
+        for sy in (-1.0, 1.0):
+            with Locations((wall_center_x, sy * (0.5 * slot_w + 0.5 * outer_wall_w), z_center)):
+                Box(boss_h + overlap, outer_wall_w, boss_l)
+            with Locations((overhang_center_x, sy * (0.5 * opening_w + 0.5 * rail_oh), z_center)):
+                Box(rail_t, rail_oh, boss_l)
+    return _largest_solid(shoe_bp.part)
+
+
 def _derived(p: ZowietekParams) -> dict:
     # Inner cavity = device + clearance
     tpu_inner_w = p.device_nominal_w_mm + 2.0 * p.tpu_clearance_mm
@@ -684,43 +759,62 @@ def build_dual_material_body(p: ZowietekParams):
                 cs_slot_d = p.cold_shoe_slot_depth_mm
                 cs_boss_h = cs_slot_d + cs_rail_t
                 cs_opening = cs_slot_w - 2.0 * cs_rail_oh
-                cs_front_z = cs_pad_z - 0.5 * cs_boss_l
-                cs_slot_len = body_depth + 0.2 - cs_front_z
-                cs_slot_mid_z = cs_front_z + 0.5 * cs_slot_len
-                boss_overlap = min(1.5, shade_w - 0.2)
+                boss_overlap = min(0.8, shade_w - 0.2)
 
-                # Plane.XZ has a -Y normal. Negative offset lands on the +Y roof.
-                with BuildPart() as top_boss_bp:
-                    with BuildSketch(Plane.XZ.offset(-(half_shade_outer_h - boss_overlap))):
-                        with Locations((0.0, cs_pad_z)):
-                            Rectangle(cs_boss_w, cs_boss_l)
-                    extrude(amount=-(cs_boss_h + boss_overlap))
-                asa_shell = _largest_solid(asa_shell + top_boss_bp.part)
+                top_cold_shoe = _build_top_cold_shoe_rails(
+                    roof_y=half_shade_outer_h,
+                    z_center=cs_pad_z,
+                    boss_l=cs_boss_l,
+                    boss_w=cs_boss_w,
+                    slot_w=cs_slot_w,
+                    opening_w=cs_opening,
+                    slot_d=cs_slot_d,
+                    rail_t=cs_rail_t,
+                    rail_oh=cs_rail_oh,
+                    overlap=boss_overlap,
+                )
+                asa_shell = _largest_solid(asa_shell + top_cold_shoe)
 
-                top_outer_offset = -(half_shade_outer_h + cs_boss_h)
-                with BuildPart() as narrow_slot_bp:
-                    with BuildSketch(Plane.XZ.offset(top_outer_offset + 0.1)):
-                        with Locations((0.0, cs_slot_mid_z)):
-                            Rectangle(cs_opening, cs_slot_len)
-                    extrude(amount=(cs_boss_h + 0.2))
-                asa_shell = _largest_solid(asa_shell - narrow_slot_bp.part)
+                left_cold_shoe = _build_side_cold_shoe_rails(
+                    side_x=-half_shade_outer_w,
+                    outward_sign=-1.0,
+                    z_center=cs_pad_z,
+                    boss_l=cs_boss_l,
+                    boss_w=cs_boss_w,
+                    slot_w=cs_slot_w,
+                    opening_w=cs_opening,
+                    slot_d=cs_slot_d,
+                    rail_t=cs_rail_t,
+                    rail_oh=cs_rail_oh,
+                    overlap=boss_overlap,
+                )
+                asa_shell = _largest_solid(asa_shell + left_cold_shoe)
 
-                with BuildPart() as wide_slot_bp:
-                    with BuildSketch(Plane.XZ.offset(-(half_shade_outer_h - 0.1))):
-                        with Locations((0.0, cs_slot_mid_z)):
-                            Rectangle(cs_slot_w, cs_slot_len)
-                    extrude(amount=-(cs_slot_d + 0.2))
-                asa_shell = _largest_solid(asa_shell - wide_slot_bp.part)
+                right_cold_shoe = _build_side_cold_shoe_rails(
+                    side_x=half_shade_outer_w,
+                    outward_sign=1.0,
+                    z_center=cs_pad_z,
+                    boss_l=cs_boss_l,
+                    boss_w=cs_boss_w,
+                    slot_w=cs_slot_w,
+                    opening_w=cs_opening,
+                    slot_d=cs_slot_d,
+                    rail_t=cs_rail_t,
+                    rail_oh=cs_rail_oh,
+                    overlap=boss_overlap,
+                )
+                asa_shell = _largest_solid(asa_shell + right_cold_shoe)
 
                 cold_shoe_info = {
                     "enabled": True,
-                    "locations": ["top"],
+                    "locations": ["top", "left", "right"],
                     "pad_z_center_mm": float(cs_pad_z),
                     "boss_height_mm": float(cs_boss_h),
                     "slot_width_mm": float(cs_slot_w),
                     "rail_opening_mm": float(cs_opening),
                     "slide_in_from": "rear",
                     "mounted_on": "shade_hood",
+                    "style": "open_dual_rail",
                 }
 
             sun_shade_info = {
@@ -741,6 +835,12 @@ def build_dual_material_body(p: ZowietekParams):
 
     # Compute rear relief depth here so it's accessible outside BuildPart
     rear_relief_depth = min(max(p.tpu_rear_cap_relief_depth_mm, 0.0), max(cavity_depth - 1.0, 0.0))
+    face_wrap_radial = max(p.tpu_front_edge_wrap_radial_mm, 0.6)
+    face_wrap_inner_w = max(tpu_inner_w - 2.0 * face_wrap_radial, 2.0)
+    face_wrap_inner_h = max(tpu_inner_h - 2.0 * face_wrap_radial, 2.0)
+    face_wrap_inner_r = max(p.tpu_inner_corner_r_mm - face_wrap_radial, 0.5)
+    front_face_wrap_depth = float(d["front_wrap_intrusion_mm"])
+    rear_face_wrap_depth = float(d["rear_wrap_intrusion_mm"])
 
     # --- TPU Skeleton Frame ---
     # Corner bumpers at each of the 4 vertical edges, connected by edge rails
@@ -805,21 +905,6 @@ def build_dual_material_body(p: ZowietekParams):
                     mode=Mode.SUBTRACT,
                 )
 
-        # Front edge wrap (thin lip around front opening for device retention)
-        if p.include_tpu_front_edge_wrap:
-            wrap_depth = float(d["front_wrap_intrusion_mm"])
-            wrap_radial = max(p.tpu_front_edge_wrap_radial_mm, 0.6)
-            wrap_inner_w = max(tpu_inner_w - 2.0 * wrap_radial, 2.0)
-            wrap_inner_h = max(tpu_inner_h - 2.0 * wrap_radial, 2.0)
-            with BuildSketch(Plane.XY.offset(cavity_start_z)):
-                Rectangle(tpu_inner_w, tpu_inner_h)
-                fillet(vertices(), p.tpu_inner_corner_r_mm)
-            extrude(amount=wrap_depth)
-            with BuildSketch(Plane.XY.offset(cavity_start_z - 0.2)):
-                Rectangle(wrap_inner_w, wrap_inner_h)
-                fillet(vertices(), max(p.tpu_inner_corner_r_mm - 0.5, 0.3))
-            extrude(amount=wrap_depth + 0.4, mode=Mode.SUBTRACT)
-
         # Rear TPU relief for cap insertion
         rear_relief_depth = min(max(p.tpu_rear_cap_relief_depth_mm, 0.0), max(cavity_depth - 1.0, 0.0))
         if rear_relief_depth > 0.0:
@@ -865,54 +950,24 @@ def build_dual_material_body(p: ZowietekParams):
 
     tpu_frame = _largest_solid(tpu_bp.part)
 
-    # Rear edge wrap: full continuous rim mirroring the front edge wrap.
-    # Smooth transition from normal wall thickness to a thicker rim that
-    # wraps over the camera's rear face — symmetrical with the front.
-    if p.include_rear_tpu_bumpers:
-        rear_z = cavity_start_z + cavity_depth
-        rb_overlap = 4.0  # overlap into surviving skeleton for fusion
-
-        # Use same wrap dimensions as front edge wrap for symmetry
-        rear_wrap_depth = float(d["rear_wrap_intrusion_mm"])
-        rear_wrap_radial = max(p.tpu_front_edge_wrap_radial_mm, 0.6)
-        rear_wrap_inner_w = max(tpu_inner_w - 2.0 * rear_wrap_radial, 2.0)
-        rear_wrap_inner_h = max(tpu_inner_h - 2.0 * rear_wrap_radial, 2.0)
-        rear_wrap_inner_r = max(p.tpu_inner_corner_r_mm - rear_wrap_radial, 0.5)
-
-        rear_wrap_start = rear_z - rear_wrap_depth
-        overlap_start = rear_wrap_start - rb_overlap
-
-        with BuildPart() as _rear_wrap:
-            # Full outer tube from overlap zone to rear face
-            with BuildSketch(Plane.XY.offset(overlap_start)):
-                Rectangle(tpu_outer_w, tpu_outer_h)
-                fillet(vertices(), p.tpu_outer_corner_r_mm)
-            extrude(amount=rear_wrap_depth + rb_overlap)
-
-            # Subtract normal cavity in the overlap zone (thin walls)
-            with BuildSketch(Plane.XY.offset(overlap_start - 0.1)):
-                Rectangle(tpu_inner_w, tpu_inner_h)
-                fillet(vertices(), p.tpu_inner_corner_r_mm)
-            extrude(amount=rb_overlap + 0.2, mode=Mode.SUBTRACT)
-
-            # Transition zone: fill to cavity profile, then subtract shrunk inner
-            with BuildSketch(Plane.XY.offset(rear_wrap_start - 0.1)):
-                Rectangle(tpu_inner_w, tpu_inner_h)
-                fillet(vertices(), p.tpu_inner_corner_r_mm)
-            extrude(amount=rear_wrap_depth + 0.1)
-            with BuildSketch(Plane.XY.offset(rear_wrap_start - 0.2)):
-                Rectangle(rear_wrap_inner_w, rear_wrap_inner_h)
-                fillet(vertices(), rear_wrap_inner_r)
-            extrude(amount=rear_wrap_depth + 0.4, mode=Mode.SUBTRACT)
-
+    if p.include_tpu_front_edge_wrap and front_face_wrap_depth > 0.0:
         try:
-            tpu_frame = tpu_frame + _rear_wrap.part
-            print(f"  Rear edge wrap (full rim): added (Z to {rear_z:.1f})")
+            front_face_ring = _build_face_wrap_ring(
+                outer_w=tpu_inner_w,
+                outer_h=tpu_inner_h,
+                outer_r=p.tpu_inner_corner_r_mm,
+                inner_w=face_wrap_inner_w,
+                inner_h=face_wrap_inner_h,
+                inner_r=face_wrap_inner_r,
+                z_start=cavity_start_z,
+                depth=front_face_wrap_depth,
+            )
+            tpu_frame = _largest_solid(tpu_frame + front_face_ring)
         except Exception:
-            print("  WARNING: rear edge wrap failed to fuse")
+            print("  WARNING: front TPU face wrap failed to fuse")
 
-    # Final rear cap relief must be applied after any rear wrap geometry is added,
-    # otherwise the wrap simply fills the cap-entry zone back in.
+    # Re-apply the rear cap relief to the fused TPU frame so the cap-entry zone
+    # stays clear even after the front face wrap has been added.
     if rear_relief_depth > 0.0:
         relief_start_z = cavity_start_z + cavity_depth - rear_relief_depth
         relief_w = tpu_outer_w + 2.0 * max(p.tpu_rear_cap_relief_radial_mm, 0.0)
@@ -927,6 +982,22 @@ def build_dual_material_body(p: ZowietekParams):
             tpu_frame = _largest_solid(tpu_frame - rear_relief_bp.part)
         except Exception:
             print("  WARNING: final rear cap relief subtraction failed")
+
+    if p.include_rear_tpu_bumpers and rear_face_wrap_depth > 0.0:
+        try:
+            rear_face_ring = _build_face_wrap_ring(
+                outer_w=tpu_inner_w,
+                outer_h=tpu_inner_h,
+                outer_r=p.tpu_inner_corner_r_mm,
+                inner_w=face_wrap_inner_w,
+                inner_h=face_wrap_inner_h,
+                inner_r=face_wrap_inner_r,
+                z_start=cavity_start_z + cavity_depth - rear_face_wrap_depth,
+                depth=rear_face_wrap_depth,
+            )
+            tpu_frame = _largest_solid(tpu_frame + rear_face_ring)
+        except Exception:
+            print("  WARNING: rear TPU face wrap failed to fuse")
     tpu_frame.label = "TPU_Frame"
 
     interface_gap_w_each = 0.5 * (asa_inner_w - tpu_outer_w)
@@ -979,6 +1050,16 @@ def build_dual_material_body(p: ZowietekParams):
                 "corner_bumper_w_mm": float(p.tpu_corner_bumper_w_mm),
                 "edge_rail_w_mm": float(p.tpu_edge_rail_w_mm),
                 "wall_thickness_mm": float(p.tpu_wall_mm),
+                "front_face_wrap": {
+                    "enabled": bool(p.include_tpu_front_edge_wrap),
+                    "depth_mm": float(front_face_wrap_depth),
+                    "rail_thickness_mm": float(face_wrap_radial),
+                },
+                "rear_face_wrap": {
+                    "enabled": bool(p.include_rear_tpu_bumpers),
+                    "depth_mm": float(rear_face_wrap_depth),
+                    "rail_thickness_mm": float(face_wrap_radial),
+                },
             },
             "cold_shoe": cold_shoe_info if cold_shoe_info else {"enabled": False},
             "friction_ridge": {"enabled": False},
