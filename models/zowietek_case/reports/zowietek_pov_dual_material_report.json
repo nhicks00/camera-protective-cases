@@ -3,15 +3,16 @@
     "device_nominal_l_mm": 68.6,
     "device_nominal_w_mm": 60.2,
     "device_nominal_h_mm": 51.0,
+    "extra_depth_mm": 4.0,
     "tpu_clearance_mm": 0.4,
     "tpu_wall_mm": 1.8,
     "asa_wall_mm": 2.2,
     "interface_gap_mm": 0.0,
     "bond_interface_tolerance_mm": 0.02,
-    "asa_outer_corner_r_mm": 4.0,
-    "asa_inner_corner_r_mm": 2.0,
-    "tpu_outer_corner_r_mm": 2.0,
-    "tpu_inner_corner_r_mm": 1.0,
+    "asa_outer_corner_r_mm": 6.0,
+    "asa_inner_corner_r_mm": 4.0,
+    "tpu_outer_corner_r_mm": 4.0,
+    "tpu_inner_corner_r_mm": 2.5,
     "sun_hood_depth_mm": 3.0,
     "include_front_lens_led_cutouts": true,
     "lens_cutout_d_mm": 37.7,
@@ -32,7 +33,7 @@
     "include_tpu_front_edge_wrap": true,
     "tripod_rect_w_mm": 31.75,
     "tripod_rect_l_mm": 25.4,
-    "tripod_bottom_center_from_front_mm": 34.3,
+    "tripod_bottom_center_from_front_mm": 47.0,
     "include_top_tripod": false,
     "tripod_top_center_from_front_mm": 34.3,
     "include_thermal_vents": true,
@@ -65,24 +66,37 @@
     "back_cap_edge_fillet_mm": 0.6,
     "bumper_ring_inset_mm": 3.0,
     "bumper_ring_corner_r_mm": 3.0,
-    "include_ext_latches": true,
-    "ext_latch_arm_width_mm": 12.0,
-    "ext_latch_arm_thickness_mm": 2.0,
-    "ext_latch_overhang_mm": 8.0,
-    "ext_latch_hook_depth_mm": 1.5,
-    "ext_latch_hook_height_mm": 2.0,
-    "ext_latch_clearance_mm": 0.3,
+    "include_snap_latches": true,
+    "snap_latch_beam_length_mm": 4.0,
+    "snap_latch_beam_width_mm": 8.0,
+    "snap_latch_beam_thickness_mm": 1.5,
+    "snap_latch_hook_height_mm": 1.0,
+    "snap_latch_hook_ramp_mm": 2.5,
+    "snap_latch_flex_gap_mm": 1.2,
+    "snap_latch_side_slot_width_mm": 1.0,
+    "snap_latch_hole_width_mm": 10.0,
+    "snap_latch_hole_height_mm": 4.0,
+    "include_retention_bumps": true,
+    "retention_bump_height_mm": 0.8,
+    "retention_bump_width_mm": 8.0,
+    "retention_bump_z_extent_mm": 4.0,
+    "retention_bump_setback_mm": 3.0,
     "tpu_rear_cap_relief_depth_mm": 5.4,
     "tpu_rear_cap_relief_radial_mm": 0.3,
     "include_rear_tpu_bumpers": true,
     "tpu_rear_bumper_depth_mm": 3.0,
-    "tpu_rear_bumper_wall_mm": 1.8
+    "tpu_rear_bumper_wall_mm": 1.8,
+    "include_sun_shade": true,
+    "sun_shade_standoff_mm": 6.0,
+    "sun_shade_wall_mm": 2.0,
+    "sun_shade_post_width_mm": 4.0,
+    "sun_shade_side_drop_ratio": 0.55
   },
   "body_report": {
     "derived_mm": {
       "tpu_inner_w_mm": 61.0,
       "tpu_inner_h_mm": 51.8,
-      "tpu_inner_depth_mm": 69.39999999999999,
+      "tpu_inner_depth_mm": 73.39999999999999,
       "tpu_outer_w_mm": 64.6,
       "tpu_outer_h_mm": 55.4,
       "asa_inner_w_mm": 64.6,
@@ -90,7 +104,7 @@
       "asa_outer_w_mm": 69.0,
       "asa_outer_h_mm": 59.8,
       "cavity_start_z_mm": 3.0,
-      "body_depth_mm": 72.39999999999999,
+      "body_depth_mm": 76.39999999999999,
       "lip_tip_w_mm": 64.32,
       "lip_tip_h_mm": 55.12,
       "ring_opening_w_mm": 54.2,
@@ -115,7 +129,7 @@
         "bottom": {
           "rect_w_mm": 31.75,
           "rect_l_mm": 25.4,
-          "center_from_front_mm": 34.3
+          "center_from_front_mm": 47.0
         },
         "top": {
           "enabled": false,
@@ -128,19 +142,20 @@
         "side_slots": {
           "count_per_side": 5,
           "z_centers": [
-            18.199999999999996,
-            27.199999999999996,
-            36.199999999999996,
-            45.199999999999996,
-            54.199999999999996
+            20.199999999999996,
+            29.199999999999996,
+            38.199999999999996,
+            47.199999999999996,
+            56.199999999999996
           ]
         },
         "top_slots": {
-          "count": 3,
+          "count": 4,
           "z_centers": [
-            18.4,
-            30.199999999999996,
-            42.199999999999996
+            20.199999999999996,
+            32.199999999999996,
+            44.199999999999996,
+            56.199999999999996
           ]
         }
       },
@@ -152,23 +167,40 @@
       },
       "cold_shoe": {
         "enabled": true,
-        "pad_z_center_mm": 60.39999999999999,
+        "locations": [
+          "top"
+        ],
+        "pad_z_center_mm": 64.39999999999999,
         "boss_height_mm": 4.3,
         "slot_width_mm": 18.8,
         "rail_opening_mm": 13.5,
-        "slide_in_from": "rear"
+        "slide_in_from": "rear",
+        "mounted_on": "shade_hood"
       },
       "friction_ridge": {
         "enabled": false
       },
-      "ext_latches": {
+      "snap_latches": {
         "enabled": true,
-        "count": 4,
-        "arm_width_mm": 12.0,
-        "arm_thickness_mm": 2.0,
-        "overhang_mm": 8.0,
-        "hook_depth_mm": 1.5,
-        "hook_height_mm": 2.0
+        "count": 3,
+        "walls": [
+          "X+",
+          "X-",
+          "Y-"
+        ],
+        "hole_z_mm": 72.64999999999999,
+        "hole_width_mm": 10.0,
+        "hole_height_mm": 4.0
+      },
+      "sun_shade": {
+        "enabled": true,
+        "standoff_mm": 6.0,
+        "wall_mm": 2.0,
+        "shade_outer_w_mm": 85.0,
+        "shade_outer_h_mm": 75.8,
+        "post_width_mm": 4.0,
+        "side_drop_ratio": 0.55,
+        "coverage": "top + partial left/right sides (open bottom)"
       }
     },
     "bond_interface_mm": {
@@ -195,15 +227,36 @@
       "lip_undersize_total": 0.28,
       "ring_opening_w": 54.2,
       "ring_opening_h": 45.0,
-      "bumper_ring_inset": 3.0
+      "bumper_ring_inset": 3.0,
+      "snap_latches": {
+        "enabled": true,
+        "type": "flush_wall_bump",
+        "count": 3,
+        "walls": [
+          "X+",
+          "X-",
+          "Y-"
+        ],
+        "bump_protrusion_mm": 1.0,
+        "bump_width_mm": 8.0,
+        "bump_z_extent_mm": 2.5
+      },
+      "retention_bumps": {
+        "enabled": true,
+        "walls": [
+          "Y+"
+        ],
+        "bump_height_mm": 0.8,
+        "bump_width_mm": 8.0
+      }
     },
     "named_bodies": [
       "ASA_Back_Cap"
     ]
   },
   "collision_check": {
-    "cap_vs_body_mm3": 153.1608600162267,
+    "cap_vs_body_mm3": 0.0,
     "collision_pass": true,
-    "cap_seated_z_mm": 72.89999999999999
+    "cap_seated_z_mm": 76.89999999999999
   }
 }

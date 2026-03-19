@@ -52,6 +52,7 @@ class ZowietekParams:
     device_nominal_l_mm: float = 68.6
     device_nominal_w_mm: float = 60.2
     device_nominal_h_mm: float = 51.0
+    extra_depth_mm: float = 4.0         # added rear margin for TPU-installed fit + cap seating
 
     # TPU clearance and wall
     tpu_clearance_mm: float = 0.40        # per side (matched to Mevo)
@@ -63,10 +64,10 @@ class ZowietekParams:
     bond_interface_tolerance_mm: float = 0.02
 
     # Corner fillets (rounded-rectangle profile)
-    asa_outer_corner_r_mm: float = 4.0
-    asa_inner_corner_r_mm: float = 2.0
-    tpu_outer_corner_r_mm: float = 2.0
-    tpu_inner_corner_r_mm: float = 1.0
+    asa_outer_corner_r_mm: float = 6.0
+    asa_inner_corner_r_mm: float = 4.0
+    tpu_outer_corner_r_mm: float = 4.0
+    tpu_inner_corner_r_mm: float = 2.5
 
     # Front wall / sun hood
     sun_hood_depth_mm: float = 3.0
@@ -95,7 +96,7 @@ class ZowietekParams:
     # Bottom tripod cutout (1/4"-20)
     tripod_rect_w_mm: float = 31.75       # 1.25 inches
     tripod_rect_l_mm: float = 25.4        # 1 inch along Z
-    tripod_bottom_center_from_front_mm: float = 34.3  # roughly centered along L
+    tripod_bottom_center_from_front_mm: float = 47.0  # shifted rearward ~0.5 in from prior print
     # Top tripod cutout (mirrored)
     include_top_tripod: bool = False
     tripod_top_center_from_front_mm: float = 34.3
@@ -136,14 +137,24 @@ class ZowietekParams:
     bumper_ring_inset_mm: float = 3.0     # inset from device edge per side for opening
     bumper_ring_corner_r_mm: float = 3.0
 
-    # External cantilever latches (arms on outer shell, hook over cap plate)
-    include_ext_latches: bool = True
-    ext_latch_arm_width_mm: float = 12.0    # width along wall face
-    ext_latch_arm_thickness_mm: float = 2.0  # radial thickness (outward from wall)
-    ext_latch_overhang_mm: float = 8.0       # how far arms extend past rear face
-    ext_latch_hook_depth_mm: float = 1.5     # how far hook extends inward
-    ext_latch_hook_height_mm: float = 2.0    # axial extent of hook nub
-    ext_latch_clearance_mm: float = 0.3      # gap between hook and cap plate face
+    # Cantilever snap-fit latches (beams on cap plug, through-holes in shell)
+    include_snap_latches: bool = True
+    snap_latch_beam_length_mm: float = 4.0   # free cantilever length along Z axis
+    snap_latch_beam_width_mm: float = 8.0    # lateral width of beam strip
+    snap_latch_beam_thickness_mm: float = 1.5 # radial thickness of beam (thin for flex)
+    snap_latch_hook_height_mm: float = 1.0   # reduced protrusion for easier snap-in
+    snap_latch_hook_ramp_mm: float = 2.5     # Z extent of hook ramp
+    snap_latch_flex_gap_mm: float = 1.2      # radial gap behind beam for deflection
+    snap_latch_side_slot_width_mm: float = 1.0  # width of side isolation slots
+    snap_latch_hole_width_mm: float = 10.0   # through-hole width in shell (press-to-release)
+    snap_latch_hole_height_mm: float = 4.0   # through-hole Z extent in shell
+
+    # Retention bumps on non-latch walls (low-profile press-fit)
+    include_retention_bumps: bool = True
+    retention_bump_height_mm: float = 0.8    # protrusion from plug surface
+    retention_bump_width_mm: float = 8.0     # lateral width of bump
+    retention_bump_z_extent_mm: float = 4.0  # Z extent of bump
+    retention_bump_setback_mm: float = 3.0   # from plug tip
 
     # Rear TPU relief
     tpu_rear_cap_relief_depth_mm: float = 5.4
@@ -153,6 +164,13 @@ class ZowietekParams:
     include_rear_tpu_bumpers: bool = True
     tpu_rear_bumper_depth_mm: float = 3.0    # how far bumper wraps around rear corners
     tpu_rear_bumper_wall_mm: float = 1.8     # wall thickness of rear bumper
+
+    # Floating sun shade canopy (top + partial sides, open bottom)
+    include_sun_shade: bool = True
+    sun_shade_standoff_mm: float = 6.0
+    sun_shade_wall_mm: float = 2.0
+    sun_shade_post_width_mm: float = 4.0
+    sun_shade_side_drop_ratio: float = 0.55  # keep side coverage to roughly the upper half
 
 
 def _largest_solid(shape):
@@ -184,7 +202,7 @@ def _derived(p: ZowietekParams) -> dict:
     # Inner cavity = device + clearance
     tpu_inner_w = p.device_nominal_w_mm + 2.0 * p.tpu_clearance_mm
     tpu_inner_h = p.device_nominal_h_mm + 2.0 * p.tpu_clearance_mm
-    tpu_inner_depth = p.device_nominal_l_mm + 2.0 * p.tpu_clearance_mm
+    tpu_inner_depth = p.device_nominal_l_mm + 2.0 * p.tpu_clearance_mm + p.extra_depth_mm
 
     tpu_outer_w = tpu_inner_w + 2.0 * p.tpu_wall_mm
     tpu_outer_h = tpu_inner_h + 2.0 * p.tpu_wall_mm
@@ -269,8 +287,8 @@ def build_dual_material_body(p: ZowietekParams):
         for z in top_vent_z_centers
     ]
 
-    # Remove top vents in cold shoe zone
-    if p.include_cold_shoe:
+    # Keep the rear top vent clear only when the cold shoe lives on the shell.
+    if p.include_cold_shoe and not p.include_sun_shade:
         cs_pad_z = body_depth - p.cold_shoe_pad_z_from_rear_mm
         cs_pad_half_l = 0.5 * p.cold_shoe_pad_length_mm
         top_vent_z_centers = [
@@ -356,9 +374,10 @@ def build_dual_material_body(p: ZowietekParams):
             with Locations((0.0, half_asa_outer_h - 0.5 * tripod_cut_depth + 0.2, tripod_z_top)):
                 Box(p.tripod_rect_w_mm, tripod_cut_depth, p.tripod_rect_l_mm, mode=Mode.SUBTRACT)
 
-        # Cold shoe mount (ISO 518) on top rear (Y+)
+        # Cold shoe mount on shell top. Disabled when the floating shade is enabled,
+        # since the cold shoe gets promoted onto the shade roof instead.
         cold_shoe_info = None
-        if p.include_cold_shoe:
+        if p.include_cold_shoe and not p.include_sun_shade:
             pad_w = p.cold_shoe_pad_width_mm
             pad_l = p.cold_shoe_pad_length_mm
             pad_z_center = body_depth - p.cold_shoe_pad_z_from_rear_mm
@@ -429,6 +448,67 @@ def build_dual_material_body(p: ZowietekParams):
                 "slide_in_from": "rear",
             }
 
+        # Snap-latch through-holes in shell walls (press-to-release access).
+        # Beams on cap plug snap outward through these holes when seated.
+        # Skip Y+ wall (has cold shoe). Use X+, X-, Y-.
+        snap_latch_info = None
+        if p.include_snap_latches:
+            hook_body_z = body_depth - p.back_cap_lip_depth_mm + 0.5 * p.snap_latch_hook_ramp_mm
+            hole_z = hook_body_z
+            hole_w = p.snap_latch_hole_width_mm
+            hole_h = p.snap_latch_hole_height_mm
+            wall_cut = p.asa_wall_mm + 2.0
+
+            # X+ wall
+            with BuildSketch(Plane.YZ.offset(half_asa_outer_w + 0.2)):
+                with Locations((0.0, hole_z)):
+                    Rectangle(hole_w, hole_h)
+            extrude(amount=-wall_cut, mode=Mode.SUBTRACT)
+
+            # X- wall
+            with BuildSketch(Plane.YZ.offset(-(half_asa_outer_w + 0.2))):
+                with Locations((0.0, hole_z)):
+                    Rectangle(hole_w, hole_h)
+            extrude(amount=wall_cut, mode=Mode.SUBTRACT)
+
+            # Y- wall
+            with BuildSketch(Plane.XZ.offset(-(half_asa_outer_h + 0.2))):
+                with Locations((0.0, hole_z)):
+                    Rectangle(hole_w, hole_h)
+            extrude(amount=wall_cut, mode=Mode.SUBTRACT)
+
+            latch_walls = ["X+", "X-", "Y-"]
+            snap_latch_info = {
+                "enabled": True,
+                "count": len(latch_walls),
+                "walls": latch_walls,
+                "hole_z_mm": float(hole_z),
+                "hole_width_mm": float(hole_w),
+                "hole_height_mm": float(hole_h),
+            }
+
+        # Retention bump pocket on non-latch wall (Y+ only)
+        retention_bump_info = None
+        if p.include_retention_bumps and p.include_snap_latches:
+            rb_h = p.retention_bump_height_mm
+            rb_w = p.retention_bump_width_mm
+            rb_z_ext = p.retention_bump_z_extent_mm
+            rb_z = body_depth - p.retention_bump_setback_mm
+            half_ih = 0.5 * asa_inner_h
+            pocket_d = rb_h + 0.2
+
+            # Y+ wall pocket
+            with Locations((0.0, half_ih + 0.5 * pocket_d, rb_z)):
+                Box(rb_w, pocket_d, rb_z_ext, mode=Mode.SUBTRACT)
+
+            retention_bump_info = {
+                "enabled": True,
+                "walls": ["Y+"],
+                "bump_height_mm": float(rb_h),
+                "bump_width_mm": float(rb_w),
+                "z_mm": float(rb_z),
+            }
+
     asa_shell = _largest_solid(asa_bp.part)
 
     # Build top-visor lens hood (arc over top of lens opening)
@@ -469,61 +549,152 @@ def build_dual_material_body(p: ZowietekParams):
         except Exception:
             pass
 
-    # External cantilever latches: 4 arms on outer shell walls, extending past rear face.
-    # Arms overlap 1mm into shell wall for proper boolean fusion.
-    ext_latch_info = None
-    if p.include_ext_latches:
-        el_w = p.ext_latch_arm_width_mm
-        el_t = p.ext_latch_arm_thickness_mm
-        el_ovr = p.ext_latch_overhang_mm
-        el_hd = p.ext_latch_hook_depth_mm
-        el_hh = p.ext_latch_hook_height_mm
-        el_cl = p.ext_latch_clearance_mm
-        overlap = 1.0  # mm overlap into shell wall for solid fusion
+    sun_shade_info = None
+    if p.include_sun_shade:
+        standoff = p.sun_shade_standoff_mm
+        shade_w = p.sun_shade_wall_mm
+        post_w = p.sun_shade_post_width_mm
 
-        half_ow = 0.5 * asa_outer_w
-        half_oh = 0.5 * asa_outer_h
+        shade_inner_w = asa_outer_w + 2.0 * standoff
+        shade_inner_h = asa_outer_h + 2.0 * standoff
+        shade_outer_w = shade_inner_w + 2.0 * shade_w
+        shade_outer_h = shade_inner_h + 2.0 * shade_w
+        shade_inner_r = min(
+            p.asa_outer_corner_r_mm + standoff,
+            0.49 * min(shade_inner_w, shade_inner_h),
+        )
+        shade_outer_r = min(
+            shade_inner_r + shade_w,
+            0.49 * min(shade_outer_w, shade_outer_h),
+        )
 
-        arm_total = el_ovr + overlap
-        with BuildPart() as latch_bp:
-            latch_positions = [
-                (half_ow + 0.5 * el_t - 0.5 * overlap, 0.0, -el_hd, 0.0),
-                (-(half_ow + 0.5 * el_t - 0.5 * overlap), 0.0, el_hd, 0.0),
-                (0.0, half_oh + 0.5 * el_t - 0.5 * overlap, 0.0, -el_hd),
-                (0.0, -(half_oh + 0.5 * el_t - 0.5 * overlap), 0.0, el_hd),
-            ]
-            for ax, ay, hdx, hdy in latch_positions:
-                arm_w_x = el_t if abs(ax) > abs(ay) else el_w
-                arm_w_y = el_w if abs(ax) > abs(ay) else el_t
-                arm_z = body_depth - overlap + 0.5 * arm_total
-                with Locations((ax, ay, arm_z)):
-                    Box(arm_w_x, arm_w_y, arm_total)
+        half_shade_outer_w = 0.5 * shade_outer_w
+        half_shade_outer_h = 0.5 * shade_outer_h
+        half_shade_inner_w = 0.5 * shade_inner_w
 
-                hook_engage_z = body_depth + p.back_cap_thickness_mm + el_cl
-                hook_z = hook_engage_z + 0.5 * el_hh
-                hook_w_x = abs(hdx) + el_t if hdx != 0 else el_w - 2.0
-                hook_w_y = abs(hdy) + el_t if hdy != 0 else el_w - 2.0
-                hx = ax + 0.5 * hdx
-                hy = ay + 0.5 * hdy
-                with Locations((hx, hy, hook_z)):
-                    Box(hook_w_x, hook_w_y, el_hh)
+        shade_z_start = 0.0
+        shade_z_len = body_depth
+        shade_mid_z = 0.5 * shade_z_len
+
+        flat_extent_half = max(half_asa_outer_w - p.asa_outer_corner_r_mm, 0.0)
+        rib_offset = max(flat_extent_half - 2.0, 0.0)
+        rib_radial = standoff + 2.0
+
+        # Top is the Y- side. Trim the lower portions of the X side panels so they
+        # stop around mid-height instead of running all the way to the bottom.
+        side_drop = min(
+            max(p.sun_shade_side_drop_ratio * shade_outer_h, 0.25 * shade_outer_h),
+            shade_outer_h - 2.0 * shade_w - 2.0,
+        )
+        side_panel_bottom_y = -half_shade_outer_h + side_drop
+        side_trim_h = max(half_shade_outer_h - side_panel_bottom_y, 0.0)
+        side_trim_x_depth = max(shade_outer_w - shade_inner_w + 2.0, shade_w + 1.0)
+        side_trim_x_center = 0.5 * (half_shade_outer_w + half_shade_inner_w)
 
         try:
-            asa_shell = _largest_solid(asa_shell + latch_bp.part)
-        except Exception:
-            pass
+            with BuildPart() as shade_bp:
+                with BuildSketch(Plane.XY.offset(shade_z_start)):
+                    Rectangle(shade_outer_w, shade_outer_h)
+                    fillet(vertices(), shade_outer_r)
+                extrude(amount=shade_z_len)
+                with BuildSketch(Plane.XY.offset(shade_z_start - 0.1)):
+                    Rectangle(shade_inner_w, shade_inner_h)
+                    fillet(vertices(), shade_inner_r)
+                extrude(amount=shade_z_len + 0.2, mode=Mode.SUBTRACT)
 
-        ext_latch_info = {
-            "enabled": True,
-            "count": 4,
-            "arm_width_mm": float(el_w),
-            "arm_thickness_mm": float(el_t),
-            "overhang_mm": float(el_ovr),
-            "hook_depth_mm": float(el_hd),
-            "hook_height_mm": float(el_hh),
-        }
+                # Remove the full bottom panel so the shade stays open underneath.
+                bottom_cut_h = half_shade_outer_h - half_asa_outer_h + 1.0
+                with Locations((0.0, half_asa_outer_h + 0.5 * bottom_cut_h, shade_mid_z)):
+                    Box(shade_outer_w + 2.0, bottom_cut_h + 0.2, shade_z_len + 2.0, mode=Mode.SUBTRACT)
+
+                # Trim the lower halves of the left and right side panels.
+                if side_trim_h > 0.5:
+                    for sx in (-1.0, 1.0):
+                        with Locations((sx * side_trim_x_center, side_panel_bottom_y + 0.5 * side_trim_h, shade_mid_z)):
+                            Box(side_trim_x_depth, side_trim_h + 0.2, shade_z_len + 2.0, mode=Mode.SUBTRACT)
+
+                # Use the same rib strategy as Mevo Core; the lower side ribs will
+                # disappear automatically where the side panels are trimmed away.
+                for ry in (-1.0, 1.0):
+                    with Locations((half_asa_outer_w + 0.5 * standoff, ry * rib_offset, shade_mid_z)):
+                        Box(rib_radial, post_w, shade_z_len)
+                for ry in (-1.0, 1.0):
+                    with Locations((-(half_asa_outer_w + 0.5 * standoff), ry * rib_offset, shade_mid_z)):
+                        Box(rib_radial, post_w, shade_z_len)
+                for rx in (-1.0, 1.0):
+                    with Locations((rx * rib_offset, -(half_asa_outer_h + 0.5 * standoff), shade_mid_z)):
+                        Box(post_w, rib_radial, shade_z_len)
+
+            shade_solid = _largest_solid(shade_bp.part)
+            asa_shell = _largest_solid(asa_shell + shade_solid)
+
+            if p.include_cold_shoe:
+                cs_pad_z = body_depth - p.cold_shoe_pad_z_from_rear_mm
+                cs_boss_l = p.cold_shoe_boss_length_mm
+                cs_boss_w = p.cold_shoe_boss_width_mm
+                cs_slot_w = p.cold_shoe_slot_width_mm
+                cs_rail_oh = p.cold_shoe_rail_overhang_mm
+                cs_rail_t = p.cold_shoe_rail_thickness_mm
+                cs_slot_d = p.cold_shoe_slot_depth_mm
+                cs_boss_h = cs_slot_d + cs_rail_t
+                cs_opening = cs_slot_w - 2.0 * cs_rail_oh
+                cs_front_z = cs_pad_z - 0.5 * cs_boss_l
+                cs_slot_len = body_depth + 0.2 - cs_front_z
+                cs_slot_mid_z = cs_front_z + 0.5 * cs_slot_len
+                boss_overlap = min(1.5, shade_w - 0.2)
+
+                # Plane.XZ has a -Y normal. Positive offset therefore lands on the
+                # top exterior surface (Y- in this model orientation).
+                with BuildPart() as top_boss_bp:
+                    with BuildSketch(Plane.XZ.offset(half_shade_outer_h - boss_overlap)):
+                        with Locations((0.0, cs_pad_z)):
+                            Rectangle(cs_boss_w, cs_boss_l)
+                    extrude(amount=cs_boss_h + boss_overlap)
+                asa_shell = _largest_solid(asa_shell + top_boss_bp.part)
+
+                top_outer_offset = half_shade_outer_h + cs_boss_h
+                with BuildPart() as narrow_slot_bp:
+                    with BuildSketch(Plane.XZ.offset(top_outer_offset + 0.1)):
+                        with Locations((0.0, cs_slot_mid_z)):
+                            Rectangle(cs_opening, cs_slot_len)
+                    extrude(amount=-(cs_boss_h + 0.2))
+                asa_shell = _largest_solid(asa_shell - narrow_slot_bp.part)
+
+                with BuildPart() as wide_slot_bp:
+                    with BuildSketch(Plane.XZ.offset(half_shade_outer_h - 0.1)):
+                        with Locations((0.0, cs_slot_mid_z)):
+                            Rectangle(cs_slot_w, cs_slot_len)
+                    extrude(amount=cs_slot_d + 0.2)
+                asa_shell = _largest_solid(asa_shell - wide_slot_bp.part)
+
+                cold_shoe_info = {
+                    "enabled": True,
+                    "locations": ["top"],
+                    "pad_z_center_mm": float(cs_pad_z),
+                    "boss_height_mm": float(cs_boss_h),
+                    "slot_width_mm": float(cs_slot_w),
+                    "rail_opening_mm": float(cs_opening),
+                    "slide_in_from": "rear",
+                    "mounted_on": "shade_hood",
+                }
+
+            sun_shade_info = {
+                "enabled": True,
+                "standoff_mm": float(standoff),
+                "wall_mm": float(shade_w),
+                "shade_outer_w_mm": float(shade_outer_w),
+                "shade_outer_h_mm": float(shade_outer_h),
+                "post_width_mm": float(post_w),
+                "side_drop_ratio": float(p.sun_shade_side_drop_ratio),
+                "coverage": "top + partial left/right sides (open bottom)",
+            }
+        except Exception as exc:
+            print(f"  WARNING: sun shade failed to build: {exc}")
 
     asa_shell.label = "ASA_Shell"
+
+    # Compute rear relief depth here so it's accessible outside BuildPart
+    rear_relief_depth = min(max(p.tpu_rear_cap_relief_depth_mm, 0.0), max(cavity_depth - 1.0, 0.0))
 
     # --- TPU Skeleton Frame ---
     # Corner bumpers at each of the 4 vertical edges, connected by edge rails
@@ -646,37 +817,53 @@ def build_dual_material_body(p: ZowietekParams):
             with Locations((0.0, half_tpu_outer_h - 0.5 * tripod_tpu_cut_depth + 0.2, tripod_z_top)):
                 Box(tpu_rect_w, tripod_tpu_cut_depth, tpu_rect_l, mode=Mode.SUBTRACT)
 
-        # Rear corner bumpers: L-shaped wraps at each of 4 corners that protect
-        # the rear edges. Extend from surviving corner leg (2mm overlap) through
-        # the relief zone to the rear face, plus a small shelf on the rear face.
-        if p.include_rear_tpu_bumpers and p.tpu_rear_bumper_depth_mm > 0.0:
-            rb_wrap = p.tpu_rear_bumper_depth_mm
-            rb_wall = p.tpu_rear_bumper_wall_mm
-            bumper_extent = p.tpu_corner_bumper_w_mm
-            rear_z = cavity_start_z + cavity_depth
-            rb_overlap = 2.0
-            rb_total_z = rear_relief_depth + rb_overlap if rear_relief_depth > 0 else rb_wrap + rb_overlap
-            rb_z_center = rear_z - 0.5 * rb_total_z
-
-            for sx in (-1.0, 1.0):
-                for sy in (-1.0, 1.0):
-                    # Wall-parallel pieces (continuation of corner leg to rear face)
-                    wx = sx * (half_tpu_outer_w - 0.5 * rb_wall)
-                    wy = sy * (half_tpu_outer_h - 0.5 * bumper_extent)
-                    with Locations((wx, wy, rb_z_center)):
-                        Box(rb_wall, bumper_extent, rb_total_z)
-                    wx2 = sx * (half_tpu_outer_w - 0.5 * bumper_extent)
-                    wy2 = sy * (half_tpu_outer_h - 0.5 * rb_wall)
-                    with Locations((wx2, wy2, rb_z_center)):
-                        Box(bumper_extent, rb_wall, rb_total_z)
-
-                    # Rear face wrap piece (bumper shelf at corner)
-                    rx = sx * (0.5 * tpu_inner_w + 0.5 * rb_wrap)
-                    ry = sy * (0.5 * tpu_inner_h + 0.5 * rb_wrap)
-                    with Locations((rx, ry, rear_z - 0.5 * rb_wall)):
-                        Box(rb_wrap + rb_wall, rb_wrap + rb_wall, rb_wall)
-
     tpu_frame = _largest_solid(tpu_bp.part)
+
+    # Rear edge wrap: full continuous rim mirroring the front edge wrap.
+    # Smooth transition from normal wall thickness to a thicker rim that
+    # wraps over the camera's rear face — symmetrical with the front.
+    if p.include_rear_tpu_bumpers:
+        rear_z = cavity_start_z + cavity_depth
+        rb_overlap = 4.0  # overlap into surviving skeleton for fusion
+
+        # Use same wrap dimensions as front edge wrap for symmetry
+        rear_wrap_depth = max(min(p.tpu_front_edge_wrap_depth_mm, 0.45 * cavity_depth), 0.6)
+        rear_wrap_radial = max(p.tpu_front_edge_wrap_radial_mm, 0.6)
+        rear_wrap_inner_w = max(tpu_inner_w - 2.0 * rear_wrap_radial, 2.0)
+        rear_wrap_inner_h = max(tpu_inner_h - 2.0 * rear_wrap_radial, 2.0)
+        rear_wrap_inner_r = max(p.tpu_inner_corner_r_mm - rear_wrap_radial, 0.5)
+
+        rear_wrap_start = rear_z - rear_wrap_depth
+        overlap_start = rear_wrap_start - rb_overlap
+
+        with BuildPart() as _rear_wrap:
+            # Full outer tube from overlap zone to rear face
+            with BuildSketch(Plane.XY.offset(overlap_start)):
+                Rectangle(tpu_outer_w, tpu_outer_h)
+                fillet(vertices(), p.tpu_outer_corner_r_mm)
+            extrude(amount=rear_wrap_depth + rb_overlap)
+
+            # Subtract normal cavity in the overlap zone (thin walls)
+            with BuildSketch(Plane.XY.offset(overlap_start - 0.1)):
+                Rectangle(tpu_inner_w, tpu_inner_h)
+                fillet(vertices(), p.tpu_inner_corner_r_mm)
+            extrude(amount=rb_overlap + 0.2, mode=Mode.SUBTRACT)
+
+            # Transition zone: fill to cavity profile, then subtract shrunk inner
+            with BuildSketch(Plane.XY.offset(rear_wrap_start - 0.1)):
+                Rectangle(tpu_inner_w, tpu_inner_h)
+                fillet(vertices(), p.tpu_inner_corner_r_mm)
+            extrude(amount=rear_wrap_depth + 0.1)
+            with BuildSketch(Plane.XY.offset(rear_wrap_start - 0.2)):
+                Rectangle(rear_wrap_inner_w, rear_wrap_inner_h)
+                fillet(vertices(), rear_wrap_inner_r)
+            extrude(amount=rear_wrap_depth + 0.4, mode=Mode.SUBTRACT)
+
+        try:
+            tpu_frame = tpu_frame + _rear_wrap.part
+            print(f"  Rear edge wrap (full rim): added (Z to {rear_z:.1f})")
+        except Exception:
+            print("  WARNING: rear edge wrap failed to fuse")
     tpu_frame.label = "TPU_Frame"
 
     interface_gap_w_each = 0.5 * (asa_inner_w - tpu_outer_w)
@@ -732,7 +919,8 @@ def build_dual_material_body(p: ZowietekParams):
             },
             "cold_shoe": cold_shoe_info if cold_shoe_info else {"enabled": False},
             "friction_ridge": {"enabled": False},
-            "ext_latches": ext_latch_info if ext_latch_info else {"enabled": False},
+            "snap_latches": snap_latch_info if snap_latch_info else {"enabled": False},
+            "sun_shade": sun_shade_info if sun_shade_info else {"enabled": False},
         },
         "bond_interface_mm": {
             "target_gap_each": float(p.interface_gap_mm),
@@ -791,7 +979,74 @@ def build_back_cap(p: ZowietekParams):
         pass
     cap = _largest_solid(cap)
 
-    # No cap-side features needed for external latches — hooks catch plate face directly
+    # Flush wall bumps on 3 plug walls (X+, X-, Y-) that click into
+    # the shell through-holes. No channel cuts or isolated beams —
+    # the bump is part of the plug wall surface.
+    snap_latch_cap_info = None
+    if p.include_snap_latches:
+        hook_h = p.snap_latch_hook_height_mm
+        hook_ramp = p.snap_latch_hook_ramp_mm
+        beam_w = p.snap_latch_beam_width_mm
+
+        half_lw = 0.5 * lip_tip_w
+        half_lh = 0.5 * lip_tip_h
+        plug_tip_z = p.back_cap_thickness_mm + p.back_cap_lip_depth_mm
+
+        # Position bump near plug tip to align with shell through-holes
+        bump_z_top = plug_tip_z
+        bump_z_center = bump_z_top - 0.5 * hook_ramp
+
+        # Bump walls: X+, X-, Y- (Y+ gets retention bump only)
+        latch_defs = [("X", 1.0), ("X", -1.0), ("Y", -1.0)]
+
+        for axis, sign in latch_defs:
+            half_wall = half_lw if axis == "X" else half_lh
+
+            if axis == "X":
+                bump_cx = sign * (half_wall + 0.5 * hook_h)
+                with BuildPart() as _bump:
+                    with Locations((bump_cx, 0.0, bump_z_center)):
+                        Box(hook_h, beam_w, hook_ramp)
+                cap = cap + _bump.part
+            else:
+                bump_cy = sign * (half_wall + 0.5 * hook_h)
+                with BuildPart() as _bump:
+                    with Locations((0.0, bump_cy, bump_z_center)):
+                        Box(beam_w, hook_h, hook_ramp)
+                cap = cap + _bump.part
+
+        snap_latch_cap_info = {
+            "enabled": True,
+            "type": "flush_wall_bump",
+            "count": 3,
+            "walls": ["X+", "X-", "Y-"],
+            "bump_protrusion_mm": float(hook_h),
+            "bump_width_mm": float(beam_w),
+            "bump_z_extent_mm": float(hook_ramp),
+        }
+
+    # Low-profile retention bump on non-latch wall (Y+ only)
+    retention_bump_cap_info = None
+    if p.include_retention_bumps and p.include_snap_latches:
+        rb_h = p.retention_bump_height_mm
+        rb_w = p.retention_bump_width_mm
+        rb_z_ext = p.retention_bump_z_extent_mm
+        half_lh = 0.5 * lip_tip_h
+        plug_tip_z = p.back_cap_thickness_mm + p.back_cap_lip_depth_mm
+        rb_z = plug_tip_z - p.retention_bump_setback_mm
+
+        # Bump on Y+ wall (protrudes outward in +Y direction)
+        with BuildPart() as _rb_yp:
+            with Locations((0.0, half_lh + 0.5 * rb_h, rb_z)):
+                Box(rb_w, rb_h, rb_z_ext)
+        cap = cap + _rb_yp.part
+
+        retention_bump_cap_info = {
+            "enabled": True,
+            "walls": ["Y+"],
+            "bump_height_mm": float(rb_h),
+            "bump_width_mm": float(rb_w),
+        }
 
     cap.label = "ASA_Back_Cap"
 
@@ -807,6 +1062,8 @@ def build_back_cap(p: ZowietekParams):
             "ring_opening_w": float(ring_opening_w),
             "ring_opening_h": float(ring_opening_h),
             "bumper_ring_inset": float(p.bumper_ring_inset_mm),
+            "snap_latches": snap_latch_cap_info if snap_latch_cap_info else {"enabled": False},
+            "retention_bumps": retention_bump_cap_info if retention_bump_cap_info else {"enabled": False},
         },
         "named_bodies": ["ASA_Back_Cap"],
     }
@@ -820,10 +1077,11 @@ def main():
     )
     parser.add_argument("--out", type=Path, default=Path("models/zowietek_case"), help="Output directory")
     parser.add_argument("--no-cold-shoe", action="store_true", help="Disable cold shoe mount")
-    parser.add_argument("--no-ext-latches", action="store_true", help="Disable external cantilever latches")
+    parser.add_argument("--no-snap-latches", action="store_true", help="Disable cantilever snap-fit latches")
     parser.add_argument("--no-top-tripod", action="store_true", help="Disable top tripod cutout")
     parser.add_argument("--no-hood", action="store_true", help="Disable lens hood")
     parser.add_argument("--no-vents", action="store_true", help="Disable thermal vents")
+    parser.add_argument("--no-sun-shade", action="store_true", help="Disable floating shade hood")
     parser.add_argument("--lens-diameter", type=float, default=None, help="Front lens cutout diameter (mm)")
     parser.add_argument("--cold-shoe-z-from-rear", type=float, default=None, help="Cold shoe center from rear (mm)")
     parser.add_argument("--bumper-ring-inset", type=float, default=None, help="Bumper ring inset from device edge (mm)")
@@ -832,14 +1090,16 @@ def main():
     p = ZowietekParams()
     if args.no_cold_shoe:
         p.include_cold_shoe = False
-    if args.no_ext_latches:
-        p.include_ext_latches = False
+    if args.no_snap_latches:
+        p.include_snap_latches = False
     if args.no_top_tripod:
         p.include_top_tripod = False
     if args.no_hood:
         p.include_lens_hood = False
     if args.no_vents:
         p.include_thermal_vents = False
+    if args.no_sun_shade:
+        p.include_sun_shade = False
     if args.lens_diameter is not None:
         p.lens_cutout_d_mm = float(args.lens_diameter)
     if args.cold_shoe_z_from_rear is not None:
