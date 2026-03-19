@@ -90,8 +90,7 @@
     "sun_shade_standoff_mm": 6.0,
     "sun_shade_wall_mm": 2.0,
     "sun_shade_post_width_mm": 4.0,
-    "sun_shade_side_drop_ratio": 0.72,
-    "sun_shade_side_support_height_mm": 3.0
+    "sun_shade_side_drop_ratio": 0.72
   },
   "body_report": {
     "derived_mm": {
@@ -205,7 +204,6 @@
         "shade_outer_h_mm": 75.8,
         "post_width_mm": 4.0,
         "side_drop_ratio": 0.72,
-        "side_support_height_mm": 3.0,
         "coverage": "top + partial left/right sides (open bottom)"
       }
     },

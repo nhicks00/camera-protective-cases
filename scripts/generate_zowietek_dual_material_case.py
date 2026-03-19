@@ -171,6 +171,7 @@ class ZowietekParams:
     sun_shade_wall_mm: float = 2.0
     sun_shade_post_width_mm: float = 4.0
     sun_shade_side_drop_ratio: float = 0.72  # extend side coverage enough to fully mask the vent zone
+    sun_shade_side_support_height_mm: float = 3.0  # tie the lower side edge back into the shell
 
 
 def _largest_solid(shape):
@@ -624,6 +625,10 @@ def build_dual_material_body(p: ZowietekParams):
         side_trim_h = max(side_panel_lower_y + half_shade_outer_h, 0.0)
         side_trim_x_depth = max(shade_outer_w - shade_inner_w + 2.0, shade_w + 1.0)
         side_trim_x_center = 0.5 * (half_shade_outer_w + half_shade_inner_w)
+        lower_side_support_h = max(min(p.sun_shade_side_support_height_mm, side_drop - 1.0), 1.5)
+        lower_side_support_y = side_panel_lower_y + 0.5 * lower_side_support_h
+        lower_side_support_x = 0.5 * (half_asa_outer_w + half_shade_outer_w)
+        lower_side_support_x_span = max(half_shade_outer_w - half_asa_outer_w, shade_w + 0.8)
 
         try:
             with BuildPart() as shade_bp:
@@ -659,6 +664,12 @@ def build_dual_material_body(p: ZowietekParams):
                 for rx in (-1.0, 1.0):
                     with Locations((rx * rib_offset, half_asa_outer_h + 0.5 * standoff, shade_mid_z)):
                         Box(post_w, rib_radial, shade_z_len)
+
+                # Lower edge support ledge: ties the bottom of each partial side
+                # panel back into the ASA shell to stiffen the shade termination.
+                for sx in (-1.0, 1.0):
+                    with Locations((sx * lower_side_support_x, lower_side_support_y, shade_mid_z)):
+                        Box(lower_side_support_x_span, lower_side_support_h, shade_z_len)
 
             shade_solid = _largest_solid(shade_bp.part)
             asa_shell = _largest_solid(asa_shell + shade_solid)
@@ -720,6 +731,7 @@ def build_dual_material_body(p: ZowietekParams):
                 "shade_outer_h_mm": float(shade_outer_h),
                 "post_width_mm": float(post_w),
                 "side_drop_ratio": float(p.sun_shade_side_drop_ratio),
+                "side_support_height_mm": float(lower_side_support_h),
                 "coverage": "top + partial left/right sides (open bottom)",
             }
         except Exception as exc:
