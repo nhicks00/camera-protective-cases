@@ -254,7 +254,7 @@ def _build_top_cold_shoe_rails(
                 Box(outer_wall_w, boss_h + overlap, boss_l)
             with Locations((sx * (0.5 * opening_w + 0.5 * rail_oh), overhang_center_y, z_center)):
                 Box(rail_oh, rail_t, boss_l)
-    return _largest_solid(shoe_bp.part)
+    return shoe_bp.part
 
 
 def _build_side_cold_shoe_rails(
@@ -281,7 +281,7 @@ def _build_side_cold_shoe_rails(
                 Box(boss_h + overlap, outer_wall_w, boss_l)
             with Locations((overhang_center_x, sy * (0.5 * opening_w + 0.5 * rail_oh), z_center)):
                 Box(rail_t, rail_oh, boss_l)
-    return _largest_solid(shoe_bp.part)
+    return shoe_bp.part
 
 
 def _derived(p: ZowietekParams) -> dict:
