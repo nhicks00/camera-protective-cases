@@ -953,17 +953,26 @@ def build_dual_material_body(p: ZowietekParams):
         rear_overlap_start_z = rear_wrap_start_z - rear_overlap
 
         try:
-            rear_face_ring = _build_face_wrap_ring(
-                outer_w=tpu_inner_w,
-                outer_h=tpu_inner_h,
-                outer_r=p.tpu_inner_corner_r_mm,
-                inner_w=face_wrap_inner_w,
-                inner_h=face_wrap_inner_h,
-                inner_r=face_wrap_inner_r,
-                z_start=rear_overlap_start_z,
-                depth=rear_face_wrap_depth + rear_overlap,
-            )
-            tpu_frame = _largest_solid(tpu_frame + rear_face_ring)
+            with BuildPart() as rear_wrap_bp:
+                with BuildSketch(Plane.XY.offset(rear_overlap_start_z)):
+                    Rectangle(tpu_outer_w, tpu_outer_h)
+                    fillet(vertices(), p.tpu_outer_corner_r_mm)
+                extrude(amount=rear_face_wrap_depth + rear_overlap)
+
+                with BuildSketch(Plane.XY.offset(rear_overlap_start_z - 0.1)):
+                    Rectangle(tpu_inner_w, tpu_inner_h)
+                    fillet(vertices(), p.tpu_inner_corner_r_mm)
+                extrude(amount=rear_overlap + 0.2, mode=Mode.SUBTRACT)
+
+                with BuildSketch(Plane.XY.offset(rear_wrap_start_z)):
+                    Rectangle(tpu_inner_w, tpu_inner_h)
+                    fillet(vertices(), p.tpu_inner_corner_r_mm)
+                with BuildSketch(Plane.XY.offset(rear_z)):
+                    Rectangle(face_wrap_inner_w, face_wrap_inner_h)
+                    fillet(vertices(), face_wrap_inner_r)
+                loft(mode=Mode.SUBTRACT)
+
+            tpu_frame = _largest_solid(tpu_frame + rear_wrap_bp.part)
         except Exception:
             print("  WARNING: rear TPU face wrap failed to fuse")
     tpu_frame.label = "TPU_Frame"
