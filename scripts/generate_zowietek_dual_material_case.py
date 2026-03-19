@@ -64,10 +64,10 @@ class ZowietekParams:
     bond_interface_tolerance_mm: float = 0.02
 
     # Corner fillets (rounded-rectangle profile)
-    asa_outer_corner_r_mm: float = 6.0
-    asa_inner_corner_r_mm: float = 4.0
-    tpu_outer_corner_r_mm: float = 4.0
-    tpu_inner_corner_r_mm: float = 2.5
+    asa_outer_corner_r_mm: float = 8.0
+    asa_inner_corner_r_mm: float = 5.8
+    tpu_outer_corner_r_mm: float = 5.8
+    tpu_inner_corner_r_mm: float = 4.0
 
     # Front wall / sun hood
     sun_hood_depth_mm: float = 3.0
@@ -157,7 +157,7 @@ class ZowietekParams:
     retention_bump_setback_mm: float = 3.0   # from plug tip
 
     # Rear TPU relief
-    tpu_rear_cap_relief_depth_mm: float = 5.4
+    tpu_rear_cap_relief_depth_mm: float = 6.0
     tpu_rear_cap_relief_radial_mm: float = 0.3
 
     # Rear TPU corner bumpers
@@ -170,7 +170,7 @@ class ZowietekParams:
     sun_shade_standoff_mm: float = 6.0
     sun_shade_wall_mm: float = 2.0
     sun_shade_post_width_mm: float = 4.0
-    sun_shade_side_drop_ratio: float = 0.55  # keep side coverage to roughly the upper half
+    sun_shade_side_drop_ratio: float = 0.72  # extend side coverage enough to fully mask the vent zone
 
 
 def _largest_solid(shape):
@@ -198,11 +198,41 @@ def _archive_existing(paths: list[Path], out_dir: Path) -> list[tuple[str, str]]
     return moved
 
 
+def _resolved_wrap_depth(requested_depth: float, cavity_depth: float, enabled: bool) -> float:
+    if not enabled:
+        return 0.0
+    return max(min(requested_depth, 0.45 * cavity_depth), 0.6)
+
+
 def _derived(p: ZowietekParams) -> dict:
     # Inner cavity = device + clearance
     tpu_inner_w = p.device_nominal_w_mm + 2.0 * p.tpu_clearance_mm
     tpu_inner_h = p.device_nominal_h_mm + 2.0 * p.tpu_clearance_mm
-    tpu_inner_depth = p.device_nominal_l_mm + 2.0 * p.tpu_clearance_mm + p.extra_depth_mm
+    base_tpu_inner_depth = p.device_nominal_l_mm + 2.0 * p.tpu_clearance_mm + p.extra_depth_mm
+
+    required_usable_device_depth = p.device_nominal_l_mm + 2.0 * p.tpu_clearance_mm
+    tpu_inner_depth = base_tpu_inner_depth
+    front_wrap_depth = 0.0
+    rear_wrap_depth = 0.0
+    for _ in range(4):
+        front_wrap_depth = _resolved_wrap_depth(
+            p.tpu_front_edge_wrap_depth_mm,
+            tpu_inner_depth,
+            p.include_tpu_front_edge_wrap,
+        )
+        rear_wrap_depth = _resolved_wrap_depth(
+            p.tpu_front_edge_wrap_depth_mm,
+            tpu_inner_depth,
+            p.include_rear_tpu_bumpers,
+        )
+        required_inner_depth = required_usable_device_depth + front_wrap_depth + rear_wrap_depth
+        resolved_depth = max(base_tpu_inner_depth, required_inner_depth)
+        if abs(resolved_depth - tpu_inner_depth) <= 1e-6:
+            tpu_inner_depth = resolved_depth
+            break
+        tpu_inner_depth = resolved_depth
+
+    usable_tpu_device_depth = tpu_inner_depth - front_wrap_depth - rear_wrap_depth
 
     tpu_outer_w = tpu_inner_w + 2.0 * p.tpu_wall_mm
     tpu_outer_h = tpu_inner_h + 2.0 * p.tpu_wall_mm
@@ -227,6 +257,10 @@ def _derived(p: ZowietekParams) -> dict:
         "tpu_inner_w_mm": tpu_inner_w,
         "tpu_inner_h_mm": tpu_inner_h,
         "tpu_inner_depth_mm": tpu_inner_depth,
+        "required_usable_device_depth_mm": required_usable_device_depth,
+        "usable_tpu_device_depth_mm": usable_tpu_device_depth,
+        "front_wrap_intrusion_mm": front_wrap_depth,
+        "rear_wrap_intrusion_mm": rear_wrap_depth,
         "tpu_outer_w_mm": tpu_outer_w,
         "tpu_outer_h_mm": tpu_outer_h,
         "asa_inner_w_mm": asa_inner_w,
@@ -580,14 +614,14 @@ def build_dual_material_body(p: ZowietekParams):
         rib_offset = max(flat_extent_half - 2.0, 0.0)
         rib_radial = standoff + 2.0
 
-        # Top is the Y- side. Trim the lower portions of the X side panels so they
-        # stop around mid-height instead of running all the way to the bottom.
+        # Top is the +Y side in this model. Keep the shade on the top plus upper
+        # side walls, and trim away the lower portions of the side panels.
         side_drop = min(
             max(p.sun_shade_side_drop_ratio * shade_outer_h, 0.25 * shade_outer_h),
             shade_outer_h - 2.0 * shade_w - 2.0,
         )
-        side_panel_bottom_y = -half_shade_outer_h + side_drop
-        side_trim_h = max(half_shade_outer_h - side_panel_bottom_y, 0.0)
+        side_panel_lower_y = half_shade_outer_h - side_drop
+        side_trim_h = max(side_panel_lower_y + half_shade_outer_h, 0.0)
         side_trim_x_depth = max(shade_outer_w - shade_inner_w + 2.0, shade_w + 1.0)
         side_trim_x_center = 0.5 * (half_shade_outer_w + half_shade_inner_w)
 
@@ -602,15 +636,16 @@ def build_dual_material_body(p: ZowietekParams):
                     fillet(vertices(), shade_inner_r)
                 extrude(amount=shade_z_len + 0.2, mode=Mode.SUBTRACT)
 
-                # Remove the full bottom panel so the shade stays open underneath.
+                # Remove the full bottom panel (negative Y face) so the shade stays
+                # open underneath while the roof remains on the top face.
                 bottom_cut_h = half_shade_outer_h - half_asa_outer_h + 1.0
-                with Locations((0.0, half_asa_outer_h + 0.5 * bottom_cut_h, shade_mid_z)):
+                with Locations((0.0, -(half_asa_outer_h + 0.5 * bottom_cut_h), shade_mid_z)):
                     Box(shade_outer_w + 2.0, bottom_cut_h + 0.2, shade_z_len + 2.0, mode=Mode.SUBTRACT)
 
-                # Trim the lower halves of the left and right side panels.
+                # Trim the lower portions of the left and right side panels.
                 if side_trim_h > 0.5:
                     for sx in (-1.0, 1.0):
-                        with Locations((sx * side_trim_x_center, side_panel_bottom_y + 0.5 * side_trim_h, shade_mid_z)):
+                        with Locations((sx * side_trim_x_center, -half_shade_outer_h + 0.5 * side_trim_h, shade_mid_z)):
                             Box(side_trim_x_depth, side_trim_h + 0.2, shade_z_len + 2.0, mode=Mode.SUBTRACT)
 
                 # Use the same rib strategy as Mevo Core; the lower side ribs will
@@ -622,7 +657,7 @@ def build_dual_material_body(p: ZowietekParams):
                     with Locations((-(half_asa_outer_w + 0.5 * standoff), ry * rib_offset, shade_mid_z)):
                         Box(rib_radial, post_w, shade_z_len)
                 for rx in (-1.0, 1.0):
-                    with Locations((rx * rib_offset, -(half_asa_outer_h + 0.5 * standoff), shade_mid_z)):
+                    with Locations((rx * rib_offset, half_asa_outer_h + 0.5 * standoff, shade_mid_z)):
                         Box(post_w, rib_radial, shade_z_len)
 
             shade_solid = _largest_solid(shade_bp.part)
@@ -643,28 +678,27 @@ def build_dual_material_body(p: ZowietekParams):
                 cs_slot_mid_z = cs_front_z + 0.5 * cs_slot_len
                 boss_overlap = min(1.5, shade_w - 0.2)
 
-                # Plane.XZ has a -Y normal. Positive offset therefore lands on the
-                # top exterior surface (Y- in this model orientation).
+                # Plane.XZ has a -Y normal. Negative offset lands on the +Y roof.
                 with BuildPart() as top_boss_bp:
-                    with BuildSketch(Plane.XZ.offset(half_shade_outer_h - boss_overlap)):
+                    with BuildSketch(Plane.XZ.offset(-(half_shade_outer_h - boss_overlap))):
                         with Locations((0.0, cs_pad_z)):
                             Rectangle(cs_boss_w, cs_boss_l)
-                    extrude(amount=cs_boss_h + boss_overlap)
+                    extrude(amount=-(cs_boss_h + boss_overlap))
                 asa_shell = _largest_solid(asa_shell + top_boss_bp.part)
 
-                top_outer_offset = half_shade_outer_h + cs_boss_h
+                top_outer_offset = -(half_shade_outer_h + cs_boss_h)
                 with BuildPart() as narrow_slot_bp:
                     with BuildSketch(Plane.XZ.offset(top_outer_offset + 0.1)):
                         with Locations((0.0, cs_slot_mid_z)):
                             Rectangle(cs_opening, cs_slot_len)
-                    extrude(amount=-(cs_boss_h + 0.2))
+                    extrude(amount=(cs_boss_h + 0.2))
                 asa_shell = _largest_solid(asa_shell - narrow_slot_bp.part)
 
                 with BuildPart() as wide_slot_bp:
-                    with BuildSketch(Plane.XZ.offset(half_shade_outer_h - 0.1)):
+                    with BuildSketch(Plane.XZ.offset(-(half_shade_outer_h - 0.1))):
                         with Locations((0.0, cs_slot_mid_z)):
                             Rectangle(cs_slot_w, cs_slot_len)
-                    extrude(amount=cs_slot_d + 0.2)
+                    extrude(amount=-(cs_slot_d + 0.2))
                 asa_shell = _largest_solid(asa_shell - wide_slot_bp.part)
 
                 cold_shoe_info = {
@@ -761,7 +795,7 @@ def build_dual_material_body(p: ZowietekParams):
 
         # Front edge wrap (thin lip around front opening for device retention)
         if p.include_tpu_front_edge_wrap:
-            wrap_depth = max(min(p.tpu_front_edge_wrap_depth_mm, 0.45 * cavity_depth), 0.6)
+            wrap_depth = float(d["front_wrap_intrusion_mm"])
             wrap_radial = max(p.tpu_front_edge_wrap_radial_mm, 0.6)
             wrap_inner_w = max(tpu_inner_w - 2.0 * wrap_radial, 2.0)
             wrap_inner_h = max(tpu_inner_h - 2.0 * wrap_radial, 2.0)
@@ -827,7 +861,7 @@ def build_dual_material_body(p: ZowietekParams):
         rb_overlap = 4.0  # overlap into surviving skeleton for fusion
 
         # Use same wrap dimensions as front edge wrap for symmetry
-        rear_wrap_depth = max(min(p.tpu_front_edge_wrap_depth_mm, 0.45 * cavity_depth), 0.6)
+        rear_wrap_depth = float(d["rear_wrap_intrusion_mm"])
         rear_wrap_radial = max(p.tpu_front_edge_wrap_radial_mm, 0.6)
         rear_wrap_inner_w = max(tpu_inner_w - 2.0 * rear_wrap_radial, 2.0)
         rear_wrap_inner_h = max(tpu_inner_h - 2.0 * rear_wrap_radial, 2.0)

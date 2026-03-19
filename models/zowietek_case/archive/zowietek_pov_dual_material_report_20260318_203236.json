@@ -90,17 +90,13 @@
     "sun_shade_standoff_mm": 6.0,
     "sun_shade_wall_mm": 2.0,
     "sun_shade_post_width_mm": 4.0,
-    "sun_shade_side_drop_ratio": 0.72
+    "sun_shade_side_drop_ratio": 0.55
   },
   "body_report": {
     "derived_mm": {
       "tpu_inner_w_mm": 61.0,
       "tpu_inner_h_mm": 51.8,
-      "tpu_inner_depth_mm": 74.39999999999999,
-      "required_usable_device_depth_mm": 69.39999999999999,
-      "usable_tpu_device_depth_mm": 69.39999999999999,
-      "front_wrap_intrusion_mm": 2.5,
-      "rear_wrap_intrusion_mm": 2.5,
+      "tpu_inner_depth_mm": 73.39999999999999,
       "tpu_outer_w_mm": 64.6,
       "tpu_outer_h_mm": 55.4,
       "asa_inner_w_mm": 64.6,
@@ -108,7 +104,7 @@
       "asa_outer_w_mm": 69.0,
       "asa_outer_h_mm": 59.8,
       "cavity_start_z_mm": 3.0,
-      "body_depth_mm": 77.39999999999999,
+      "body_depth_mm": 76.39999999999999,
       "lip_tip_w_mm": 64.32,
       "lip_tip_h_mm": 55.12,
       "ring_opening_w_mm": 54.2,
@@ -146,20 +142,20 @@
         "side_slots": {
           "count_per_side": 5,
           "z_centers": [
-            20.699999999999996,
-            29.699999999999996,
-            38.699999999999996,
-            47.699999999999996,
-            56.699999999999996
+            20.199999999999996,
+            29.199999999999996,
+            38.199999999999996,
+            47.199999999999996,
+            56.199999999999996
           ]
         },
         "top_slots": {
           "count": 4,
           "z_centers": [
-            20.699999999999996,
-            32.699999999999996,
-            44.699999999999996,
-            56.699999999999996
+            20.199999999999996,
+            32.199999999999996,
+            44.199999999999996,
+            56.199999999999996
           ]
         }
       },
@@ -174,7 +170,7 @@
         "locations": [
           "top"
         ],
-        "pad_z_center_mm": 65.39999999999999,
+        "pad_z_center_mm": 64.39999999999999,
         "boss_height_mm": 4.3,
         "slot_width_mm": 18.8,
         "rail_opening_mm": 13.5,
@@ -192,7 +188,7 @@
           "X-",
           "Y-"
         ],
-        "hole_z_mm": 73.64999999999999,
+        "hole_z_mm": 72.64999999999999,
         "hole_width_mm": 10.0,
         "hole_height_mm": 4.0
       },
@@ -203,7 +199,7 @@
         "shade_outer_w_mm": 85.0,
         "shade_outer_h_mm": 75.8,
         "post_width_mm": 4.0,
-        "side_drop_ratio": 0.72,
+        "side_drop_ratio": 0.55,
         "coverage": "top + partial left/right sides (open bottom)"
       }
     },
@@ -261,6 +257,6 @@
   "collision_check": {
     "cap_vs_body_mm3": 0.0,
     "collision_pass": true,
-    "cap_seated_z_mm": 77.89999999999999
+    "cap_seated_z_mm": 76.89999999999999
   }
 }
