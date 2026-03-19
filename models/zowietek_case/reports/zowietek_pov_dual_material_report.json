@@ -86,6 +86,10 @@
     "include_rear_tpu_bumpers": true,
     "tpu_rear_bumper_depth_mm": 3.0,
     "tpu_rear_bumper_wall_mm": 1.8,
+    "tpu_rear_face_outer_overlap_total_mm": 0.6,
+    "tpu_rear_face_connector_width_mm": 10.0,
+    "tpu_rear_face_connector_shell_overlap_mm": 0.8,
+    "back_cap_rear_frame_clearance_total_mm": 0.6,
     "include_sun_shade": true,
     "sun_shade_standoff_mm": 6.0,
     "sun_shade_wall_mm": 2.0,
@@ -112,8 +116,8 @@
       "body_depth_mm": 77.39999999999999,
       "lip_tip_w_mm": 64.32,
       "lip_tip_h_mm": 55.12,
-      "ring_opening_w_mm": 54.2,
-      "ring_opening_h_mm": 45.0
+      "ring_opening_w_mm": 62.2,
+      "ring_opening_h_mm": 53.0
     },
     "features_mm": {
       "include_front_lens_led_cutouts": true,
@@ -244,8 +248,8 @@
       "lip_depth": 5.0,
       "thickness": 3.0,
       "lip_undersize_total": 0.28,
-      "ring_opening_w": 54.2,
-      "ring_opening_h": 45.0,
+      "ring_opening_w": 62.2,
+      "ring_opening_h": 53.0,
       "bumper_ring_inset": 3.0,
       "snap_latches": {
         "enabled": true,

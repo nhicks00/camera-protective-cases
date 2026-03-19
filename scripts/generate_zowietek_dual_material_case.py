@@ -164,6 +164,10 @@ class ZowietekParams:
     include_rear_tpu_bumpers: bool = True
     tpu_rear_bumper_depth_mm: float = 3.0    # how far bumper wraps around rear corners
     tpu_rear_bumper_wall_mm: float = 1.8     # wall thickness of rear bumper
+    tpu_rear_face_outer_overlap_total_mm: float = 0.6  # enough outward overlap to fuse the rear face frame to the surviving corner structure
+    tpu_rear_face_connector_width_mm: float = 10.0
+    tpu_rear_face_connector_shell_overlap_mm: float = 0.8
+    back_cap_rear_frame_clearance_total_mm: float = 0.6
 
     # Floating sun shade canopy (top + partial sides, open bottom)
     include_sun_shade: bool = True
@@ -328,6 +332,17 @@ def _derived(p: ZowietekParams) -> dict:
     # Bumper ring opening = device envelope + margin on each side
     ring_opening_w = max(p.device_nominal_w_mm - 2.0 * p.bumper_ring_inset_mm, 10.0)
     ring_opening_h = max(p.device_nominal_h_mm - 2.0 * p.bumper_ring_inset_mm, 10.0)
+    if p.include_rear_tpu_bumpers:
+        rear_frame_outer_w = tpu_inner_w + p.tpu_rear_face_outer_overlap_total_mm
+        rear_frame_outer_h = tpu_inner_h + p.tpu_rear_face_outer_overlap_total_mm
+        ring_opening_w = max(
+            ring_opening_w,
+            rear_frame_outer_w + p.back_cap_rear_frame_clearance_total_mm,
+        )
+        ring_opening_h = max(
+            ring_opening_h,
+            rear_frame_outer_h + p.back_cap_rear_frame_clearance_total_mm,
+        )
 
     return {
         "tpu_inner_w_mm": tpu_inner_w,
@@ -841,6 +856,30 @@ def build_dual_material_body(p: ZowietekParams):
     face_wrap_inner_r = max(p.tpu_inner_corner_r_mm - face_wrap_radial, 0.5)
     front_face_wrap_depth = float(d["front_wrap_intrusion_mm"])
     rear_face_wrap_depth = float(d["rear_wrap_intrusion_mm"])
+    rear_face_outer_w = tpu_inner_w + p.tpu_rear_face_outer_overlap_total_mm
+    rear_face_outer_h = tpu_inner_h + p.tpu_rear_face_outer_overlap_total_mm
+    rear_face_outer_r = min(
+        p.tpu_inner_corner_r_mm + 0.5 * p.tpu_rear_face_outer_overlap_total_mm,
+        0.49 * min(rear_face_outer_w, rear_face_outer_h),
+    )
+    rear_wrap_start_z = cavity_start_z + cavity_depth - rear_face_wrap_depth
+    rear_connector_ring_overlap = min(max(0.6, 0.2 * rear_face_wrap_depth), rear_face_wrap_depth - 0.2)
+    connector_radial_w = 0.5 * (rear_face_outer_w - face_wrap_inner_w)
+    connector_radial_h = 0.5 * (rear_face_outer_h - face_wrap_inner_h)
+    rear_corner_bridge_w = min(max(0.8, 0.35 * connector_radial_w), connector_radial_w)
+    rear_corner_bridge_h = min(max(0.8, 0.35 * connector_radial_h), connector_radial_h)
+    rear_bridge_x = max(0.5 * rear_face_outer_w - rear_face_outer_r - 0.5 * rear_corner_bridge_w, 0.5 * rear_corner_bridge_w)
+    rear_bridge_y = max(0.5 * rear_face_outer_h - 0.5 * rear_corner_bridge_h, 0.5 * rear_corner_bridge_h)
+    rear_corner_bridge_start_z = relief_start_z = cavity_start_z + cavity_depth - rear_relief_depth
+    if p.include_rear_tpu_bumpers and rear_face_wrap_depth > 0.0:
+        rear_corner_bridge_start_z = relief_start_z - min(
+            max(p.tpu_rear_face_connector_shell_overlap_mm, 0.2),
+            max(rear_wrap_start_z - relief_start_z, 0.2),
+        )
+    rear_corner_bridge_depth = max(
+        rear_wrap_start_z + rear_connector_ring_overlap - rear_corner_bridge_start_z,
+        0.0,
+    )
 
     # --- TPU Skeleton Frame ---
     # Corner bumpers at each of the 4 vertical edges, connected by edge rails
@@ -905,17 +944,6 @@ def build_dual_material_body(p: ZowietekParams):
                     mode=Mode.SUBTRACT,
                 )
 
-        # Rear TPU relief for cap insertion
-        rear_relief_depth = min(max(p.tpu_rear_cap_relief_depth_mm, 0.0), max(cavity_depth - 1.0, 0.0))
-        if rear_relief_depth > 0.0:
-            relief_start_z = cavity_start_z + cavity_depth - rear_relief_depth
-            relief_w = tpu_outer_w + 2.0 * max(p.tpu_rear_cap_relief_radial_mm, 0.0)
-            relief_h = tpu_outer_h + 2.0 * max(p.tpu_rear_cap_relief_radial_mm, 0.0)
-            with BuildSketch(Plane.XY.offset(relief_start_z - 0.2)):
-                Rectangle(relief_w, relief_h)
-                fillet(vertices(), max(p.tpu_outer_corner_r_mm + 0.3, 0.5))
-            extrude(amount=rear_relief_depth + 0.4, mode=Mode.SUBTRACT)
-
         # Vent pass-through cuts on TPU (same locations as ASA)
         if p.include_thermal_vents:
             tpu_side_cut = max(p.side_vent_cut_depth_mm, p.tpu_wall_mm + 1.5)
@@ -969,7 +997,6 @@ def build_dual_material_body(p: ZowietekParams):
     # Re-apply the rear cap relief to the fused TPU frame so the cap-entry zone
     # stays clear even after the front face wrap has been added.
     if rear_relief_depth > 0.0:
-        relief_start_z = cavity_start_z + cavity_depth - rear_relief_depth
         relief_w = tpu_outer_w + 2.0 * max(p.tpu_rear_cap_relief_radial_mm, 0.0)
         relief_h = tpu_outer_h + 2.0 * max(p.tpu_rear_cap_relief_radial_mm, 0.0)
         relief_corner_r = max(p.tpu_outer_corner_r_mm + 0.3, 0.5)
@@ -985,14 +1012,27 @@ def build_dual_material_body(p: ZowietekParams):
 
     if p.include_rear_tpu_bumpers and rear_face_wrap_depth > 0.0:
         try:
+            if rear_corner_bridge_depth > 0.2:
+                rear_bridge_center_z = rear_corner_bridge_start_z + 0.5 * rear_corner_bridge_depth
+                with BuildPart() as rear_corner_bridges_bp:
+                    for sx in (-1.0, 1.0):
+                        for sy in (-1.0, 1.0):
+                            with Locations((
+                                sx * rear_bridge_x,
+                                sy * rear_bridge_y,
+                                rear_bridge_center_z,
+                            )):
+                                Box(rear_corner_bridge_w, rear_corner_bridge_h, rear_corner_bridge_depth)
+                tpu_frame = _largest_solid(tpu_frame + rear_corner_bridges_bp.part)
+
             rear_face_ring = _build_face_wrap_ring(
-                outer_w=tpu_inner_w,
-                outer_h=tpu_inner_h,
-                outer_r=p.tpu_inner_corner_r_mm,
+                outer_w=rear_face_outer_w,
+                outer_h=rear_face_outer_h,
+                outer_r=rear_face_outer_r,
                 inner_w=face_wrap_inner_w,
                 inner_h=face_wrap_inner_h,
                 inner_r=face_wrap_inner_r,
-                z_start=cavity_start_z + cavity_depth - rear_face_wrap_depth,
+                z_start=rear_wrap_start_z,
                 depth=rear_face_wrap_depth,
             )
             tpu_frame = _largest_solid(tpu_frame + rear_face_ring)
