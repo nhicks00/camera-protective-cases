@@ -1381,6 +1381,7 @@ def main():
                 f"Verified {label}: "
                 f"{info['size_bytes']} bytes, mtime {info['modified_at']}"
             )
+    print("Note: STEP files are CAD outputs. Most printer slicers want the STL files in models/zowietek_case/printable_mesh.")
 
 
 if __name__ == "__main__":
