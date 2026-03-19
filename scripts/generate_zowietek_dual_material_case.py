@@ -41,6 +41,7 @@ from build123d import (
     SlotOverall,
     add,
     export_step,
+    export_stl,
     extrude,
     fillet,
     import_step,
@@ -216,6 +217,17 @@ def _verify_exported_step(path: Path) -> dict:
         "path": str(path),
         "solids": int(len(solids)),
         "volume_mm3": float(part.volume),
+        "size_bytes": int(stat.st_size),
+        "modified_at": datetime.fromtimestamp(stat.st_mtime).isoformat(timespec="seconds"),
+    }
+
+
+def _verify_file_exists(path: Path) -> dict:
+    if not path.exists():
+        raise FileNotFoundError(f"Expected export missing: {path}")
+    stat = path.stat()
+    return {
+        "path": str(path),
         "size_bytes": int(stat.st_size),
         "modified_at": datetime.fromtimestamp(stat.st_mtime).isoformat(timespec="seconds"),
     }
@@ -1288,23 +1300,55 @@ def main():
     shell_step = args.out / "zowietek_pov_asa_shell.step"
     tpu_step = args.out / "zowietek_pov_tpu_frame.step"
     cap_step = args.out / "zowietek_pov_back_cap.step"
+    shell_stp = args.out / "zowietek_pov_asa_shell.stp"
+    tpu_stp = args.out / "zowietek_pov_tpu_frame.stp"
+    cap_stp = args.out / "zowietek_pov_back_cap.stp"
+    mesh_dir = args.out / "printable_mesh"
+    mesh_dir.mkdir(parents=True, exist_ok=True)
+    shell_stl = mesh_dir / "zowietek_pov_asa_shell.stl"
+    tpu_stl = mesh_dir / "zowietek_pov_tpu_frame.stl"
+    cap_stl = mesh_dir / "zowietek_pov_back_cap.stl"
     report_json = reports_dir / "zowietek_pov_dual_material_report.json"
 
     # Also archive old combined body file
     body_step_legacy = args.out / "zowietek_pov_body_dual_material.step"
     archived = _archive_existing(
-        [shell_step, tpu_step, cap_step, report_json, body_step_legacy],
+        [
+            shell_step,
+            tpu_step,
+            cap_step,
+            shell_stp,
+            tpu_stp,
+            cap_stp,
+            shell_stl,
+            tpu_stl,
+            cap_stl,
+            report_json,
+            body_step_legacy,
+        ],
         args.out,
     )
 
     export_step(asa_shell, str(shell_step))
     export_step(tpu_frame, str(tpu_step))
     export_step(back_cap, str(cap_step))
+    shutil.copyfile(shell_step, shell_stp)
+    shutil.copyfile(tpu_step, tpu_stp)
+    shutil.copyfile(cap_step, cap_stp)
+    export_stl(asa_shell, str(shell_stl))
+    export_stl(tpu_frame, str(tpu_stl))
+    export_stl(back_cap, str(cap_stl))
 
     export_verification = {
         "asa_shell": _verify_exported_step(shell_step),
         "tpu_frame": _verify_exported_step(tpu_step),
         "back_cap": _verify_exported_step(cap_step),
+        "asa_shell_stp": _verify_exported_step(shell_stp),
+        "tpu_frame_stp": _verify_exported_step(tpu_stp),
+        "back_cap_stp": _verify_exported_step(cap_stp),
+        "asa_shell_stl": _verify_file_exists(shell_stl),
+        "tpu_frame_stl": _verify_file_exists(tpu_stl),
+        "back_cap_stl": _verify_file_exists(cap_stl),
     }
 
     payload = {
@@ -1321,12 +1365,24 @@ def main():
     print(f"Wrote {shell_step}")
     print(f"Wrote {tpu_step}")
     print(f"Wrote {cap_step}")
+    print(f"Wrote {shell_stp}")
+    print(f"Wrote {tpu_stp}")
+    print(f"Wrote {cap_stp}")
+    print(f"Wrote {shell_stl}")
+    print(f"Wrote {tpu_stl}")
+    print(f"Wrote {cap_stl}")
     print(f"Wrote {report_json}")
     for label, info in export_verification.items():
-        print(
-            f"Verified {label}: {info['solids']} solid, "
-            f"{info['size_bytes']} bytes, mtime {info['modified_at']}"
-        )
+        if "solids" in info:
+            print(
+                f"Verified {label}: {info['solids']} solid, "
+                f"{info['size_bytes']} bytes, mtime {info['modified_at']}"
+            )
+        else:
+            print(
+                f"Verified {label}: "
+                f"{info['size_bytes']} bytes, mtime {info['modified_at']}"
+            )
 
 
 if __name__ == "__main__":

@@ -284,21 +284,57 @@
       "solids": 1,
       "volume_mm3": 85459.36813257779,
       "size_bytes": 878664,
-      "modified_at": "2026-03-18T21:45:19"
+      "modified_at": "2026-03-18T21:48:05"
     },
     "tpu_frame": {
       "path": "models/zowietek_case/zowietek_pov_tpu_frame.step",
       "solids": 1,
       "volume_mm3": 15206.079697657657,
       "size_bytes": 182592,
-      "modified_at": "2026-03-18T21:45:19"
+      "modified_at": "2026-03-18T21:48:05"
     },
     "back_cap": {
       "path": "models/zowietek_case/zowietek_pov_back_cap.step",
       "solids": 1,
       "volume_mm3": 10387.191768667466,
       "size_bytes": 301135,
-      "modified_at": "2026-03-18T21:45:19"
+      "modified_at": "2026-03-18T21:48:05"
+    },
+    "asa_shell_stp": {
+      "path": "models/zowietek_case/zowietek_pov_asa_shell.stp",
+      "solids": 1,
+      "volume_mm3": 85459.36813257779,
+      "size_bytes": 878664,
+      "modified_at": "2026-03-18T21:48:05"
+    },
+    "tpu_frame_stp": {
+      "path": "models/zowietek_case/zowietek_pov_tpu_frame.stp",
+      "solids": 1,
+      "volume_mm3": 15206.079697657657,
+      "size_bytes": 182592,
+      "modified_at": "2026-03-18T21:48:05"
+    },
+    "back_cap_stp": {
+      "path": "models/zowietek_case/zowietek_pov_back_cap.stp",
+      "solids": 1,
+      "volume_mm3": 10387.191768667466,
+      "size_bytes": 301135,
+      "modified_at": "2026-03-18T21:48:05"
+    },
+    "asa_shell_stl": {
+      "path": "models/zowietek_case/printable_mesh/zowietek_pov_asa_shell.stl",
+      "size_bytes": 2370884,
+      "modified_at": "2026-03-18T21:48:05"
+    },
+    "tpu_frame_stl": {
+      "path": "models/zowietek_case/printable_mesh/zowietek_pov_tpu_frame.stl",
+      "size_bytes": 157684,
+      "modified_at": "2026-03-18T21:48:05"
+    },
+    "back_cap_stl": {
+      "path": "models/zowietek_case/printable_mesh/zowietek_pov_back_cap.stl",
+      "size_bytes": 2623884,
+      "modified_at": "2026-03-18T21:48:05"
     }
   }
 }
