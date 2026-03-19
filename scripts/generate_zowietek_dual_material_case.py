@@ -61,12 +61,13 @@ class ZowietekParams:
     # TPU clearance and wall
     tpu_clearance_mm: float = 0.40        # per side (matched to Mevo)
     tpu_wall_mm: float = 1.8
+    tpu_axial_trim_mm: float = 4.0        # shorten TPU/front-back fit from print feedback
 
     # ASA shell
     asa_wall_mm: float = 2.2
     interface_gap_mm: float = 0.15        # per-side assembly gap so TPU can slide into ASA
     bond_interface_tolerance_mm: float = 0.20
-    rear_cap_seat_depth_mm: float = 8.5   # extra shell-only depth behind TPU for cap insertion/snap seating
+    rear_cap_seat_depth_mm: float = 6.5   # extra shell-only depth behind TPU for cap insertion/snap seating
 
     # Corner fillets (rounded-rectangle profile)
     asa_outer_corner_r_mm: float = 8.0
@@ -343,6 +344,7 @@ def _derived(p: ZowietekParams) -> dict:
             break
         tpu_inner_depth = resolved_depth
 
+    tpu_inner_depth = max(tpu_inner_depth - max(p.tpu_axial_trim_mm, 0.0), 10.0)
     usable_tpu_device_depth = tpu_inner_depth - front_wrap_depth - rear_wrap_depth
 
     tpu_outer_w = tpu_inner_w + 2.0 * p.tpu_wall_mm
@@ -413,6 +415,8 @@ def build_dual_material_body(p: ZowietekParams):
     cavity_depth = d["tpu_inner_depth_mm"]
     shell_inner_depth = d["shell_inner_depth_mm"]
     body_depth = d["body_depth_mm"]
+    usable_tpu_device_depth = d["usable_tpu_device_depth_mm"]
+    required_usable_device_depth = d["required_usable_device_depth_mm"]
 
     # Vent Z centers
     slot_mid_z = 0.5 * body_depth
@@ -1095,6 +1099,10 @@ def build_dual_material_body(p: ZowietekParams):
     if max_abs_gap > p.bond_interface_tolerance_mm:
         report["warnings"].append(
             "TPU-to-ASA interface gap exceeds tolerance; fusion quality may be reduced."
+        )
+    if usable_tpu_device_depth < required_usable_device_depth:
+        report["warnings"].append(
+            "TPU usable axial depth is below nominal device-plus-clearance depth; this build is intentionally trimmed from print feedback."
         )
 
     return asa_shell, tpu_frame, report

@@ -6,10 +6,11 @@
     "extra_depth_mm": 4.0,
     "tpu_clearance_mm": 0.4,
     "tpu_wall_mm": 1.8,
+    "tpu_axial_trim_mm": 4.0,
     "asa_wall_mm": 2.2,
     "interface_gap_mm": 0.15,
     "bond_interface_tolerance_mm": 0.2,
-    "rear_cap_seat_depth_mm": 8.5,
+    "rear_cap_seat_depth_mm": 6.5,
     "asa_outer_corner_r_mm": 8.0,
     "asa_inner_corner_r_mm": 5.8,
     "tpu_outer_corner_r_mm": 5.8,
@@ -98,9 +99,9 @@
     "derived_mm": {
       "tpu_inner_w_mm": 61.0,
       "tpu_inner_h_mm": 51.8,
-      "tpu_inner_depth_mm": 74.39999999999999,
+      "tpu_inner_depth_mm": 70.39999999999999,
       "required_usable_device_depth_mm": 69.39999999999999,
-      "usable_tpu_device_depth_mm": 69.39999999999999,
+      "usable_tpu_device_depth_mm": 65.39999999999999,
       "front_wrap_intrusion_mm": 2.5,
       "rear_wrap_intrusion_mm": 2.5,
       "tpu_outer_w_mm": 64.6,
@@ -110,10 +111,10 @@
       "asa_outer_w_mm": 69.3,
       "asa_outer_h_mm": 60.099999999999994,
       "cavity_start_z_mm": 3.0,
-      "shell_inner_depth_mm": 82.89999999999999,
-      "rear_cap_seat_depth_mm": 8.5,
-      "rear_cap_fit_margin_mm": 3.5,
-      "body_depth_mm": 85.89999999999999,
+      "shell_inner_depth_mm": 76.89999999999999,
+      "rear_cap_seat_depth_mm": 6.5,
+      "rear_cap_fit_margin_mm": 1.5,
+      "body_depth_mm": 79.89999999999999,
       "lip_tip_w_mm": 64.61999999999999,
       "lip_tip_h_mm": 55.419999999999995,
       "ring_opening_w_mm": 54.2,
@@ -151,20 +152,20 @@
         "side_slots": {
           "count_per_side": 5,
           "z_centers": [
-            24.949999999999996,
-            33.949999999999996,
-            42.949999999999996,
-            51.949999999999996,
-            60.949999999999996
+            21.949999999999996,
+            30.949999999999996,
+            39.949999999999996,
+            48.949999999999996,
+            57.949999999999996
           ]
         },
         "top_slots": {
           "count": 4,
           "z_centers": [
-            24.949999999999996,
-            36.949999999999996,
-            48.949999999999996,
-            60.949999999999996
+            21.949999999999996,
+            33.949999999999996,
+            45.949999999999996,
+            57.949999999999996
           ]
         }
       },
@@ -191,7 +192,7 @@
           "left",
           "right"
         ],
-        "pad_z_center_mm": 73.89999999999999,
+        "pad_z_center_mm": 67.89999999999999,
         "boss_height_mm": 4.3,
         "slot_width_mm": 18.8,
         "rail_opening_mm": 13.5,
@@ -210,7 +211,7 @@
           "X-",
           "Y-"
         ],
-        "hole_z_mm": 82.14999999999999,
+        "hole_z_mm": 76.14999999999999,
         "hole_width_mm": 10.0,
         "hole_height_mm": 4.0
       },
@@ -237,7 +238,9 @@
       "TPU_Frame",
       "ASA_Shell"
     ],
-    "warnings": []
+    "warnings": [
+      "TPU usable axial depth is below nominal device-plus-clearance depth; this build is intentionally trimmed from print feedback."
+    ]
   },
   "back_cap_report": {
     "back_cap_mm": {
@@ -280,44 +283,44 @@
   "collision_check": {
     "cap_vs_body_mm3": 0.0,
     "collision_pass": true,
-    "cap_seated_z_mm": 86.39999999999999
+    "cap_seated_z_mm": 80.39999999999999
   },
   "export_verification": {
     "asa_shell": {
       "path": "models/zowietek_case/zowietek_pov_asa_shell.step",
       "solids": 1,
-      "volume_mm3": 94500.56391990755,
+      "volume_mm3": 88419.19249325276,
       "size_bytes": 881929,
-      "modified_at": "2026-03-19T11:13:46"
+      "modified_at": "2026-03-19T17:26:16"
     },
     "tpu_frame": {
       "path": "models/zowietek_case/zowietek_pov_tpu_frame.step",
       "solids": 1,
-      "volume_mm3": 15206.079697657657,
+      "volume_mm3": 14627.288920020175,
       "size_bytes": 182592,
-      "modified_at": "2026-03-19T11:13:46"
+      "modified_at": "2026-03-19T17:26:16"
     },
     "back_cap": {
       "path": "models/zowietek_case/zowietek_pov_back_cap.step",
       "solids": 1,
       "volume_mm3": 10682.806352680655,
       "size_bytes": 301463,
-      "modified_at": "2026-03-19T11:13:46"
+      "modified_at": "2026-03-19T17:26:16"
     },
     "asa_shell_stl": {
       "path": "models/zowietek_case/printable_mesh/zowietek_pov_asa_shell.stl",
-      "size_bytes": 2367284,
-      "modified_at": "2026-03-19T11:13:46"
+      "size_bytes": 2370184,
+      "modified_at": "2026-03-19T17:26:16"
     },
     "tpu_frame_stl": {
       "path": "models/zowietek_case/printable_mesh/zowietek_pov_tpu_frame.stl",
       "size_bytes": 157684,
-      "modified_at": "2026-03-19T11:13:46"
+      "modified_at": "2026-03-19T17:26:16"
     },
     "back_cap_stl": {
       "path": "models/zowietek_case/printable_mesh/zowietek_pov_back_cap.stl",
       "size_bytes": 2623884,
-      "modified_at": "2026-03-19T11:13:46"
+      "modified_at": "2026-03-19T17:26:16"
     }
   }
 }
