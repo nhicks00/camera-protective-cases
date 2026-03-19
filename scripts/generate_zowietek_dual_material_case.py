@@ -39,9 +39,11 @@ from build123d import (
     Plane,
     Rectangle,
     SlotOverall,
+    add,
     export_step,
     extrude,
     fillet,
+    loft,
     vertices,
 )
 
@@ -164,10 +166,6 @@ class ZowietekParams:
     include_rear_tpu_bumpers: bool = True
     tpu_rear_bumper_depth_mm: float = 3.0    # how far bumper wraps around rear corners
     tpu_rear_bumper_wall_mm: float = 1.8     # wall thickness of rear bumper
-    tpu_rear_face_outer_overlap_total_mm: float = 0.6  # enough outward overlap to fuse the rear face frame to the surviving corner structure
-    tpu_rear_face_connector_width_mm: float = 10.0
-    tpu_rear_face_connector_shell_overlap_mm: float = 0.8
-    back_cap_rear_frame_clearance_total_mm: float = 0.6
 
     # Floating sun shade canopy (top + partial sides, open bottom)
     include_sun_shade: bool = True
@@ -332,17 +330,6 @@ def _derived(p: ZowietekParams) -> dict:
     # Bumper ring opening = device envelope + margin on each side
     ring_opening_w = max(p.device_nominal_w_mm - 2.0 * p.bumper_ring_inset_mm, 10.0)
     ring_opening_h = max(p.device_nominal_h_mm - 2.0 * p.bumper_ring_inset_mm, 10.0)
-    if p.include_rear_tpu_bumpers:
-        rear_frame_outer_w = tpu_inner_w + p.tpu_rear_face_outer_overlap_total_mm
-        rear_frame_outer_h = tpu_inner_h + p.tpu_rear_face_outer_overlap_total_mm
-        ring_opening_w = max(
-            ring_opening_w,
-            rear_frame_outer_w + p.back_cap_rear_frame_clearance_total_mm,
-        )
-        ring_opening_h = max(
-            ring_opening_h,
-            rear_frame_outer_h + p.back_cap_rear_frame_clearance_total_mm,
-        )
 
     return {
         "tpu_inner_w_mm": tpu_inner_w,
@@ -856,102 +843,75 @@ def build_dual_material_body(p: ZowietekParams):
     face_wrap_inner_r = max(p.tpu_inner_corner_r_mm - face_wrap_radial, 0.5)
     front_face_wrap_depth = float(d["front_wrap_intrusion_mm"])
     rear_face_wrap_depth = float(d["rear_wrap_intrusion_mm"])
-    rear_face_outer_w = tpu_inner_w + p.tpu_rear_face_outer_overlap_total_mm
-    rear_face_outer_h = tpu_inner_h + p.tpu_rear_face_outer_overlap_total_mm
-    rear_face_outer_r = min(
-        p.tpu_inner_corner_r_mm + 0.5 * p.tpu_rear_face_outer_overlap_total_mm,
-        0.49 * min(rear_face_outer_w, rear_face_outer_h),
-    )
-    rear_wrap_start_z = cavity_start_z + cavity_depth - rear_face_wrap_depth
-    rear_connector_ring_overlap = min(max(0.6, 0.2 * rear_face_wrap_depth), rear_face_wrap_depth - 0.2)
-    # Size the rear corner bridges from the bumper geometry, not the tiny ring
-    # radial gap, so the rear face reads like the Mevo Core style frame instead
-    # of four thin posts glued onto the corners.
-    rear_corner_bridge_w = min(
-        max(p.tpu_corner_bumper_w_mm - 2.0, 8.0),
-        rear_face_outer_w - 2.0,
-    )
-    rear_corner_bridge_h = min(
-        max(p.tpu_corner_bumper_w_mm - 2.0, 8.0),
-        rear_face_outer_h - 2.0,
-    )
-    rear_bridge_x = max(0.5 * rear_face_outer_w - 0.5 * rear_corner_bridge_w, 0.5 * rear_corner_bridge_w)
-    rear_bridge_y = max(0.5 * rear_face_outer_h - 0.5 * rear_corner_bridge_h, 0.5 * rear_corner_bridge_h)
-    rear_corner_bridge_start_z = relief_start_z = cavity_start_z + cavity_depth - rear_relief_depth
-    if p.include_rear_tpu_bumpers and rear_face_wrap_depth > 0.0:
-        rear_corner_bridge_start_z = relief_start_z - min(
-            max(p.tpu_rear_face_connector_shell_overlap_mm, 0.2),
-            max(rear_wrap_start_z - relief_start_z, 0.2),
-        )
-    rear_corner_bridge_depth = max(
-        rear_wrap_start_z + rear_connector_ring_overlap - rear_corner_bridge_start_z,
-        0.0,
-    )
+    wrap_z = cavity_start_z + front_face_wrap_depth
 
-    # --- TPU Skeleton Frame ---
-    # Corner bumpers at each of the 4 vertical edges, connected by edge rails
-    # along each of the 4 horizontal edges (top/bottom/left/right at front and rear).
-    with BuildPart() as tpu_bp:
-        # Full TPU outer shell (will subtract interior + skeleton cuts)
+    with BuildPart() as tpu_stage1:
         with BuildSketch(Plane.XY.offset(cavity_start_z)):
             Rectangle(tpu_outer_w, tpu_outer_h)
             fillet(vertices(), p.tpu_outer_corner_r_mm)
         extrude(amount=cavity_depth)
 
-        # Subtract inner cavity
-        with BuildSketch(Plane.XY.offset(cavity_start_z - 0.2)):
+        with BuildSketch(Plane.XY.offset(wrap_z - 0.1)):
             Rectangle(tpu_inner_w, tpu_inner_h)
             fillet(vertices(), p.tpu_inner_corner_r_mm)
-        extrude(amount=cavity_depth + 0.4, mode=Mode.SUBTRACT)
+        extrude(amount=cavity_depth - front_face_wrap_depth + 0.3, mode=Mode.SUBTRACT)
 
-        # Now subtract the wall sections BETWEEN corner bumpers + edge rails
-        # to create the skeleton frame.
-        # Strategy: cut rectangular windows from each flat wall face,
-        # leaving corner bumper zones and horizontal edge rails intact.
-        #
-        # Each wall has:
-        # - Corner bumpers at each end (tpu_corner_bumper_w_mm from corner)
-        # - Edge rails at top and bottom of the wall (tpu_edge_rail_w_mm)
-        # - The middle section between these is cut away
-        #
-        # X walls (left/right): span = tpu_outer_h - 2*corner_bumper_w
-        # Y walls (top/bottom): span = tpu_outer_w - 2*corner_bumper_w
+        if p.include_tpu_front_edge_wrap and front_face_wrap_depth > 0.0 and face_wrap_radial > 0.0:
+            with BuildSketch(Plane.XY.offset(cavity_start_z)):
+                Rectangle(face_wrap_inner_w, face_wrap_inner_h)
+                fillet(vertices(), face_wrap_inner_r)
+            with BuildSketch(Plane.XY.offset(wrap_z)):
+                Rectangle(tpu_inner_w, tpu_inner_h)
+                fillet(vertices(), p.tpu_inner_corner_r_mm)
+            loft(mode=Mode.SUBTRACT)
 
-        bumper_w = p.tpu_corner_bumper_w_mm
-        rail_w = p.tpu_edge_rail_w_mm
-        wall_cut_depth = p.tpu_wall_mm + 1.0  # ensure full through-cut
+    tpu_base = _largest_solid(tpu_stage1.part)
 
-        # X walls (left/right faces): wall runs along Y axis
-        x_wall_clear_h = max(tpu_outer_h - 2.0 * bumper_w, 0.0)  # Y extent of clearable zone
-        x_wall_clear_z = max(cavity_depth - 2.0 * rail_w, 0.0)    # Z extent of clearable zone
-        if x_wall_clear_h > 1.0 and x_wall_clear_z > 1.0:
-            x_cut_center_z = cavity_start_z + 0.5 * cavity_depth
+    bumper_w = p.tpu_corner_bumper_w_mm
+    rail_w = p.tpu_edge_rail_w_mm
+    wall_cut_depth = p.tpu_wall_mm + 1.0
+    skel_start_z = cavity_start_z + front_face_wrap_depth + rail_w
+    skel_end_z = cavity_start_z + cavity_depth - rail_w
+    skel_span = max(skel_end_z - skel_start_z, 0.0)
+    relief_start_z = cavity_start_z + cavity_depth - rear_relief_depth
+
+    with BuildPart() as tpu_bp:
+        add(tpu_base)
+
+        x_wall_clear_h = max(tpu_outer_h - 2.0 * bumper_w, 0.0)
+        if x_wall_clear_h > 1.0 and skel_span > 1.0:
+            x_cut_center_z = skel_start_z + 0.5 * skel_span
             for side in (-1.0, 1.0):
                 x_face = side * (half_tpu_outer_w + 0.2)
                 with BuildSketch(Plane.YZ.offset(x_face)):
                     with Locations((0.0, x_cut_center_z)):
-                        Rectangle(x_wall_clear_h, x_wall_clear_z)
+                        Rectangle(x_wall_clear_h, skel_span)
                 extrude(
                     amount=wall_cut_depth if side < 0 else -wall_cut_depth,
                     mode=Mode.SUBTRACT,
                 )
 
-        # Y walls (top/bottom faces): wall runs along X axis
         y_wall_clear_w = max(tpu_outer_w - 2.0 * bumper_w, 0.0)
-        y_wall_clear_z = max(cavity_depth - 2.0 * rail_w, 0.0)
-        if y_wall_clear_w > 1.0 and y_wall_clear_z > 1.0:
-            y_cut_center_z = cavity_start_z + 0.5 * cavity_depth
+        if y_wall_clear_w > 1.0 and skel_span > 1.0:
+            y_cut_center_z = skel_start_z + 0.5 * skel_span
             for side in (-1.0, 1.0):
                 y_face = side * (half_tpu_outer_h + 0.2)
                 with BuildSketch(Plane.XZ.offset(-y_face)):
                     with Locations((0.0, y_cut_center_z)):
-                        Rectangle(y_wall_clear_w, y_wall_clear_z)
+                        Rectangle(y_wall_clear_w, skel_span)
                 extrude(
                     amount=wall_cut_depth if side > 0 else -wall_cut_depth,
                     mode=Mode.SUBTRACT,
                 )
 
-        # Vent pass-through cuts on TPU (same locations as ASA)
+        if rear_relief_depth > 0.0:
+            relief_w = tpu_outer_w + 2.0 * max(p.tpu_rear_cap_relief_radial_mm, 0.0)
+            relief_h = tpu_outer_h + 2.0 * max(p.tpu_rear_cap_relief_radial_mm, 0.0)
+            with BuildSketch(Plane.XY.offset(relief_start_z - 0.2)):
+                Rectangle(relief_w, relief_h)
+                fillet(vertices(), max(p.tpu_outer_corner_r_mm + 0.3, 0.5))
+            extrude(amount=rear_relief_depth + 0.4, mode=Mode.SUBTRACT)
+
         if p.include_thermal_vents:
             tpu_side_cut = max(p.side_vent_cut_depth_mm, p.tpu_wall_mm + 1.5)
             for side in ("neg", "pos"):
@@ -960,7 +920,10 @@ def build_dual_material_body(p: ZowietekParams):
                     with BuildSketch(Plane.YZ.offset(x_face)):
                         with Locations((p.side_vent_center_y_mm, z_c)):
                             SlotOverall(p.side_vent_slot_h_mm, p.side_vent_slot_w_mm)
-                    extrude(amount=tpu_side_cut if side == "neg" else -tpu_side_cut, mode=Mode.SUBTRACT)
+                    extrude(
+                        amount=tpu_side_cut if side == "neg" else -tpu_side_cut,
+                        mode=Mode.SUBTRACT,
+                    )
 
             tpu_top_cut = max(p.top_vent_cut_depth_mm, p.tpu_wall_mm + 1.5)
             with BuildSketch(Plane.XZ.offset(-(half_tpu_outer_h + 0.2))):
@@ -969,7 +932,6 @@ def build_dual_material_body(p: ZowietekParams):
                         SlotOverall(p.top_vent_slot_width_mm, p.top_vent_slot_height_mm)
             extrude(amount=tpu_top_cut, mode=Mode.SUBTRACT)
 
-        # Bottom tripod pass-through
         tripod_tpu_cut_depth = half_tpu_outer_h
         tpu_rect_w = p.tripod_rect_w_mm + 2.0
         tpu_rect_l = p.tripod_rect_l_mm + 2.0
@@ -977,7 +939,6 @@ def build_dual_material_body(p: ZowietekParams):
         with Locations((0.0, -half_tpu_outer_h + 0.5 * tripod_tpu_cut_depth - 0.2, tripod_z_bottom)):
             Box(tpu_rect_w, tripod_tpu_cut_depth, tpu_rect_l, mode=Mode.SUBTRACT)
 
-        # Top tripod pass-through
         if p.include_top_tripod:
             tripod_z_top = cavity_start_z + p.tripod_top_center_from_front_mm
             with Locations((0.0, half_tpu_outer_h - 0.5 * tripod_tpu_cut_depth + 0.2, tripod_z_top)):
@@ -985,62 +946,22 @@ def build_dual_material_body(p: ZowietekParams):
 
     tpu_frame = _largest_solid(tpu_bp.part)
 
-    if p.include_tpu_front_edge_wrap and front_face_wrap_depth > 0.0:
+    if p.include_rear_tpu_bumpers and rear_face_wrap_depth > 0.0:
+        rear_z = cavity_start_z + cavity_depth
+        rear_wrap_start_z = rear_z - rear_face_wrap_depth
+        rear_overlap = max(rail_w, 4.0)
+        rear_overlap_start_z = rear_wrap_start_z - rear_overlap
+
         try:
-            front_face_ring = _build_face_wrap_ring(
+            rear_face_ring = _build_face_wrap_ring(
                 outer_w=tpu_inner_w,
                 outer_h=tpu_inner_h,
                 outer_r=p.tpu_inner_corner_r_mm,
                 inner_w=face_wrap_inner_w,
                 inner_h=face_wrap_inner_h,
                 inner_r=face_wrap_inner_r,
-                z_start=cavity_start_z,
-                depth=front_face_wrap_depth,
-            )
-            tpu_frame = _largest_solid(tpu_frame + front_face_ring)
-        except Exception:
-            print("  WARNING: front TPU face wrap failed to fuse")
-
-    # Re-apply the rear cap relief to the fused TPU frame so the cap-entry zone
-    # stays clear even after the front face wrap has been added.
-    if rear_relief_depth > 0.0:
-        relief_w = tpu_outer_w + 2.0 * max(p.tpu_rear_cap_relief_radial_mm, 0.0)
-        relief_h = tpu_outer_h + 2.0 * max(p.tpu_rear_cap_relief_radial_mm, 0.0)
-        relief_corner_r = max(p.tpu_outer_corner_r_mm + 0.3, 0.5)
-        with BuildPart() as rear_relief_bp:
-            with BuildSketch(Plane.XY.offset(relief_start_z - 0.2)):
-                Rectangle(relief_w, relief_h)
-                fillet(vertices(), relief_corner_r)
-            extrude(amount=rear_relief_depth + 0.4)
-        try:
-            tpu_frame = _largest_solid(tpu_frame - rear_relief_bp.part)
-        except Exception:
-            print("  WARNING: final rear cap relief subtraction failed")
-
-    if p.include_rear_tpu_bumpers and rear_face_wrap_depth > 0.0:
-        try:
-            if rear_corner_bridge_depth > 0.2:
-                rear_bridge_center_z = rear_corner_bridge_start_z + 0.5 * rear_corner_bridge_depth
-                with BuildPart() as rear_corner_bridges_bp:
-                    for sx in (-1.0, 1.0):
-                        for sy in (-1.0, 1.0):
-                            with Locations((
-                                sx * rear_bridge_x,
-                                sy * rear_bridge_y,
-                                rear_bridge_center_z,
-                            )):
-                                Box(rear_corner_bridge_w, rear_corner_bridge_h, rear_corner_bridge_depth)
-                tpu_frame = _largest_solid(tpu_frame + rear_corner_bridges_bp.part)
-
-            rear_face_ring = _build_face_wrap_ring(
-                outer_w=rear_face_outer_w,
-                outer_h=rear_face_outer_h,
-                outer_r=rear_face_outer_r,
-                inner_w=face_wrap_inner_w,
-                inner_h=face_wrap_inner_h,
-                inner_r=face_wrap_inner_r,
-                z_start=rear_wrap_start_z,
-                depth=rear_face_wrap_depth,
+                z_start=rear_overlap_start_z,
+                depth=rear_face_wrap_depth + rear_overlap,
             )
             tpu_frame = _largest_solid(tpu_frame + rear_face_ring)
         except Exception:
