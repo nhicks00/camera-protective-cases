@@ -864,11 +864,18 @@ def build_dual_material_body(p: ZowietekParams):
     )
     rear_wrap_start_z = cavity_start_z + cavity_depth - rear_face_wrap_depth
     rear_connector_ring_overlap = min(max(0.6, 0.2 * rear_face_wrap_depth), rear_face_wrap_depth - 0.2)
-    connector_radial_w = 0.5 * (rear_face_outer_w - face_wrap_inner_w)
-    connector_radial_h = 0.5 * (rear_face_outer_h - face_wrap_inner_h)
-    rear_corner_bridge_w = min(max(0.8, 0.35 * connector_radial_w), connector_radial_w)
-    rear_corner_bridge_h = min(max(0.8, 0.35 * connector_radial_h), connector_radial_h)
-    rear_bridge_x = max(0.5 * rear_face_outer_w - rear_face_outer_r - 0.5 * rear_corner_bridge_w, 0.5 * rear_corner_bridge_w)
+    # Size the rear corner bridges from the bumper geometry, not the tiny ring
+    # radial gap, so the rear face reads like the Mevo Core style frame instead
+    # of four thin posts glued onto the corners.
+    rear_corner_bridge_w = min(
+        max(p.tpu_corner_bumper_w_mm - 2.0, 8.0),
+        rear_face_outer_w - 2.0,
+    )
+    rear_corner_bridge_h = min(
+        max(p.tpu_corner_bumper_w_mm - 2.0, 8.0),
+        rear_face_outer_h - 2.0,
+    )
+    rear_bridge_x = max(0.5 * rear_face_outer_w - 0.5 * rear_corner_bridge_w, 0.5 * rear_corner_bridge_w)
     rear_bridge_y = max(0.5 * rear_face_outer_h - 0.5 * rear_corner_bridge_h, 0.5 * rear_corner_bridge_h)
     rear_corner_bridge_start_z = relief_start_z = cavity_start_z + cavity_depth - rear_relief_depth
     if p.include_rear_tpu_bumpers and rear_face_wrap_depth > 0.0:
