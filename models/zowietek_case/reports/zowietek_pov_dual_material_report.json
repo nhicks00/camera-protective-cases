@@ -288,57 +288,36 @@
       "solids": 1,
       "volume_mm3": 94500.56391990755,
       "size_bytes": 881929,
-      "modified_at": "2026-03-19T11:00:58"
+      "modified_at": "2026-03-19T11:12:45"
     },
     "tpu_frame": {
       "path": "models/zowietek_case/zowietek_pov_tpu_frame.step",
       "solids": 1,
       "volume_mm3": 15206.079697657657,
       "size_bytes": 182592,
-      "modified_at": "2026-03-19T11:00:58"
+      "modified_at": "2026-03-19T11:12:45"
     },
     "back_cap": {
       "path": "models/zowietek_case/zowietek_pov_back_cap.step",
       "solids": 1,
       "volume_mm3": 10682.806352680655,
       "size_bytes": 301463,
-      "modified_at": "2026-03-19T11:00:58"
-    },
-    "asa_shell_stp": {
-      "path": "models/zowietek_case/zowietek_pov_asa_shell.stp",
-      "solids": 1,
-      "volume_mm3": 94500.56391990755,
-      "size_bytes": 881929,
-      "modified_at": "2026-03-19T11:00:58"
-    },
-    "tpu_frame_stp": {
-      "path": "models/zowietek_case/zowietek_pov_tpu_frame.stp",
-      "solids": 1,
-      "volume_mm3": 15206.079697657657,
-      "size_bytes": 182592,
-      "modified_at": "2026-03-19T11:00:58"
-    },
-    "back_cap_stp": {
-      "path": "models/zowietek_case/zowietek_pov_back_cap.stp",
-      "solids": 1,
-      "volume_mm3": 10682.806352680655,
-      "size_bytes": 301463,
-      "modified_at": "2026-03-19T11:00:58"
+      "modified_at": "2026-03-19T11:12:45"
     },
     "asa_shell_stl": {
       "path": "models/zowietek_case/printable_mesh/zowietek_pov_asa_shell.stl",
       "size_bytes": 2367284,
-      "modified_at": "2026-03-19T11:00:58"
+      "modified_at": "2026-03-19T11:12:45"
     },
     "tpu_frame_stl": {
       "path": "models/zowietek_case/printable_mesh/zowietek_pov_tpu_frame.stl",
       "size_bytes": 157684,
-      "modified_at": "2026-03-19T11:00:58"
+      "modified_at": "2026-03-19T11:12:45"
     },
     "back_cap_stl": {
       "path": "models/zowietek_case/printable_mesh/zowietek_pov_back_cap.stl",
       "size_bytes": 2623884,
-      "modified_at": "2026-03-19T11:00:58"
+      "modified_at": "2026-03-19T11:12:45"
     }
   }
 }

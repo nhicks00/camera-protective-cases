@@ -1339,9 +1339,6 @@ def main():
     export_step(asa_shell, str(shell_step))
     export_step(tpu_frame, str(tpu_step))
     export_step(back_cap, str(cap_step))
-    shutil.copyfile(shell_step, shell_stp)
-    shutil.copyfile(tpu_step, tpu_stp)
-    shutil.copyfile(cap_step, cap_stp)
     export_stl(asa_shell, str(shell_stl))
     export_stl(tpu_frame, str(tpu_stl))
     export_stl(back_cap, str(cap_stl))
@@ -1350,9 +1347,6 @@ def main():
         "asa_shell": _verify_exported_step(shell_step),
         "tpu_frame": _verify_exported_step(tpu_step),
         "back_cap": _verify_exported_step(cap_step),
-        "asa_shell_stp": _verify_exported_step(shell_stp),
-        "tpu_frame_stp": _verify_exported_step(tpu_stp),
-        "back_cap_stp": _verify_exported_step(cap_stp),
         "asa_shell_stl": _verify_file_exists(shell_stl),
         "tpu_frame_stl": _verify_file_exists(tpu_stl),
         "back_cap_stl": _verify_file_exists(cap_stl),
@@ -1372,9 +1366,6 @@ def main():
     print(f"Wrote {shell_step}")
     print(f"Wrote {tpu_step}")
     print(f"Wrote {cap_step}")
-    print(f"Wrote {shell_stp}")
-    print(f"Wrote {tpu_stp}")
-    print(f"Wrote {cap_stp}")
     print(f"Wrote {shell_stl}")
     print(f"Wrote {tpu_stl}")
     print(f"Wrote {cap_stl}")
