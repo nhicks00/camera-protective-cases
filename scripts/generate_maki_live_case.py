@@ -104,7 +104,7 @@ class MakiCaseParams:
     sun_shade_wall_mm: float = 2.0
     sun_shade_post_width_mm: float = 4.0
     sun_shade_side_drop_ratio: float = 0.72
-    sun_shade_side_support_height_mm: float = 3.0
+    sun_shade_side_support_height_mm: float = 0.0
 
     # Snap-latch flexure clips for rear cap retention
     include_snap_clips: bool = False
@@ -1246,7 +1246,7 @@ def build_case(p: MakiCaseParams):
         clip_h = _maki_hood_outer_r + 1.0
         with BuildPart() as clip_bp:
             with Locations((_maki_hood_center_x,
-                            _maki_hood_center_y + 0.5 * clip_h,
+                            _maki_hood_center_y - 0.5 * clip_h,
                             -0.5 * p.lens_hood_depth_mm)):
                 Box(clip_w, clip_h, p.lens_hood_depth_mm + 1.0)
         hood_solid = hood_bp.part & clip_bp.part
@@ -1301,10 +1301,12 @@ def build_case(p: MakiCaseParams):
         side_trim_h = max(side_panel_lower_y + half_shade_outer_h, 0.0)
         side_trim_x_depth = max(shade_outer_w - shade_inner_w + 2.0, shade_w + 1.0)
         side_trim_x_center = 0.5 * (half_shade_outer_w + half_shade_inner_w)
-        lower_side_support_h = max(min(p.sun_shade_side_support_height_mm, side_drop - 1.0), 1.5)
-        lower_side_support_y = side_panel_lower_y + 0.5 * lower_side_support_h
-        lower_side_support_x = 0.5 * (half_outer_w + half_shade_outer_w)
-        lower_side_support_x_span = max(half_shade_outer_w - half_outer_w, shade_w + 0.8)
+        lower_side_support_h = 0.0
+        if p.sun_shade_side_support_height_mm > 0.0:
+            lower_side_support_h = max(min(p.sun_shade_side_support_height_mm, side_drop - 1.0), 1.5)
+            lower_side_support_y = -(side_panel_lower_y + 0.5 * lower_side_support_h)
+            lower_side_support_x = 0.5 * (half_outer_w + half_shade_outer_w)
+            lower_side_support_x_span = max(half_shade_outer_w - half_outer_w, shade_w + 0.8)
 
         try:
             with BuildPart() as shade_bp:
@@ -1317,16 +1319,16 @@ def build_case(p: MakiCaseParams):
                     fillet(vertices(), shade_inner_r)
                 extrude(amount=shell_depth + 0.2, mode=Mode.SUBTRACT)
 
-                # Keep the roof on the +Y side and open the underside (-Y).
+                # Keep the roof on the -Y side and open the underside (+Y).
                 bottom_cut_h = half_shade_outer_h - half_outer_h + 1.0
-                with Locations((0.0, -(half_outer_h + 0.5 * bottom_cut_h), shade_mid_z)):
+                with Locations((0.0, half_outer_h + 0.5 * bottom_cut_h, shade_mid_z)):
                     Box(shade_outer_w + 2.0, bottom_cut_h + 0.2, shell_depth + 2.0, mode=Mode.SUBTRACT)
 
-                # Trim the lower sections of the side walls so the shade behaves like
-                # a visor wrap, not a full enclosure.
+                # Trim the lower sections of the side walls on the +Y side so the
+                # shade behaves like a top visor wrap, not a full enclosure.
                 if side_trim_h > 0.5:
                     for sx_sign in (-1.0, 1.0):
-                        with Locations((sx_sign * side_trim_x_center, -half_shade_outer_h + 0.5 * side_trim_h, shade_mid_z)):
+                        with Locations((sx_sign * side_trim_x_center, half_shade_outer_h - 0.5 * side_trim_h, shade_mid_z)):
                             Box(side_trim_x_depth, side_trim_h + 0.2, shell_depth + 2.0, mode=Mode.SUBTRACT)
 
                 for ry in (-1.0, 1.0):
@@ -1336,12 +1338,13 @@ def build_case(p: MakiCaseParams):
                     with Locations((-(half_outer_w + 0.5 * standoff), ry * rib_offset, shade_mid_z)):
                         Box(rib_radial, post_w, shell_depth)
                 for rx in (-1.0, 1.0):
-                    with Locations((rx * rib_offset, half_outer_h + 0.5 * standoff, shade_mid_z)):
+                    with Locations((rx * rib_offset, -(half_outer_h + 0.5 * standoff), shade_mid_z)):
                         Box(post_w, rib_radial, shell_depth)
 
-                for sx_sign in (-1.0, 1.0):
-                    with Locations((sx_sign * lower_side_support_x, lower_side_support_y, shade_mid_z)):
-                        Box(lower_side_support_x_span, lower_side_support_h, shell_depth)
+                if lower_side_support_h > 0.0:
+                    for sx_sign in (-1.0, 1.0):
+                        with Locations((sx_sign * lower_side_support_x, lower_side_support_y, shade_mid_z)):
+                            Box(lower_side_support_x_span, lower_side_support_h, shell_depth)
 
             sleeve = _largest_solid(sleeve + _largest_solid(shade_bp.part))
 

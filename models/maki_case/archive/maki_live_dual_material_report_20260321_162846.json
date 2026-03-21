@@ -603,7 +603,7 @@
             "shade_outer_h_mm": 83.59,
             "post_width_mm": 4.0,
             "side_drop_ratio": 0.72,
-            "side_support_height_mm": 0.0,
+            "side_support_height_mm": 3.0,
             "coverage": "top + partial left/right sides (open bottom)"
           },
           "snap_clips": {
@@ -620,7 +620,7 @@
             "z_mm": 124.91999999999999
           },
           "machined_finish_mm": {
-            "sleeve_axis_y_fillet": 0.0
+            "sleeve_axis_y_fillet": 0.45
           },
           "outer_bounds_xy_mm": {
             "min_x": -33.795,
