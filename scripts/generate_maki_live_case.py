@@ -105,6 +105,7 @@ class MakiCaseParams:
     sun_shade_post_width_mm: float = 4.0
     sun_shade_side_drop_ratio: float = 0.72
     sun_shade_side_support_height_mm: float = 0.0
+    sun_shade_vent_relief_mm: float = 0.8
 
     # Snap-latch flexure clips for rear cap retention
     include_snap_clips: bool = False
@@ -1316,6 +1317,7 @@ def build_case(p: MakiCaseParams):
         standoff = p.sun_shade_standoff_mm
         shade_w = p.sun_shade_wall_mm
         post_w = p.sun_shade_post_width_mm
+        vent_relief_margin = max(p.sun_shade_vent_relief_mm, 0.2)
 
         shade_inner_w = outer_w + 2.0 * standoff
         shade_inner_h = outer_h + 2.0 * standoff
@@ -1340,6 +1342,14 @@ def build_case(p: MakiCaseParams):
         flat_extent_half = max(half_outer_w - outer_corner_r, 0.0)
         rib_offset = max(flat_extent_half - 2.0, 0.0)
         rib_radial = standoff + 2.0
+        side_rib_x_centers = {
+            "neg": -(half_outer_w + 0.5 * standoff),
+            "pos": half_outer_w + 0.5 * standoff,
+        }
+        side_rib_y_centers = (-rib_offset, rib_offset)
+        top_rib_x_centers = (-rib_offset, rib_offset)
+        top_rib_y_center = -(half_outer_h + 0.5 * standoff)
+        shade_support_relief_count = 0
 
         side_drop = min(
             max(p.sun_shade_side_drop_ratio * shade_outer_h, 0.25 * shade_outer_h),
@@ -1393,6 +1403,41 @@ def build_case(p: MakiCaseParams):
                     for sx_sign in (-1.0, 1.0):
                         with Locations((sx_sign * lower_side_support_x, lower_side_support_y, shade_mid_z)):
                             Box(lower_side_support_x_span, lower_side_support_h, shell_depth)
+
+                # Cut relief notches into the shade support ribs anywhere they would
+                # otherwise bridge directly across existing vent openings.
+                for vent in vents_used:
+                    slot_t = float(vent.get("slot_t", vent.get("slot_w", 0.0)))
+                    slot_z = float(vent.get("slot_z", vent.get("slot_h", 0.0)))
+                    if slot_t <= 0.0 or slot_z <= 0.0:
+                        continue
+
+                    notch_z = slot_z + vent_relief_margin
+
+                    if vent.get("axis") == "x":
+                        rib_x = side_rib_x_centers.get(vent.get("side"))
+                        if rib_x is None:
+                            continue
+                        notch_x = rib_radial + vent_relief_margin
+                        notch_y = slot_t + vent_relief_margin
+                        for rib_y in side_rib_y_centers:
+                            if abs(float(vent.get("y", 0.0)) - rib_y) > 0.5 * (slot_t + post_w) + 0.3:
+                                continue
+                            with Locations((rib_x, float(vent.get("y", 0.0)), float(vent.get("z", shade_mid_z)))):
+                                Box(notch_x, notch_y, notch_z, mode=Mode.SUBTRACT)
+                            shade_support_relief_count += 1
+
+                    elif vent.get("axis") == "y":
+                        if vent.get("side") != "neg":
+                            continue
+                        notch_x = slot_t + vent_relief_margin
+                        notch_y = rib_radial + vent_relief_margin
+                        for rib_x in top_rib_x_centers:
+                            if abs(float(vent.get("x", 0.0)) - rib_x) > 0.5 * (slot_t + post_w) + 0.3:
+                                continue
+                            with Locations((float(vent.get("x", 0.0)), top_rib_y_center, float(vent.get("z", shade_mid_z)))):
+                                Box(notch_x, notch_y, notch_z, mode=Mode.SUBTRACT)
+                            shade_support_relief_count += 1
 
             sleeve = _largest_solid(sleeve + _largest_solid(shade_bp.part))
 
@@ -1501,6 +1546,8 @@ def build_case(p: MakiCaseParams):
                 "post_width_mm": float(post_w),
                 "side_drop_ratio": float(p.sun_shade_side_drop_ratio),
                 "side_support_height_mm": float(lower_side_support_h),
+                "vent_relief_mm": float(vent_relief_margin),
+                "vent_relief_count": int(shade_support_relief_count),
                 "cold_shoe_count": int(3 if p.cold_shoe_enabled else 0),
                 "coverage": "top + partial left/right sides (open bottom)",
             }

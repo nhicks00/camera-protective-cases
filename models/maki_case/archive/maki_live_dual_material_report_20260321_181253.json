@@ -593,8 +593,6 @@
             "post_width_mm": 4.0,
             "side_drop_ratio": 0.72,
             "side_support_height_mm": 0.0,
-            "vent_relief_mm": 0.8,
-            "vent_relief_count": 24,
             "cold_shoe_count": 3,
             "coverage": "top + partial left/right sides (open bottom)"
           },
