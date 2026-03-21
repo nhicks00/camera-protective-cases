@@ -16,6 +16,7 @@ import argparse
 import json
 import math
 import shutil
+import tempfile
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
@@ -30,6 +31,7 @@ from build123d import (
     BuildPart,
     BuildSketch,
     Circle,
+    Cone,
     Cylinder,
     GeomType,
     Locations,
@@ -78,9 +80,11 @@ class MakiCaseParams:
     front_bezel_extra_mm: float = 1.0
     front_bezel_height_mm: float = 1.1
     lens_hood_enabled: bool = True
-    lens_hood_depth_mm: float = 16.0
+    lens_hood_depth_mm: float = 10.0
     lens_hood_wall_mm: float = 2.5
     lens_hood_clearance_mm: float = 1.0
+    lens_hood_base_flare_mm: float = 4.0
+    lens_hood_base_depth_mm: float = 5.0
 
     # Cold shoe mount (ISO 518 female receptor)
     cold_shoe_enabled: bool = True
@@ -93,6 +97,14 @@ class MakiCaseParams:
     cold_shoe_slot_depth_mm: float = 2.5       # Below rail to floor (deeper C-channel)
     cold_shoe_z_from_rear_mm: float = 20.0     # Center distance from rear edge
     cold_shoe_fillet_mm: float = 0.8           # Edge fillet on boss
+
+    # Floating sun shade canopy (top + partial sides)
+    include_sun_shade: bool = True
+    sun_shade_standoff_mm: float = 6.0
+    sun_shade_wall_mm: float = 2.0
+    sun_shade_post_width_mm: float = 4.0
+    sun_shade_side_drop_ratio: float = 0.72
+    sun_shade_side_support_height_mm: float = 3.0
 
     # Snap-latch flexure clips for rear cap retention
     include_snap_clips: bool = False
@@ -743,7 +755,10 @@ def _extract_profile_xy(mesh: trimesh.Trimesh, z_mm: float) -> Polygon:
 
 
 def build_case(p: MakiCaseParams):
-    tmp_stl = Path("tmp/maki_device_from_step.stl")
+    tmp_dir = Path("tmp")
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=tmp_dir, suffix=".stl", delete=False) as tmp_file:
+        tmp_stl = Path(tmp_file.name)
     mesh, housing, step_features = _load_step_as_mesh(p.step_path, tmp_stl, p)
 
     zmin, zmax = mesh.bounds[:, 2]
@@ -835,10 +850,12 @@ def build_case(p: MakiCaseParams):
         if _build_maki_hood:
             _maki_hood_inner_r = 0.5 * p.lens_diameter_mm + p.lens_hood_clearance_mm
             _maki_hood_outer_r = _maki_hood_inner_r + p.lens_hood_wall_mm
+            _maki_hood_flare_r = _maki_hood_outer_r + p.lens_hood_base_flare_mm
+            _maki_hood_flare_d = min(p.lens_hood_base_depth_mm, p.lens_hood_depth_mm * 0.5)
 
         # Cold shoe mount (ISO 518 female receptor) on top (Y+) side, near rear.
         cold_shoe_info = None
-        if p.cold_shoe_enabled:
+        if p.cold_shoe_enabled and not p.include_sun_shade:
             cs_z_center = shell_depth - p.cold_shoe_z_from_rear_mm
             cs_boss_l = p.cold_shoe_boss_length_mm
             cs_boss_w = p.cold_shoe_boss_width_mm
@@ -1201,6 +1218,10 @@ def build_case(p: MakiCaseParams):
             with Locations((0.0, p.lens_center_y_mm, 0.0)):
                 Cylinder(_maki_hood_outer_r, p.lens_hood_depth_mm, rotation=(180, 0, 0),
                          align=(Align.CENTER, Align.CENTER, Align.MIN))
+            if p.lens_hood_base_flare_mm > 0.0 and _maki_hood_flare_d > 0.0:
+                with Locations((0.0, p.lens_center_y_mm, 0.0)):
+                    Cone(_maki_hood_flare_r, _maki_hood_outer_r, _maki_hood_flare_d, rotation=(180, 0, 0),
+                         align=(Align.CENTER, Align.CENTER, Align.MIN))
             with Locations((0.0, p.lens_center_y_mm, 0.1)):
                 Cylinder(_maki_hood_inner_r, p.lens_hood_depth_mm + 0.2, rotation=(180, 0, 0),
                          align=(Align.CENTER, Align.CENTER, Align.MIN),
@@ -1225,6 +1246,156 @@ def build_case(p: MakiCaseParams):
             pass
 
     sleeve, sleeve_fillet_y = _apply_axis_fillet(sleeve, Axis.Y, (0.8, 0.6, 0.45, 0.3, 0.2))
+
+    sun_shade_info = None
+    if p.include_sun_shade:
+        standoff = p.sun_shade_standoff_mm
+        shade_w = p.sun_shade_wall_mm
+        post_w = p.sun_shade_post_width_mm
+
+        shade_inner_w = outer_w + 2.0 * standoff
+        shade_inner_h = outer_h + 2.0 * standoff
+        shade_outer_w = shade_inner_w + 2.0 * shade_w
+        shade_outer_h = shade_inner_h + 2.0 * shade_w
+        shade_inner_r = min(
+            outer_corner_r + standoff,
+            0.49 * min(shade_inner_w, shade_inner_h),
+        )
+        shade_outer_r = min(
+            shade_inner_r + shade_w,
+            0.49 * min(shade_outer_w, shade_outer_h),
+        )
+
+        half_outer_w = 0.5 * outer_w
+        half_outer_h = 0.5 * outer_h
+        half_shade_outer_w = 0.5 * shade_outer_w
+        half_shade_outer_h = 0.5 * shade_outer_h
+        half_shade_inner_w = 0.5 * shade_inner_w
+        shade_mid_z = 0.5 * shell_depth
+
+        flat_extent_half = max(half_outer_w - outer_corner_r, 0.0)
+        rib_offset = max(flat_extent_half - 2.0, 0.0)
+        rib_radial = standoff + 2.0
+
+        side_drop = min(
+            max(p.sun_shade_side_drop_ratio * shade_outer_h, 0.25 * shade_outer_h),
+            shade_outer_h - 2.0 * shade_w - 2.0,
+        )
+        side_panel_lower_y = half_shade_outer_h - side_drop
+        side_trim_h = max(side_panel_lower_y + half_shade_outer_h, 0.0)
+        side_trim_x_depth = max(shade_outer_w - shade_inner_w + 2.0, shade_w + 1.0)
+        side_trim_x_center = 0.5 * (half_shade_outer_w + half_shade_inner_w)
+        lower_side_support_h = max(min(p.sun_shade_side_support_height_mm, side_drop - 1.0), 1.5)
+        lower_side_support_y = side_panel_lower_y + 0.5 * lower_side_support_h
+        lower_side_support_x = 0.5 * (half_outer_w + half_shade_outer_w)
+        lower_side_support_x_span = max(half_shade_outer_w - half_outer_w, shade_w + 0.8)
+
+        try:
+            with BuildPart() as shade_bp:
+                with BuildSketch(Plane.XY):
+                    Rectangle(shade_outer_w, shade_outer_h)
+                    fillet(vertices(), shade_outer_r)
+                extrude(amount=shell_depth)
+                with BuildSketch(Plane.XY.offset(-0.1)):
+                    Rectangle(shade_inner_w, shade_inner_h)
+                    fillet(vertices(), shade_inner_r)
+                extrude(amount=shell_depth + 0.2, mode=Mode.SUBTRACT)
+
+                # Keep the roof on the +Y side and open the underside (-Y).
+                bottom_cut_h = half_shade_outer_h - half_outer_h + 1.0
+                with Locations((0.0, -(half_outer_h + 0.5 * bottom_cut_h), shade_mid_z)):
+                    Box(shade_outer_w + 2.0, bottom_cut_h + 0.2, shell_depth + 2.0, mode=Mode.SUBTRACT)
+
+                # Trim the lower sections of the side walls so the shade behaves like
+                # a visor wrap, not a full enclosure.
+                if side_trim_h > 0.5:
+                    for sx_sign in (-1.0, 1.0):
+                        with Locations((sx_sign * side_trim_x_center, -half_shade_outer_h + 0.5 * side_trim_h, shade_mid_z)):
+                            Box(side_trim_x_depth, side_trim_h + 0.2, shell_depth + 2.0, mode=Mode.SUBTRACT)
+
+                for ry in (-1.0, 1.0):
+                    with Locations((half_outer_w + 0.5 * standoff, ry * rib_offset, shade_mid_z)):
+                        Box(rib_radial, post_w, shell_depth)
+                for ry in (-1.0, 1.0):
+                    with Locations((-(half_outer_w + 0.5 * standoff), ry * rib_offset, shade_mid_z)):
+                        Box(rib_radial, post_w, shell_depth)
+                for rx in (-1.0, 1.0):
+                    with Locations((rx * rib_offset, half_outer_h + 0.5 * standoff, shade_mid_z)):
+                        Box(post_w, rib_radial, shell_depth)
+
+                for sx_sign in (-1.0, 1.0):
+                    with Locations((sx_sign * lower_side_support_x, lower_side_support_y, shade_mid_z)):
+                        Box(lower_side_support_x_span, lower_side_support_h, shell_depth)
+
+            sleeve = _largest_solid(sleeve + _largest_solid(shade_bp.part))
+
+            if p.cold_shoe_enabled:
+                cs_z_center = shell_depth - p.cold_shoe_z_from_rear_mm
+                cs_boss_l = p.cold_shoe_boss_length_mm
+                cs_boss_w = p.cold_shoe_boss_width_mm
+                cs_slot_w = p.cold_shoe_slot_width_mm
+                cs_rail_oh = p.cold_shoe_rail_overhang_mm
+                cs_rail_t = p.cold_shoe_rail_thickness_mm
+                cs_slot_d = p.cold_shoe_slot_depth_mm
+                cs_boss_h = cs_slot_d + cs_rail_t
+                cs_opening = cs_slot_w - 2.0 * cs_rail_oh
+                boss_overlap = min(1.0, shade_w - 0.2)
+
+                with BuildPart() as boss_bp:
+                    with BuildSketch(Plane.XZ.offset(half_shade_outer_h - boss_overlap)):
+                        with Locations((0.0, cs_z_center)):
+                            Rectangle(cs_boss_w, cs_boss_l)
+                    extrude(amount=cs_boss_h + boss_overlap)
+                sleeve = _largest_solid(sleeve + boss_bp.part)
+
+                cs_front_z = cs_z_center - 0.5 * cs_boss_l
+                cs_slot_len = shell_depth + 0.2 - cs_front_z
+                cs_slot_mid_z = cs_front_z + 0.5 * cs_slot_len
+                boss_top_y = half_shade_outer_h + cs_boss_h
+
+                with BuildPart() as stem_cut_bp:
+                    with BuildSketch(Plane.XZ.offset(boss_top_y + 0.1)):
+                        with Locations((0.0, cs_slot_mid_z)):
+                            Rectangle(cs_opening, cs_slot_len)
+                    extrude(amount=-(cs_boss_h + 0.2))
+                sleeve = _largest_solid(sleeve - stem_cut_bp.part)
+
+                with BuildPart() as floor_cut_bp:
+                    with BuildSketch(Plane.XZ.offset(half_shade_outer_h - 0.1)):
+                        with Locations((0.0, cs_slot_mid_z)):
+                            Rectangle(cs_slot_w, cs_slot_len)
+                    extrude(amount=cs_slot_d + 0.2)
+                sleeve = _largest_solid(sleeve - floor_cut_bp.part)
+
+                cold_shoe_info = {
+                    "enabled": True,
+                    "z_center_mm": float(cs_z_center),
+                    "y_base_mm": float(half_shade_outer_h),
+                    "boss_height_mm": float(cs_boss_h),
+                    "boss_length_mm": float(cs_boss_l),
+                    "boss_width_mm": float(cs_boss_w),
+                    "slot_width_mm": float(cs_slot_w),
+                    "rail_opening_mm": float(cs_opening),
+                    "rail_overhang_mm": float(cs_rail_oh),
+                    "rail_thickness_mm": float(cs_rail_t),
+                    "slot_depth_mm": float(cs_slot_d),
+                    "slide_in_from": "rear",
+                    "mounted_on": "shade_hood",
+                }
+
+            sun_shade_info = {
+                "enabled": True,
+                "standoff_mm": float(standoff),
+                "wall_mm": float(shade_w),
+                "shade_outer_w_mm": float(shade_outer_w),
+                "shade_outer_h_mm": float(shade_outer_h),
+                "post_width_mm": float(post_w),
+                "side_drop_ratio": float(p.sun_shade_side_drop_ratio),
+                "side_support_height_mm": float(lower_side_support_h),
+                "coverage": "top + partial left/right sides (open bottom)",
+            }
+        except Exception as exc:
+            print(f"  WARNING: sun shade failed to build: {exc}")
 
     report = {
         "mesh_bounds_mm": {
@@ -1258,6 +1429,8 @@ def build_case(p: MakiCaseParams):
                 "depth_mm": float(max(p.lens_hood_depth_mm, 0.0)),
                 "wall_mm": float(p.lens_hood_wall_mm),
                 "clearance_mm": float(p.lens_hood_clearance_mm),
+                "base_flare_mm": float(p.lens_hood_base_flare_mm),
+                "base_depth_mm": float(p.lens_hood_base_depth_mm),
                 "side": "neg" if resolved_tripod_side == "neg" else "pos",
             },
             "cavity_front_z_mm": float(cavity_front_z),
@@ -1282,6 +1455,7 @@ def build_case(p: MakiCaseParams):
                 "outer": float(outer_corner_r),
             },
             "cold_shoe": cold_shoe_info if cold_shoe_info else {"enabled": False},
+            "sun_shade": sun_shade_info if sun_shade_info else {"enabled": False},
             "snap_clips": snap_clip_info if snap_clip_info else {"enabled": False},
             "friction_ridge": friction_ridge_info if friction_ridge_info else {"enabled": False},
             "machined_finish_mm": {
@@ -1315,6 +1489,7 @@ def main():
     parser.add_argument("--lens-d", type=float, default=None, help="Front lens opening diameter (mm)")
     parser.add_argument("--no-lens-hood", action="store_true", help="Disable integrated top-front glare hood.")
     parser.add_argument("--lens-hood-depth", type=float, default=None, help="Integrated glare hood projection depth (mm)")
+    parser.add_argument("--no-sun-shade", action="store_true", help="Disable top-and-side floating sun shade")
 
     parser.add_argument("--tripod-z", type=float, default=None, help="Fallback tripod opening center from front (mm)")
     parser.add_argument("--no-cold-shoe", action="store_true", help="Disable cold shoe mount on top rear")
@@ -1342,6 +1517,8 @@ def main():
         params.lens_hood_enabled = False
     if args.lens_hood_depth is not None:
         params.lens_hood_depth_mm = max(float(args.lens_hood_depth), 0.0)
+    if args.no_sun_shade:
+        params.include_sun_shade = False
     if args.tripod_z is not None:
         params.tripod_center_from_front_mm = args.tripod_z
     if args.no_cold_shoe:

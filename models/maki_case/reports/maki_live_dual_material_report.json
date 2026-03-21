@@ -528,9 +528,11 @@
           "lens_hood": {
             "enabled": true,
             "type": "top_visor",
-            "depth_mm": 16.0,
+            "depth_mm": 10.0,
             "wall_mm": 2.5,
             "clearance_mm": 1.0,
+            "base_flare_mm": 4.0,
+            "base_depth_mm": 5.0,
             "side": "neg"
           },
           "cavity_front_z_mm": 3.0,
@@ -578,7 +580,7 @@
           "cold_shoe": {
             "enabled": true,
             "z_center_mm": 107.91999999999999,
-            "y_base_mm": 33.795,
+            "y_base_mm": 41.795,
             "boss_height_mm": 4.3,
             "boss_length_mm": 22.0,
             "boss_width_mm": 22.0,
@@ -587,7 +589,19 @@
             "rail_overhang_mm": 2.65,
             "rail_thickness_mm": 1.8,
             "slot_depth_mm": 2.5,
-            "slide_in_from": "rear"
+            "slide_in_from": "rear",
+            "mounted_on": "shade_hood"
+          },
+          "sun_shade": {
+            "enabled": true,
+            "standoff_mm": 6.0,
+            "wall_mm": 2.0,
+            "shade_outer_w_mm": 83.59,
+            "shade_outer_h_mm": 83.59,
+            "post_width_mm": 4.0,
+            "side_drop_ratio": 0.72,
+            "side_support_height_mm": 3.0,
+            "coverage": "top + partial left/right sides (open bottom)"
           },
           "snap_clips": {
             "enabled": false
@@ -603,7 +617,7 @@
             "z_mm": 124.91999999999999
           },
           "machined_finish_mm": {
-            "sleeve_axis_y_fillet": 0.0
+            "sleeve_axis_y_fillet": 0.45
           },
           "outer_bounds_xy_mm": {
             "min_x": -33.795,
