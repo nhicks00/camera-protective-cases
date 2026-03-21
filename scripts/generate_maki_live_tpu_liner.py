@@ -70,6 +70,9 @@ class MakiTpuLinerParams:
     # Front face pad (shock absorption between ASA front wall and camera face)
     include_front_face_pad: bool = True
     front_face_pad_thickness_mm: float = 1.5
+    front_single_circle_cutout_only: bool = True
+    lens_center_y_mm: float = 0.0
+    lens_diameter_mm: float = 42.7
 
     # Keep tripod region open through TPU. Side vent cuts are optional and
     # default off so the frame stays smooth and symmetric.
@@ -569,6 +572,9 @@ def _extract_profile_xy(mesh: trimesh.Trimesh, z_mm: float) -> Polygon:
 
 def _extract_front_cutouts_tpu(housing, p: MakiTpuLinerParams, sx: float, sy: float, zmax: float):
     """Extract front-face openings from STEP housing (lens, LED, etc.) for TPU pad cutouts."""
+    if p.front_single_circle_cutout_only:
+        return [{"x": 0.0, "y": p.lens_center_y_mm, "shape": "circle", "d": p.lens_diameter_mm}]
+
     front_window_mm = 16.0
     cutout_extra_mm = 0.25
     min_cutout_dim_mm = 3.0

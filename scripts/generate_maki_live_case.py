@@ -74,7 +74,7 @@ class MakiCaseParams:
     front_major_aperture_shrink_mm: float = 2.0
 
     # Front optics opening
-    lens_center_y_mm: float = 4.5
+    lens_center_y_mm: float = 0.0
     lens_diameter_mm: float = 42.7        # 30.0 + 12.7 mm (0.5")
     front_bezel_extra_mm: float = 1.0
     front_bezel_height_mm: float = 1.1
@@ -866,26 +866,9 @@ def build_case(p: MakiCaseParams):
         if p.front_integrated and p.include_front_cutouts:
             extracted_front_cutouts = _extract_front_cutouts(housing, p, sx, sy, zmax)
             if p.front_single_circle_cutout_only:
-                center_circles = [
-                    c for c in extracted_front_cutouts
-                    if c.get("shape") == "circle"
-                    and abs(float(c.get("x", 0.0))) <= 3.0
-                    and abs(float(c.get("y", 0.0))) <= 8.0
+                front_cutouts_detected = [
+                    {"x": 0.0, "y": p.lens_center_y_mm, "shape": "circle", "d": p.lens_diameter_mm}
                 ]
-                if center_circles:
-                    primary_circle = max(center_circles, key=lambda c: float(c.get("d", 0.0)))
-                    front_cutouts_detected = [
-                        {
-                            "x": float(primary_circle.get("x", 0.0)),
-                            "y": float(primary_circle.get("y", 0.0)),
-                            "shape": "circle",
-                            "d": float(primary_circle.get("d", p.lens_diameter_mm)),
-                        }
-                    ]
-                else:
-                    front_cutouts_detected = [
-                        {"x": 0.0, "y": p.lens_center_y_mm, "shape": "circle", "d": p.lens_diameter_mm}
-                    ]
             else:
                 front_cutouts_detected = extracted_front_cutouts
                 if not front_cutouts_detected:
