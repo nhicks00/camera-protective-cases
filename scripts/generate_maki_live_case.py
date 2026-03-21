@@ -31,8 +31,6 @@ from build123d import (
     BuildPart,
     BuildSketch,
     Circle,
-    Cone,
-    Cylinder,
     GeomType,
     Locations,
     Mode,
@@ -83,6 +81,7 @@ class MakiCaseParams:
     lens_hood_depth_mm: float = 10.0
     lens_hood_wall_mm: float = 2.5
     lens_hood_clearance_mm: float = 1.0
+    lens_hood_perimeter_margin_mm: float = 1.5
     lens_hood_base_flare_mm: float = 4.0
     lens_hood_base_depth_mm: float = 5.0
 
@@ -848,26 +847,22 @@ def build_case(p: MakiCaseParams):
         _build_maki_hood = (p.front_integrated and p.lens_hood_enabled
                             and p.lens_hood_depth_mm > 0.0)
         if _build_maki_hood:
-            hood_ref_x = 0.0
-            hood_ref_y = p.lens_center_y_mm
-            hood_ref_d = p.lens_diameter_mm
-            hood_circle_cutouts = [
-                c for c in front_cutouts_detected
-                if c.get("shape") == "circle" and float(c.get("d", 0.0)) > 0.0
-            ]
-            if hood_circle_cutouts:
-                hood_ref = max(hood_circle_cutouts, key=lambda c: float(c.get("d", 0.0)))
-                hood_ref_x = float(hood_ref.get("x", 0.0))
-                hood_ref_y = float(hood_ref.get("y", hood_ref_y))
-                hood_ref_d = float(hood_ref.get("d", hood_ref_d))
-
-            _maki_hood_center_x = hood_ref_x
-            _maki_hood_center_y = hood_ref_y
-            _maki_hood_reference_d = hood_ref_d
-            _maki_hood_inner_r = 0.5 * hood_ref_d + p.lens_hood_clearance_mm
-            _maki_hood_outer_r = _maki_hood_inner_r + p.lens_hood_wall_mm
-            _maki_hood_flare_r = _maki_hood_outer_r + p.lens_hood_base_flare_mm
-            _maki_hood_flare_d = min(p.lens_hood_base_depth_mm, p.lens_hood_depth_mm * 0.5)
+            hood_margin = max(p.lens_hood_perimeter_margin_mm, 0.6)
+            _maki_hood_center_x = 0.0
+            _maki_hood_center_y = 0.0
+            _maki_hood_reference_outer_w = outer_w
+            _maki_hood_reference_outer_h = outer_h
+            _maki_hood_reference_outer_corner_r = outer_corner_r
+            _maki_hood_perimeter_margin = hood_margin
+            _maki_hood_outer_w = max(outer_w - 2.0 * hood_margin, 2.0 * p.lens_hood_wall_mm + 6.0)
+            _maki_hood_outer_h = max(outer_h - 2.0 * hood_margin, 2.0 * p.lens_hood_wall_mm + 6.0)
+            _maki_hood_outer_r = min(
+                max(outer_corner_r - hood_margin, 0.6),
+                0.5 * min(_maki_hood_outer_w, _maki_hood_outer_h) - 0.2,
+            )
+            _maki_hood_inner_w = max(_maki_hood_outer_w - 2.0 * p.lens_hood_wall_mm, 2.0)
+            _maki_hood_inner_h = max(_maki_hood_outer_h - 2.0 * p.lens_hood_wall_mm, 2.0)
+            _maki_hood_inner_r = max(_maki_hood_outer_r - p.lens_hood_wall_mm, 0.5)
 
         # Cold shoe mount (ISO 518 female receptor) on top (Y+) side, near rear.
         cold_shoe_info = None
@@ -1228,28 +1223,26 @@ def build_case(p: MakiCaseParams):
 
     sleeve = _largest_solid(sleeve_bp.part)
 
-    # Build top-visor lens hood (arc over top of lens opening), then union.
+    # Build a perimeter-following front visor that stays near the shell edge so
+    # it doesn't intrude into the MAKI's wide-angle view.
     if _build_maki_hood:
+        half_hood_outer_h = 0.5 * _maki_hood_outer_h
+        half_hood_inner_h = 0.5 * _maki_hood_inner_h
+        bottom_panel_h = max(half_hood_outer_h - half_hood_inner_h + 1.0, p.lens_hood_wall_mm + 0.8)
         with BuildPart() as hood_bp:
-            with Locations((_maki_hood_center_x, _maki_hood_center_y, 0.0)):
-                Cylinder(_maki_hood_outer_r, p.lens_hood_depth_mm, rotation=(180, 0, 0),
-                         align=(Align.CENTER, Align.CENTER, Align.MIN))
-            if p.lens_hood_base_flare_mm > 0.0 and _maki_hood_flare_d > 0.0:
-                with Locations((_maki_hood_center_x, _maki_hood_center_y, 0.0)):
-                    Cone(_maki_hood_flare_r, _maki_hood_outer_r, _maki_hood_flare_d, rotation=(180, 0, 0),
-                         align=(Align.CENTER, Align.CENTER, Align.MIN))
-            with Locations((_maki_hood_center_x, _maki_hood_center_y, 0.1)):
-                Cylinder(_maki_hood_inner_r, p.lens_hood_depth_mm + 0.2, rotation=(180, 0, 0),
-                         align=(Align.CENTER, Align.CENTER, Align.MIN),
-                         mode=Mode.SUBTRACT)
-        clip_w = outer_w
-        clip_h = _maki_hood_outer_r + 1.0
-        with BuildPart() as clip_bp:
-            with Locations((_maki_hood_center_x,
-                            _maki_hood_center_y - 0.5 * clip_h,
-                            -0.5 * p.lens_hood_depth_mm)):
-                Box(clip_w, clip_h, p.lens_hood_depth_mm + 1.0)
-        hood_solid = hood_bp.part & clip_bp.part
+            with BuildSketch(Plane.XY):
+                _add_rounded_rectangle(_maki_hood_outer_w, _maki_hood_outer_h, _maki_hood_outer_r)
+            extrude(amount=p.lens_hood_depth_mm)
+
+            with BuildSketch(Plane.XY.offset(-0.1)):
+                _add_rounded_rectangle(_maki_hood_inner_w, _maki_hood_inner_h, _maki_hood_inner_r)
+            extrude(amount=p.lens_hood_depth_mm + 0.2, mode=Mode.SUBTRACT)
+
+            # Open the bottom panel while keeping the top and side visor walls.
+            with Locations((0.0, half_hood_inner_h + 0.5 * bottom_panel_h, 0.5 * p.lens_hood_depth_mm)):
+                Box(_maki_hood_outer_w + 2.0, bottom_panel_h + 0.2, p.lens_hood_depth_mm + 1.0, mode=Mode.SUBTRACT)
+
+        hood_solid = hood_bp.part
         for fillet_r in (2.0, 1.5, 1.0, 0.5):
             try:
                 hood_solid = fillet(hood_solid.edges(), fillet_r)
@@ -1487,15 +1480,15 @@ def build_case(p: MakiCaseParams):
             "front_integrated": bool(p.front_integrated),
             "lens_hood": {
                 "enabled": bool(p.front_integrated and p.lens_hood_enabled),
-                "type": "top_visor",
+                "type": "perimeter_visor",
                 "depth_mm": float(max(p.lens_hood_depth_mm, 0.0)),
                 "wall_mm": float(p.lens_hood_wall_mm),
-                "clearance_mm": float(p.lens_hood_clearance_mm),
-                "base_flare_mm": float(p.lens_hood_base_flare_mm),
-                "base_depth_mm": float(p.lens_hood_base_depth_mm),
+                "perimeter_margin_mm": float(_maki_hood_perimeter_margin) if _build_maki_hood else float(p.lens_hood_perimeter_margin_mm),
                 "center_x_mm": float(_maki_hood_center_x) if _build_maki_hood else float(0.0),
-                "center_y_mm": float(_maki_hood_center_y) if _build_maki_hood else float(p.lens_center_y_mm),
-                "reference_cutout_d_mm": float(_maki_hood_reference_d) if _build_maki_hood else float(p.lens_diameter_mm),
+                "center_y_mm": float(_maki_hood_center_y) if _build_maki_hood else float(0.0),
+                "reference_outer_w_mm": float(_maki_hood_reference_outer_w) if _build_maki_hood else float(outer_w),
+                "reference_outer_h_mm": float(_maki_hood_reference_outer_h) if _build_maki_hood else float(outer_h),
+                "reference_outer_corner_r_mm": float(_maki_hood_reference_outer_corner_r) if _build_maki_hood else float(outer_corner_r),
                 "side": "neg" if resolved_tripod_side == "neg" else "pos",
             },
             "cavity_front_z_mm": float(cavity_front_z),

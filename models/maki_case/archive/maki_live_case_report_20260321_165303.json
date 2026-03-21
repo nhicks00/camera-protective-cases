@@ -24,7 +24,6 @@
     "lens_hood_depth_mm": 10.0,
     "lens_hood_wall_mm": 2.5,
     "lens_hood_clearance_mm": 1.0,
-    "lens_hood_perimeter_margin_mm": 1.5,
     "lens_hood_base_flare_mm": 4.0,
     "lens_hood_base_depth_mm": 5.0,
     "cold_shoe_enabled": true,
@@ -564,15 +563,15 @@
       "front_integrated": true,
       "lens_hood": {
         "enabled": true,
-        "type": "perimeter_visor",
+        "type": "top_visor",
         "depth_mm": 10.0,
         "wall_mm": 2.5,
-        "perimeter_margin_mm": 1.5,
-        "center_x_mm": 0.0,
+        "clearance_mm": 1.0,
+        "base_flare_mm": 4.0,
+        "base_depth_mm": 5.0,
+        "center_x_mm": 6.112600315865084e-13,
         "center_y_mm": 0.0,
-        "reference_outer_w_mm": 67.59,
-        "reference_outer_h_mm": 67.59,
-        "reference_outer_corner_r_mm": 22.087156857946702,
+        "reference_cutout_d_mm": 52.25685382529972,
         "side": "neg"
       },
       "cavity_front_z_mm": 3.0,
@@ -658,7 +657,7 @@
         "z_mm": 124.91999999999999
       },
       "machined_finish_mm": {
-        "sleeve_axis_y_fillet": 0.45
+        "sleeve_axis_y_fillet": 0.0
       },
       "outer_bounds_xy_mm": {
         "min_x": -33.795,
