@@ -533,9 +533,6 @@
             "clearance_mm": 1.0,
             "base_flare_mm": 4.0,
             "base_depth_mm": 5.0,
-            "center_x_mm": 6.112600315865084e-13,
-            "center_y_mm": 0.0,
-            "reference_cutout_d_mm": 52.25685382529972,
             "side": "neg"
           },
           "cavity_front_z_mm": 3.0,
