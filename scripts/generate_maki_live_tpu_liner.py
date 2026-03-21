@@ -71,8 +71,10 @@ class MakiTpuLinerParams:
     include_front_face_pad: bool = True
     front_face_pad_thickness_mm: float = 1.5
 
-    # Keep side vent/tripod regions open through TPU
+    # Keep tripod region open through TPU. Side vent cuts are optional and
+    # default off so the frame stays smooth and symmetric.
     use_step_side_features: bool = True
+    include_side_vent_cutouts: bool = False
     side_feature_clearance_mm: float = 0.30
     tripod_cutout_extra_mm: float = 1.5
 
@@ -812,7 +814,7 @@ def build_liner(p: MakiTpuLinerParams):
             extrude(amount=edge_wrap_depth + 0.4, mode=Mode.SUBTRACT)
 
         if p.use_step_side_features:
-            if p.enforce_tripanel_vent_layout:
+            if p.include_side_vent_cutouts and p.enforce_tripanel_vent_layout:
                 vent_pattern = _derive_tripanel_vents(
                     step_features["vents"],
                     map_x,
@@ -873,7 +875,7 @@ def build_liner(p: MakiTpuLinerParams):
                                     "pattern_source": vent_pattern["source"],
                                 }
                             )
-                if p.include_side_trio_vents:
+                if p.include_side_vent_cutouts and p.include_side_trio_vents:
                     trio = _derive_side_trio_vents(
                         step_features["vents"],
                         map_y,
@@ -907,7 +909,7 @@ def build_liner(p: MakiTpuLinerParams):
                                     "vent_family": "side_trio",
                                 }
                             )
-            else:
+            elif p.include_side_vent_cutouts:
                 for v in step_features["vents"]:
                     z_c = map_z(v["z"])
                     if v["axis"] == "y":
@@ -992,7 +994,7 @@ def build_liner(p: MakiTpuLinerParams):
                     "diameter": d,
                 }
 
-        if not vents_used:
+        if p.include_side_vent_cutouts and not vents_used:
             fallback_on_neg = resolved_tripod_side == "neg"
             y_face = min_y - 0.2 if fallback_on_neg else max_y + 0.2
             cut_depth = max(p.vent_cut_depth_mm, p.shell_thickness_mm + 3.0)
@@ -1048,6 +1050,7 @@ def build_liner(p: MakiTpuLinerParams):
             "vents_detected": len(step_features["vents"]),
             "vents_applied": len(vents_used),
             "vents_applied_entries": vents_used,
+            "tpu_side_vent_cutouts_enabled": bool(p.include_side_vent_cutouts),
             "tripod_detected": step_features["tripod"] is not None,
             "tripod_source": step_features.get("tripod_source", "unknown"),
             "tripod_cyl_candidate_count": step_features.get("tripod_cyl_candidate_count", 0),
@@ -1126,6 +1129,7 @@ def main():
     parser.add_argument("--edge-wrap-radial", type=float, default=None, help="Edge wrap radial hold on face perimeter (mm)")
     parser.add_argument("--end-clearance", type=float, default=None, help="Front/rear clearance to camera (mm each end)")
     parser.add_argument("--no-step-side-features", action="store_true", help="Disable STEP-derived side vents/tripod")
+    parser.add_argument("--tpu-side-vents", action="store_true", help="Enable side vent cutouts in the TPU frame")
     parser.add_argument("--tripod-rect", action="store_true", help="Use rectangular cutout instead of circular tripod hole")
     parser.add_argument("--tripod-rect-along-width", action="store_true", help="Orient long side of rect along case width (default: along length)")
     parser.add_argument("--no-front-face-pad", action="store_true", help="Disable front face TPU pad")
@@ -1146,6 +1150,8 @@ def main():
         params.end_clearance_mm = args.end_clearance
     if args.no_step_side_features:
         params.use_step_side_features = False
+    if args.tpu_side_vents:
+        params.include_side_vent_cutouts = True
     if args.tripod_rect:
         params.tripod_use_rect_cutout = True
     if args.tripod_rect_along_width:
