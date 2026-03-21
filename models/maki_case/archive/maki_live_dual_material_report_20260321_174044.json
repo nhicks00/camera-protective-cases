@@ -10,7 +10,6 @@
     "interface_gap_tolerance_mm": 0.02,
     "tpu_front_edge_wrap_mm": 2.5,
     "tpu_edge_wrap_radial_mm": 2.0,
-    "tpu_rear_edge_wrap_radial_mm": 3.5,
     "include_tpu_front_edge_wrap": false,
     "include_tpu_rear_edge_wrap": true,
     "include_tpu_front_face_pad": true,
@@ -59,8 +58,7 @@
     },
     "tpu_edge_wrap": {
       "depth_mm": 2.5,
-      "front_radial_mm": 2.0,
-      "rear_radial_mm": 3.5,
+      "radial_mm": 2.0,
       "enabled": {
         "front": false,
         "rear": true
@@ -679,7 +677,6 @@
           },
           "edge_wrap_depth_mm": 2.5,
           "edge_wrap_radial_mm": 2.0,
-          "rear_edge_wrap_radial_mm": 3.5,
           "edge_wrap_enabled": {
             "front": false,
             "rear": true

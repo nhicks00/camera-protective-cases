@@ -64,6 +64,7 @@ class MakiTpuLinerParams:
     shell_thickness_mm: float = 2.0
     edge_wrap_depth_mm: float = 2.5
     edge_wrap_radial_mm: float = 2.0
+    rear_edge_wrap_radial_mm: float = 3.5
     include_front_edge_wrap: bool = False
     include_rear_edge_wrap: bool = True
 
@@ -690,9 +691,10 @@ def build_liner(p: MakiTpuLinerParams):
     inner_depth = p.nominal_length_mm + 2.0 * p.end_clearance_mm
     shell_depth = inner_depth
     edge_wrap_depth = max(min(p.edge_wrap_depth_mm, 0.35 * shell_depth), 0.6)
-    edge_wrap_radial = max(p.edge_wrap_radial_mm, 0.6)
-    wrap_inner_w = max(inner_w - 2.0 * edge_wrap_radial, 2.0)
-    wrap_inner_h = max(inner_h - 2.0 * edge_wrap_radial, wrap_inner_w + 0.2)
+    front_edge_wrap_radial = max(p.edge_wrap_radial_mm, 0.6)
+    rear_edge_wrap_radial = max(p.rear_edge_wrap_radial_mm, 0.6)
+    wrap_inner_w = max(inner_w - 2.0 * front_edge_wrap_radial, 2.0)
+    wrap_inner_h = max(inner_h - 2.0 * front_edge_wrap_radial, wrap_inner_w + 0.2)
 
     min_y = -0.5 * outer_h
     max_y = 0.5 * outer_h
@@ -810,9 +812,9 @@ def build_liner(p: MakiTpuLinerParams):
             extrude(amount=edge_wrap_depth)
             with BuildSketch(Plane.XY.offset(rear_start - 0.2)):
                 _add_rounded_rectangle(
-                    wrap_inner_w,
-                    wrap_inner_h,
-                    max(inner_corner_r - edge_wrap_radial, 0.6),
+                    max(inner_w - 2.0 * rear_edge_wrap_radial, 2.0),
+                    max(inner_h - 2.0 * rear_edge_wrap_radial, 2.0),
+                    max(inner_corner_r - rear_edge_wrap_radial, 0.6),
                 )
             extrude(amount=edge_wrap_depth + 0.4, mode=Mode.SUBTRACT)
 
@@ -1086,7 +1088,8 @@ def build_liner(p: MakiTpuLinerParams):
                 ),
             },
             "edge_wrap_depth_mm": float(edge_wrap_depth),
-            "edge_wrap_radial_mm": float(edge_wrap_radial),
+            "edge_wrap_radial_mm": float(front_edge_wrap_radial),
+            "rear_edge_wrap_radial_mm": float(rear_edge_wrap_radial),
             "edge_wrap_enabled": {
                 "front": bool(p.include_front_edge_wrap),
                 "rear": bool(p.include_rear_edge_wrap),

@@ -38,6 +38,7 @@ class MakiDualBodyParams:
     interface_gap_tolerance_mm: float = 0.02
     tpu_front_edge_wrap_mm: float = 2.5
     tpu_edge_wrap_radial_mm: float = 2.0
+    tpu_rear_edge_wrap_radial_mm: float = 3.5
     include_tpu_front_edge_wrap: bool = False
     include_tpu_rear_edge_wrap: bool = True
 
@@ -104,6 +105,7 @@ def build_dual_body(p: MakiDualBodyParams):
     tpu_p.asa_shell_clearance_mm = p.asa_clearance_mm
     tpu_p.edge_wrap_depth_mm = p.tpu_front_edge_wrap_mm
     tpu_p.edge_wrap_radial_mm = p.tpu_edge_wrap_radial_mm
+    tpu_p.rear_edge_wrap_radial_mm = p.tpu_rear_edge_wrap_radial_mm
     tpu_p.include_front_edge_wrap = p.include_tpu_front_edge_wrap
     tpu_p.include_rear_edge_wrap = p.include_tpu_rear_edge_wrap
     tpu_p.include_front_face_pad = p.include_tpu_front_face_pad
@@ -193,7 +195,8 @@ def build_dual_body(p: MakiDualBodyParams):
         },
         "tpu_edge_wrap": {
             "depth_mm": float(p.tpu_front_edge_wrap_mm),
-            "radial_mm": float(p.tpu_edge_wrap_radial_mm),
+            "front_radial_mm": float(p.tpu_edge_wrap_radial_mm),
+            "rear_radial_mm": float(p.tpu_rear_edge_wrap_radial_mm),
             "enabled": {
                 "front": bool(p.include_tpu_front_edge_wrap),
                 "rear": bool(p.include_tpu_rear_edge_wrap),
