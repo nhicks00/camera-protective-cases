@@ -550,17 +550,22 @@ def main():
     reports_dir.mkdir(parents=True, exist_ok=True)
     if args.profile == "asa":
         front_step = args.out / "maki_live_front_cap.step"
-        rear_step = args.out / "maki_live_rear_cap.step"
-        report_json = reports_dir / "maki_live_caps_report.json"
+        rear_step = args.out / "maki_live_back_cap.step"
+        report_json = reports_dir / "maki_live_back_cap_report.json"
         legacy_report_json = args.out / "maki_live_caps_report.json"
+        legacy_rear_step = args.out / "maki_live_rear_cap.step"
     else:
         front_step = args.out / "maki_live_tpu_front_cap.step"
         rear_step = args.out / "maki_live_tpu_rear_cap.step"
         report_json = reports_dir / "maki_live_tpu_caps_report.json"
         legacy_report_json = args.out / "maki_live_tpu_caps_report.json"
+        legacy_rear_step = None
 
     # Front cap is optional now; default workflow is integrated front body + separate rear cap.
-    archived = _archive_existing([front_step, rear_step, report_json, legacy_report_json], args.out)
+    archive_paths = [front_step, rear_step, report_json, legacy_report_json]
+    if legacy_rear_step is not None:
+        archive_paths.append(legacy_rear_step)
+    archived = _archive_existing(archive_paths, args.out)
 
     if args.include_front_cap:
         export_step(front_cap, str(front_step))
