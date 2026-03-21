@@ -64,6 +64,7 @@ class MakiCaseParams:
     front_wall_mm: float = 3.0
     front_integrated: bool = True
     include_front_cutouts: bool = True
+    front_single_circle_cutout_only: bool = True
     front_window_mm: float = 16.0
     cutout_extra_mm: float = 0.25
     front_min_cutout_dim_mm: float = 3.0
@@ -77,7 +78,7 @@ class MakiCaseParams:
     lens_diameter_mm: float = 42.7        # 30.0 + 12.7 mm (0.5")
     front_bezel_extra_mm: float = 1.0
     front_bezel_height_mm: float = 1.1
-    lens_hood_enabled: bool = True
+    lens_hood_enabled: bool = False
     lens_hood_depth_mm: float = 10.0
     lens_hood_wall_mm: float = 2.5
     lens_hood_clearance_mm: float = 1.0
@@ -863,11 +864,34 @@ def build_case(p: MakiCaseParams):
 
         # Front cutouts in integrated front wall.
         if p.front_integrated and p.include_front_cutouts:
-            front_cutouts_detected = _extract_front_cutouts(housing, p, sx, sy, zmax)
-            if not front_cutouts_detected:
-                front_cutouts_detected = [
-                    {"x": 0.0, "y": p.lens_center_y_mm, "shape": "circle", "d": p.lens_diameter_mm}
+            extracted_front_cutouts = _extract_front_cutouts(housing, p, sx, sy, zmax)
+            if p.front_single_circle_cutout_only:
+                center_circles = [
+                    c for c in extracted_front_cutouts
+                    if c.get("shape") == "circle"
+                    and abs(float(c.get("x", 0.0))) <= 3.0
+                    and abs(float(c.get("y", 0.0))) <= 8.0
                 ]
+                if center_circles:
+                    primary_circle = max(center_circles, key=lambda c: float(c.get("d", 0.0)))
+                    front_cutouts_detected = [
+                        {
+                            "x": float(primary_circle.get("x", 0.0)),
+                            "y": float(primary_circle.get("y", 0.0)),
+                            "shape": "circle",
+                            "d": float(primary_circle.get("d", p.lens_diameter_mm)),
+                        }
+                    ]
+                else:
+                    front_cutouts_detected = [
+                        {"x": 0.0, "y": p.lens_center_y_mm, "shape": "circle", "d": p.lens_diameter_mm}
+                    ]
+            else:
+                front_cutouts_detected = extracted_front_cutouts
+                if not front_cutouts_detected:
+                    front_cutouts_detected = [
+                        {"x": 0.0, "y": p.lens_center_y_mm, "shape": "circle", "d": p.lens_diameter_mm}
+                    ]
             with BuildSketch(Plane.XY.offset(-0.2)):
                 for c in front_cutouts_detected:
                     with Locations((c["x"], c["y"])):
@@ -1547,6 +1571,7 @@ def build_case(p: MakiCaseParams):
             "end_clearance_each_mm": float(p.clearance_mm),
             "front_cutouts": {
                 "enabled": bool(p.include_front_cutouts),
+                "single_circle_only": bool(p.front_single_circle_cutout_only),
                 "detected": len(front_cutouts_detected),
                 "applied": len(front_cutouts_applied),
                 "entries": front_cutouts_applied,
