@@ -567,12 +567,12 @@
         "type": "perimeter_visor",
         "depth_mm": 10.0,
         "wall_mm": 2.5,
-        "aperture_gap_mm": 1.5,
-        "center_x_mm": 6.112600315865084e-13,
+        "perimeter_margin_mm": 1.5,
+        "center_x_mm": 0.0,
         "center_y_mm": 0.0,
-        "reference_cutout_w_mm": 52.19974515760118,
-        "reference_cutout_h_mm": 52.31396249331994,
-        "reference_cutout_corner_r_mm": 14.345197245037033,
+        "reference_outer_w_mm": 67.59,
+        "reference_outer_h_mm": 67.59,
+        "reference_outer_corner_r_mm": 22.087156857946702,
         "side": "neg"
       },
       "cavity_front_z_mm": 3.0,
@@ -589,10 +589,8 @@
           {
             "x": 6.112600315865084e-13,
             "y": 0.0,
-            "shape": "roundrect",
-            "w": 52.19974515760118,
-            "h": 52.31396249331994,
-            "r": 14.345197245037033
+            "shape": "circle",
+            "d": 52.25685382529972
           },
           {
             "x": -16.900629142096747,
@@ -660,7 +658,7 @@
         "z_mm": 124.91999999999999
       },
       "machined_finish_mm": {
-        "sleeve_axis_y_fillet": 0.3
+        "sleeve_axis_y_fillet": 0.45
       },
       "outer_bounds_xy_mm": {
         "min_x": -33.795,

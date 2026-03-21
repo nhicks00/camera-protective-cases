@@ -469,6 +469,22 @@ def _classify_cutout(xlen: float, ylen: float) -> dict | None:
     return {"shape": "rect", "w": xlen, "h": ylen}
 
 
+def _estimate_wire_corner_radius_mm(wire, sx: float, sy: float, fallback_mm: float) -> float:
+    arc_radii = []
+    scale = 0.5 * (sx + sy)
+    for edge in wire.edges():
+        try:
+            if edge.geom_type != GeomType.CIRCLE:
+                continue
+            arc_radii.append(float(edge.radius) * scale)
+        except Exception:
+            continue
+    usable = [r for r in arc_radii if r > 1.5]
+    if usable:
+        return float(np.median(usable))
+    return float(max(fallback_mm, 0.6))
+
+
 def _extract_front_cutouts(housing, p: MakiCaseParams, sx: float, sy: float, zmax: float):
     cutouts = []
     for f in housing.faces():
@@ -500,13 +516,25 @@ def _extract_front_cutouts(housing, p: MakiCaseParams, sx: float, sy: float, zma
                 continue
 
             if too_large:
-                d_maj = (
-                    (xlen + ylen) * 0.5 * (sx + sy) * 0.5
-                    + p.cutout_extra_mm
-                    - p.front_major_aperture_shrink_mm
+                edge_delta = 0.5 * (p.cutout_extra_mm - p.front_major_aperture_shrink_mm)
+                w_maj = max(xlen * sx + p.cutout_extra_mm - p.front_major_aperture_shrink_mm, p.front_min_cutout_dim_mm)
+                h_maj = max(ylen * sy + p.cutout_extra_mm - p.front_major_aperture_shrink_mm, p.front_min_cutout_dim_mm)
+                fallback_r = 0.28 * min(w_maj, h_maj)
+                r_maj = max(
+                    _estimate_wire_corner_radius_mm(w, sx, sy, fallback_r) + edge_delta,
+                    0.6,
                 )
-                d_maj = max(d_maj, p.front_min_cutout_dim_mm)
-                cutouts.append({"x": xmid * sx, "y": ymid * sy, "shape": "circle", "d": d_maj})
+                r_maj = min(r_maj, 0.5 * min(w_maj, h_maj) - 0.2)
+                cutouts.append(
+                    {
+                        "x": xmid * sx,
+                        "y": ymid * sy,
+                        "shape": "roundrect",
+                        "w": w_maj,
+                        "h": h_maj,
+                        "r": r_maj,
+                    }
+                )
                 continue
 
             shape = _classify_cutout(xlen, ylen)
@@ -531,6 +559,15 @@ def _extract_front_cutouts(housing, p: MakiCaseParams, sx: float, sy: float, zma
     for c in cutouts:
         if c["shape"] == "circle":
             key = (c["shape"], round(c["x"], 2), round(c["y"], 2), round(c["d"], 2))
+        elif c["shape"] == "roundrect":
+            key = (
+                c["shape"],
+                round(c["x"], 2),
+                round(c["y"], 2),
+                round(c["w"], 2),
+                round(c["h"], 2),
+                round(c["r"], 2),
+            )
         else:
             key = (c["shape"], round(c["x"], 2), round(c["y"], 2), round(c["w"], 2), round(c["h"], 2))
         if key in seen:
@@ -836,6 +873,8 @@ def build_case(p: MakiCaseParams):
                     with Locations((c["x"], c["y"])):
                         if c["shape"] == "circle":
                             Circle(c["d"] * 0.5)
+                        elif c["shape"] == "roundrect":
+                            _add_rounded_rectangle(c["w"], c["h"], c["r"])
                         elif c["shape"] == "slot":
                             SlotOverall(c["w"], c["h"])
                         else:
@@ -847,22 +886,31 @@ def build_case(p: MakiCaseParams):
         _build_maki_hood = (p.front_integrated and p.lens_hood_enabled
                             and p.lens_hood_depth_mm > 0.0)
         if _build_maki_hood:
-            hood_margin = max(p.lens_hood_perimeter_margin_mm, 0.6)
-            _maki_hood_center_x = 0.0
-            _maki_hood_center_y = 0.0
-            _maki_hood_reference_outer_w = outer_w
-            _maki_hood_reference_outer_h = outer_h
-            _maki_hood_reference_outer_corner_r = outer_corner_r
-            _maki_hood_perimeter_margin = hood_margin
-            _maki_hood_outer_w = max(outer_w - 2.0 * hood_margin, 2.0 * p.lens_hood_wall_mm + 6.0)
-            _maki_hood_outer_h = max(outer_h - 2.0 * hood_margin, 2.0 * p.lens_hood_wall_mm + 6.0)
-            _maki_hood_outer_r = min(
-                max(outer_corner_r - hood_margin, 0.6),
-                0.5 * min(_maki_hood_outer_w, _maki_hood_outer_h) - 0.2,
-            )
-            _maki_hood_inner_w = max(_maki_hood_outer_w - 2.0 * p.lens_hood_wall_mm, 2.0)
-            _maki_hood_inner_h = max(_maki_hood_outer_h - 2.0 * p.lens_hood_wall_mm, 2.0)
-            _maki_hood_inner_r = max(_maki_hood_outer_r - p.lens_hood_wall_mm, 0.5)
+            hood_gap = max(p.lens_hood_perimeter_margin_mm, 0.6)
+            hood_roundrect_cutouts = [
+                c for c in front_cutouts_detected
+                if c.get("shape") == "roundrect"
+            ]
+            if hood_roundrect_cutouts:
+                hood_ref = max(hood_roundrect_cutouts, key=lambda c: float(c.get("w", 0.0)) * float(c.get("h", 0.0)))
+                _maki_hood_center_x = float(hood_ref.get("x", 0.0))
+                _maki_hood_center_y = float(hood_ref.get("y", 0.0))
+                _maki_hood_reference_cutout_w = float(hood_ref.get("w", outer_w - 2.0 * p.wall_mm))
+                _maki_hood_reference_cutout_h = float(hood_ref.get("h", outer_h - 2.0 * p.wall_mm))
+                _maki_hood_reference_cutout_r = float(hood_ref.get("r", outer_corner_r))
+            else:
+                _maki_hood_center_x = 0.0
+                _maki_hood_center_y = 0.0
+                _maki_hood_reference_cutout_w = max(outer_w - 2.0 * p.wall_mm, 2.0)
+                _maki_hood_reference_cutout_h = max(outer_h - 2.0 * p.wall_mm, 2.0)
+                _maki_hood_reference_cutout_r = max(outer_corner_r - p.wall_mm, 0.6)
+            _maki_hood_gap = hood_gap
+            _maki_hood_inner_w = _maki_hood_reference_cutout_w + 2.0 * hood_gap
+            _maki_hood_inner_h = _maki_hood_reference_cutout_h + 2.0 * hood_gap
+            _maki_hood_inner_r = _maki_hood_reference_cutout_r + hood_gap
+            _maki_hood_outer_w = _maki_hood_inner_w + 2.0 * p.lens_hood_wall_mm
+            _maki_hood_outer_h = _maki_hood_inner_h + 2.0 * p.lens_hood_wall_mm
+            _maki_hood_outer_r = _maki_hood_inner_r + p.lens_hood_wall_mm
 
         # Cold shoe mount (ISO 518 female receptor) on top (Y+) side, near rear.
         cold_shoe_info = None
@@ -1483,12 +1531,12 @@ def build_case(p: MakiCaseParams):
                 "type": "perimeter_visor",
                 "depth_mm": float(max(p.lens_hood_depth_mm, 0.0)),
                 "wall_mm": float(p.lens_hood_wall_mm),
-                "perimeter_margin_mm": float(_maki_hood_perimeter_margin) if _build_maki_hood else float(p.lens_hood_perimeter_margin_mm),
+                "aperture_gap_mm": float(_maki_hood_gap) if _build_maki_hood else float(p.lens_hood_perimeter_margin_mm),
                 "center_x_mm": float(_maki_hood_center_x) if _build_maki_hood else float(0.0),
                 "center_y_mm": float(_maki_hood_center_y) if _build_maki_hood else float(0.0),
-                "reference_outer_w_mm": float(_maki_hood_reference_outer_w) if _build_maki_hood else float(outer_w),
-                "reference_outer_h_mm": float(_maki_hood_reference_outer_h) if _build_maki_hood else float(outer_h),
-                "reference_outer_corner_r_mm": float(_maki_hood_reference_outer_corner_r) if _build_maki_hood else float(outer_corner_r),
+                "reference_cutout_w_mm": float(_maki_hood_reference_cutout_w) if _build_maki_hood else float(max(outer_w - 2.0 * p.wall_mm, 2.0)),
+                "reference_cutout_h_mm": float(_maki_hood_reference_cutout_h) if _build_maki_hood else float(max(outer_h - 2.0 * p.wall_mm, 2.0)),
+                "reference_cutout_corner_r_mm": float(_maki_hood_reference_cutout_r) if _build_maki_hood else float(max(outer_corner_r - p.wall_mm, 0.6)),
                 "side": "neg" if resolved_tripod_side == "neg" else "pos",
             },
             "cavity_front_z_mm": float(cavity_front_z),
