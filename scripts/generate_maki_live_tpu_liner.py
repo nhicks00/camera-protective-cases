@@ -723,8 +723,8 @@ def build_liner(p: MakiTpuLinerParams):
             _add_rounded_rectangle(inner_w, inner_h, inner_corner_r)
         extrude(amount=shell_depth + 0.4, mode=Mode.SUBTRACT)
 
-        # Skeleton frame: cut rectangular windows from each flat wall face,
-        # leaving corner bumpers at each vertical edge and edge rails at top/bottom.
+        # Skeleton frame: cut simple symmetric windows from each flat wall face,
+        # leaving the 4 corner bumpers and top/bottom rails as clean repeated geometry.
         if p.skeleton_frame:
             bumper_w = p.skeleton_corner_bumper_w_mm
             rail_w = p.skeleton_edge_rail_w_mm
@@ -732,19 +732,17 @@ def build_liner(p: MakiTpuLinerParams):
             front_frame_margin = rail_w + (p.front_face_pad_thickness_mm if p.include_front_face_pad else 0.0)
             rear_frame_margin = rail_w + (edge_wrap_depth if p.include_rear_edge_wrap else 0.0)
             skel_window_span = max(shell_depth - front_frame_margin - rear_frame_margin, 0.0)
-            window_corner_r = max(p.skeleton_window_corner_r_mm, 0.6)
 
             # X walls (left/right): wall runs along Y axis
             x_wall_clear_h = max(outer_h - 2.0 * bumper_w, 0.0)
             x_wall_clear_z = skel_window_span
             if x_wall_clear_h > 1.0 and x_wall_clear_z > 1.0:
                 x_cut_z = front_frame_margin + 0.5 * x_wall_clear_z
-                x_window_r = min(window_corner_r, 0.5 * min(x_wall_clear_h, x_wall_clear_z) - 0.2)
                 for side in (-1.0, 1.0):
                     x_face = side * (0.5 * outer_w + 0.2)
                     with BuildSketch(Plane.YZ.offset(x_face)):
                         with Locations((0.0, x_cut_z)):
-                            _add_rounded_rectangle(x_wall_clear_h, x_wall_clear_z, x_window_r)
+                            Rectangle(x_wall_clear_h, x_wall_clear_z)
                     extrude(
                         amount=skel_cut_depth if side < 0 else -skel_cut_depth,
                         mode=Mode.SUBTRACT,
@@ -755,12 +753,11 @@ def build_liner(p: MakiTpuLinerParams):
             y_wall_clear_z = skel_window_span
             if y_wall_clear_w > 1.0 and y_wall_clear_z > 1.0:
                 y_cut_z = front_frame_margin + 0.5 * y_wall_clear_z
-                y_window_r = min(window_corner_r, 0.5 * min(y_wall_clear_w, y_wall_clear_z) - 0.2)
                 for side in (-1.0, 1.0):
                     y_face = side * (0.5 * outer_h + 0.2)
                     with BuildSketch(Plane.XZ.offset(-y_face)):
                         with Locations((0.0, y_cut_z)):
-                            _add_rounded_rectangle(y_wall_clear_w, y_wall_clear_z, y_window_r)
+                            Rectangle(y_wall_clear_w, y_wall_clear_z)
                     extrude(
                         amount=skel_cut_depth if side > 0 else -skel_cut_depth,
                         mode=Mode.SUBTRACT,
@@ -1041,7 +1038,15 @@ def build_liner(p: MakiTpuLinerParams):
             }
 
     liner = _largest_solid(liner_bp.part)
-    liner, liner_fillet_y = _apply_axis_fillet(liner, Axis.Y, (1.0, 0.8, 0.6, 0.45, 0.3))
+    liner_global_fillet = 0.0
+    for fillet_r in (1.0, 0.8, 0.6, 0.45, 0.3):
+        try:
+            liner = fillet(liner.edges(), fillet_r)
+            liner_global_fillet = float(fillet_r)
+            break
+        except Exception:
+            continue
+    liner = _largest_solid(liner)
 
     report = {
         "mesh_bounds_mm": {
@@ -1090,7 +1095,7 @@ def build_liner(p: MakiTpuLinerParams):
                 "enabled": bool(p.skeleton_frame),
                 "corner_bumper_w_mm": float(p.skeleton_corner_bumper_w_mm),
                 "edge_rail_w_mm": float(p.skeleton_edge_rail_w_mm),
-                "window_corner_r_mm": float(p.skeleton_window_corner_r_mm),
+                "window_corner_r_mm": 0.0,
             },
             "front_face_pad": {
                 "enabled": bool(p.include_front_face_pad),
@@ -1112,7 +1117,7 @@ def build_liner(p: MakiTpuLinerParams):
                 "edge_wrap_inner_opening_h": float(wrap_inner_h),
             },
             "machined_finish_mm": {
-                "liner_axis_y_fillet": liner_fillet_y,
+                "liner_global_fillet": liner_global_fillet,
             },
         },
     }
