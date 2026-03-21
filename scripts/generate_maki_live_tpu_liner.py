@@ -12,6 +12,7 @@ import argparse
 import json
 import math
 import shutil
+import tempfile
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
@@ -64,7 +65,7 @@ class MakiTpuLinerParams:
     edge_wrap_depth_mm: float = 2.5
     edge_wrap_radial_mm: float = 2.0
     include_front_edge_wrap: bool = False
-    include_rear_edge_wrap: bool = False
+    include_rear_edge_wrap: bool = True
 
     # Front face pad (shock absorption between ASA front wall and camera face)
     include_front_face_pad: bool = True
@@ -121,6 +122,7 @@ class MakiTpuLinerParams:
     skeleton_frame: bool = True
     skeleton_corner_bumper_w_mm: float = 12.0   # width of each corner bumper along wall
     skeleton_edge_rail_w_mm: float = 4.0        # width of connecting rails along each edge
+    skeleton_window_corner_r_mm: float = 4.0
 
     # Processing
     section_z_ratio: float = 0.50
@@ -650,7 +652,10 @@ def _extract_front_cutouts_tpu(housing, p: MakiTpuLinerParams, sx: float, sy: fl
 
 
 def build_liner(p: MakiTpuLinerParams):
-    tmp_stl = Path("tmp/maki_device_from_step_tpu_ref.stl")
+    tmp_dir = Path("tmp")
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=tmp_dir, suffix=".stl", delete=False) as tmp_file:
+        tmp_stl = Path(tmp_file.name)
     mesh, housing, step_features = _load_step_as_mesh(p.step_path, tmp_stl, p)
 
     zmin, zmax = mesh.bounds[:, 2]
@@ -716,17 +721,22 @@ def build_liner(p: MakiTpuLinerParams):
             bumper_w = p.skeleton_corner_bumper_w_mm
             rail_w = p.skeleton_edge_rail_w_mm
             skel_cut_depth = p.shell_thickness_mm + 1.0
+            front_frame_margin = rail_w + (p.front_face_pad_thickness_mm if p.include_front_face_pad else 0.0)
+            rear_frame_margin = rail_w + (edge_wrap_depth if p.include_rear_edge_wrap else 0.0)
+            skel_window_span = max(shell_depth - front_frame_margin - rear_frame_margin, 0.0)
+            window_corner_r = max(p.skeleton_window_corner_r_mm, 0.6)
 
             # X walls (left/right): wall runs along Y axis
             x_wall_clear_h = max(outer_h - 2.0 * bumper_w, 0.0)
-            x_wall_clear_z = max(shell_depth - 2.0 * rail_w, 0.0)
+            x_wall_clear_z = skel_window_span
             if x_wall_clear_h > 1.0 and x_wall_clear_z > 1.0:
-                x_cut_z = 0.5 * shell_depth
+                x_cut_z = front_frame_margin + 0.5 * x_wall_clear_z
+                x_window_r = min(window_corner_r, 0.5 * min(x_wall_clear_h, x_wall_clear_z) - 0.2)
                 for side in (-1.0, 1.0):
                     x_face = side * (0.5 * outer_w + 0.2)
                     with BuildSketch(Plane.YZ.offset(x_face)):
                         with Locations((0.0, x_cut_z)):
-                            Rectangle(x_wall_clear_h, x_wall_clear_z)
+                            _add_rounded_rectangle(x_wall_clear_h, x_wall_clear_z, x_window_r)
                     extrude(
                         amount=skel_cut_depth if side < 0 else -skel_cut_depth,
                         mode=Mode.SUBTRACT,
@@ -734,14 +744,15 @@ def build_liner(p: MakiTpuLinerParams):
 
             # Y walls (top/bottom): wall runs along X axis
             y_wall_clear_w = max(outer_w - 2.0 * bumper_w, 0.0)
-            y_wall_clear_z = max(shell_depth - 2.0 * rail_w, 0.0)
+            y_wall_clear_z = skel_window_span
             if y_wall_clear_w > 1.0 and y_wall_clear_z > 1.0:
-                y_cut_z = 0.5 * shell_depth
+                y_cut_z = front_frame_margin + 0.5 * y_wall_clear_z
+                y_window_r = min(window_corner_r, 0.5 * min(y_wall_clear_w, y_wall_clear_z) - 0.2)
                 for side in (-1.0, 1.0):
                     y_face = side * (0.5 * outer_h + 0.2)
                     with BuildSketch(Plane.XZ.offset(-y_face)):
                         with Locations((0.0, y_cut_z)):
-                            Rectangle(y_wall_clear_w, y_wall_clear_z)
+                            _add_rounded_rectangle(y_wall_clear_w, y_wall_clear_z, y_window_r)
                     extrude(
                         amount=skel_cut_depth if side > 0 else -skel_cut_depth,
                         mode=Mode.SUBTRACT,
@@ -1065,6 +1076,12 @@ def build_liner(p: MakiTpuLinerParams):
             "edge_wrap_enabled": {
                 "front": bool(p.include_front_edge_wrap),
                 "rear": bool(p.include_rear_edge_wrap),
+            },
+            "skeleton_frame": {
+                "enabled": bool(p.skeleton_frame),
+                "corner_bumper_w_mm": float(p.skeleton_corner_bumper_w_mm),
+                "edge_rail_w_mm": float(p.skeleton_edge_rail_w_mm),
+                "window_corner_r_mm": float(p.skeleton_window_corner_r_mm),
             },
             "front_face_pad": {
                 "enabled": bool(p.include_front_face_pad),

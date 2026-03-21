@@ -1367,6 +1367,20 @@ def build_case(p: MakiCaseParams):
                     extrude(amount=cs_boss_h + boss_overlap)
                 sleeve = _largest_solid(sleeve + boss_bp.part)
 
+                with BuildPart() as left_boss_bp:
+                    with BuildSketch(Plane.YZ.offset(-half_shade_outer_w + boss_overlap)):
+                        with Locations((0.0, cs_z_center)):
+                            Rectangle(cs_boss_w, cs_boss_l)
+                    extrude(amount=-(cs_boss_h + boss_overlap))
+                sleeve = _largest_solid(sleeve + left_boss_bp.part)
+
+                with BuildPart() as right_boss_bp:
+                    with BuildSketch(Plane.YZ.offset(half_shade_outer_w - boss_overlap)):
+                        with Locations((0.0, cs_z_center)):
+                            Rectangle(cs_boss_w, cs_boss_l)
+                    extrude(amount=cs_boss_h + boss_overlap)
+                sleeve = _largest_solid(sleeve + right_boss_bp.part)
+
                 cs_front_z = cs_z_center - 0.5 * cs_boss_l
                 cs_slot_len = shell_depth + 0.2 - cs_front_z
                 cs_slot_mid_z = cs_front_z + 0.5 * cs_slot_len
@@ -1386,21 +1400,49 @@ def build_case(p: MakiCaseParams):
                     extrude(amount=cs_slot_d + 0.2)
                 sleeve = _largest_solid(sleeve - floor_cut_bp.part)
 
+                left_outer_x = -half_shade_outer_w - cs_boss_h
+                with BuildPart() as left_stem_cut_bp:
+                    with BuildSketch(Plane.YZ.offset(left_outer_x - 0.1)):
+                        with Locations((0.0, cs_slot_mid_z)):
+                            Rectangle(cs_opening, cs_slot_len)
+                    extrude(amount=cs_boss_h + 0.2)
+                sleeve = _largest_solid(sleeve - left_stem_cut_bp.part)
+
+                with BuildPart() as left_floor_cut_bp:
+                    with BuildSketch(Plane.YZ.offset(-half_shade_outer_w + 0.1)):
+                        with Locations((0.0, cs_slot_mid_z)):
+                            Rectangle(cs_slot_w, cs_slot_len)
+                    extrude(amount=-(cs_slot_d + 0.2))
+                sleeve = _largest_solid(sleeve - left_floor_cut_bp.part)
+
+                right_outer_x = half_shade_outer_w + cs_boss_h
+                with BuildPart() as right_stem_cut_bp:
+                    with BuildSketch(Plane.YZ.offset(right_outer_x + 0.1)):
+                        with Locations((0.0, cs_slot_mid_z)):
+                            Rectangle(cs_opening, cs_slot_len)
+                    extrude(amount=-(cs_boss_h + 0.2))
+                sleeve = _largest_solid(sleeve - right_stem_cut_bp.part)
+
+                with BuildPart() as right_floor_cut_bp:
+                    with BuildSketch(Plane.YZ.offset(half_shade_outer_w - 0.1)):
+                        with Locations((0.0, cs_slot_mid_z)):
+                            Rectangle(cs_slot_w, cs_slot_len)
+                    extrude(amount=cs_slot_d + 0.2)
+                sleeve = _largest_solid(sleeve - right_floor_cut_bp.part)
+
                 cold_shoe_info = {
                     "enabled": True,
-                    "z_center_mm": float(cs_z_center),
-                    "y_base_mm": float(half_shade_outer_h),
+                    "locations": ["top", "left", "right"],
+                    "pad_z_center_mm": float(cs_z_center),
                     "boss_height_mm": float(cs_boss_h),
-                    "boss_length_mm": float(cs_boss_l),
-                    "boss_width_mm": float(cs_boss_w),
                     "slot_width_mm": float(cs_slot_w),
                     "rail_opening_mm": float(cs_opening),
-                    "rail_overhang_mm": float(cs_rail_oh),
-                    "rail_thickness_mm": float(cs_rail_t),
-                    "slot_depth_mm": float(cs_slot_d),
                     "slide_in_from": "rear",
                     "mounted_on": "shade_hood",
+                    "style": "open_dual_rail",
                 }
+                sun_shade_info = sun_shade_info or {}
+                sun_shade_info["cold_shoe_count"] = 3
 
             sun_shade_info = {
                 "enabled": True,
@@ -1411,6 +1453,7 @@ def build_case(p: MakiCaseParams):
                 "post_width_mm": float(post_w),
                 "side_drop_ratio": float(p.sun_shade_side_drop_ratio),
                 "side_support_height_mm": float(lower_side_support_h),
+                "cold_shoe_count": int(3 if p.cold_shoe_enabled else 0),
                 "coverage": "top + partial left/right sides (open bottom)",
             }
         except Exception as exc:

@@ -618,18 +618,18 @@
       },
       "cold_shoe": {
         "enabled": true,
-        "locations": [
-          "top",
-          "left",
-          "right"
-        ],
-        "pad_z_center_mm": 107.91999999999999,
+        "z_center_mm": 107.91999999999999,
+        "y_base_mm": 41.795,
         "boss_height_mm": 4.3,
+        "boss_length_mm": 22.0,
+        "boss_width_mm": 22.0,
         "slot_width_mm": 18.8,
         "rail_opening_mm": 13.5,
+        "rail_overhang_mm": 2.65,
+        "rail_thickness_mm": 1.8,
+        "slot_depth_mm": 2.5,
         "slide_in_from": "rear",
-        "mounted_on": "shade_hood",
-        "style": "open_dual_rail"
+        "mounted_on": "shade_hood"
       },
       "sun_shade": {
         "enabled": true,
@@ -640,7 +640,6 @@
         "post_width_mm": 4.0,
         "side_drop_ratio": 0.72,
         "side_support_height_mm": 0.0,
-        "cold_shoe_count": 3,
         "coverage": "top + partial left/right sides (open bottom)"
       },
       "snap_clips": {

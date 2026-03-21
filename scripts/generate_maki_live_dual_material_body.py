@@ -39,7 +39,7 @@ class MakiDualBodyParams:
     tpu_front_edge_wrap_mm: float = 2.5
     tpu_edge_wrap_radial_mm: float = 2.0
     include_tpu_front_edge_wrap: bool = False
-    include_tpu_rear_edge_wrap: bool = False
+    include_tpu_rear_edge_wrap: bool = True
 
     # TPU front face pad
     include_tpu_front_face_pad: bool = True
