@@ -1440,7 +1440,9 @@ def build_case(p: MakiCaseParams):
                                 Box(notch_x, notch_y, notch_z, mode=Mode.SUBTRACT)
                             shade_support_relief_count += 1
 
-            shade_solid = _largest_solid(shade_shell_bp.part + _largest_solid(shade_ribs_bp.part))
+            shade_solid = shade_shell_bp.part
+            for rib_solid in shade_ribs_bp.part.solids():
+                shade_solid = _largest_solid(shade_solid + rib_solid)
             sleeve = _largest_solid(sleeve + shade_solid)
 
             if p.cold_shoe_enabled:
