@@ -75,7 +75,7 @@ class MakiCaseParams:
 
     # Front optics opening
     lens_center_y_mm: float = 0.0
-    lens_diameter_mm: float = 44.7        # slightly enlarged from prior 42.7 mm
+    lens_diameter_mm: float = 45.7        # slightly enlarged again from prior 44.7 mm
     front_bezel_extra_mm: float = 1.0
     front_bezel_height_mm: float = 1.1
     lens_hood_enabled: bool = False
