@@ -1347,8 +1347,6 @@ def build_case(p: MakiCaseParams):
             "pos": half_outer_w + 0.5 * standoff,
         }
         side_rib_y_centers = (-rib_offset, rib_offset)
-        top_rib_x_centers = (-rib_offset, rib_offset)
-        top_rib_y_center = -(half_outer_h + 0.5 * standoff)
         shade_support_relief_count = 0
 
         side_drop = min(
@@ -1425,18 +1423,6 @@ def build_case(p: MakiCaseParams):
                             if abs(float(vent.get("y", 0.0)) - rib_y) > 0.5 * (slot_t + post_w) + 0.3:
                                 continue
                             with Locations((rib_x, float(vent.get("y", 0.0)), float(vent.get("z", shade_mid_z)))):
-                                Box(notch_x, notch_y, notch_z, mode=Mode.SUBTRACT)
-                            shade_support_relief_count += 1
-
-                    elif vent.get("axis") == "y":
-                        if vent.get("side") != "neg":
-                            continue
-                        notch_x = slot_t + vent_relief_margin
-                        notch_y = rib_radial + vent_relief_margin
-                        for rib_x in top_rib_x_centers:
-                            if abs(float(vent.get("x", 0.0)) - rib_x) > 0.5 * (slot_t + post_w) + 0.3:
-                                continue
-                            with Locations((float(vent.get("x", 0.0)), top_rib_y_center, float(vent.get("z", shade_mid_z)))):
                                 Box(notch_x, notch_y, notch_z, mode=Mode.SUBTRACT)
                             shade_support_relief_count += 1
 
