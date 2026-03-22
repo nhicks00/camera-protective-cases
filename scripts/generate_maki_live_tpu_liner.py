@@ -73,7 +73,7 @@ class MakiTpuLinerParams:
     front_face_pad_thickness_mm: float = 1.5
     front_single_circle_cutout_only: bool = True
     lens_center_y_mm: float = 0.0
-    lens_diameter_mm: float = 42.7
+    lens_diameter_mm: float = 44.7
 
     # Keep tripod region open through TPU. Side vent cuts are optional and
     # default off so the frame stays smooth and symmetric.
