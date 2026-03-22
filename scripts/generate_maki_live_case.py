@@ -1367,7 +1367,7 @@ def build_case(p: MakiCaseParams):
             lower_side_support_x_span = max(half_shade_outer_w - half_outer_w, shade_w + 0.8)
 
         try:
-            with BuildPart() as shade_bp:
+            with BuildPart() as shade_shell_bp:
                 with BuildSketch(Plane.XY):
                     Rectangle(shade_outer_w, shade_outer_h)
                     fillet(vertices(), shade_outer_r)
@@ -1389,6 +1389,7 @@ def build_case(p: MakiCaseParams):
                         with Locations((sx_sign * side_trim_x_center, half_shade_outer_h - 0.5 * side_trim_h, shade_mid_z)):
                             Box(side_trim_x_depth, side_trim_h + 0.2, shell_depth + 2.0, mode=Mode.SUBTRACT)
 
+            with BuildPart() as shade_ribs_bp:
                 for ry in (-1.0, 1.0):
                     with Locations((half_outer_w + 0.5 * standoff, ry * rib_offset, shade_mid_z)):
                         Box(rib_radial, post_w, shell_depth)
@@ -1439,7 +1440,8 @@ def build_case(p: MakiCaseParams):
                                 Box(notch_x, notch_y, notch_z, mode=Mode.SUBTRACT)
                             shade_support_relief_count += 1
 
-            sleeve = _largest_solid(sleeve + _largest_solid(shade_bp.part))
+            shade_solid = _largest_solid(shade_shell_bp.part + _largest_solid(shade_ribs_bp.part))
+            sleeve = _largest_solid(sleeve + shade_solid)
 
             if p.cold_shoe_enabled:
                 cs_z_center = shell_depth - p.cold_shoe_z_from_rear_mm
