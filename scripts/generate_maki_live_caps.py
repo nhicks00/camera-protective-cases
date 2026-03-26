@@ -15,6 +15,7 @@ from typing import Iterable
 import numpy as np
 import trimesh
 from build123d import (
+    Box,
     BuildPart,
     BuildSketch,
     Circle,
@@ -49,9 +50,14 @@ class MakiCapParams:
 
     # Cap geometry
     cap_thickness_mm: float = 3.0
-    plug_depth_mm: float = 1.8
+    plug_depth_mm: float = 3.4
     plug_clearance_mm: float = 0.28
     cap_plate_extra_mm: float = 0.0
+    retention_bumps_enabled: bool = True
+    retention_bump_depth_mm: float = 1.1
+    retention_bump_width_mm: float = 7.2
+    retention_bump_z_mm: float = 2.0
+    retention_bump_setback_mm: float = 3.0
     cutout_extra_mm: float = 1.5
     front_recess_depth_mm: float = 1.2
     front_recess_inset_mm: float = 3.0
@@ -335,6 +341,24 @@ def _build_cap(
             _add_rounded_rectangle(plug_w, plug_h, plug_r)
         extrude(amount=p.plug_depth_mm)
 
+        if p.retention_bumps_enabled and p.retention_bump_depth_mm > 0.0:
+            bump_d = min(p.retention_bump_depth_mm, 1.5)
+            bump_w = max(min(p.retention_bump_width_mm, min(plug_w, plug_h) - 6.0), 3.0)
+            bump_z = max(min(p.retention_bump_z_mm, p.plug_depth_mm - 0.4), 1.2)
+            bump_center_from_base = min(
+                max(p.retention_bump_setback_mm, 0.5 * bump_z + 0.2),
+                p.plug_depth_mm - 0.5 * bump_z,
+            )
+            bump_z_center = p.cap_thickness_mm + bump_center_from_base
+            half_pw = 0.5 * plug_w
+            half_ph = 0.5 * plug_h
+            for sx in (-1.0, 1.0):
+                with Locations((sx * (half_pw + 0.5 * bump_d), 0.0, bump_z_center)):
+                    Box(bump_d, bump_w, bump_z)
+            for sy in (-1.0, 1.0):
+                with Locations((0.0, sy * (half_ph + 0.5 * bump_d), bump_z_center)):
+                    Box(bump_w, bump_d, bump_z)
+
         cut_depth = p.cap_thickness_mm + p.plug_depth_mm + 1.5
         with BuildSketch(Plane.XY.offset(-1.0)):
             for c in cutouts:
@@ -477,6 +501,19 @@ def build_caps(p: MakiCapParams):
             "front_bezel_mm": {
                 "recess_depth": float(max(min(p.front_recess_depth_mm, p.cap_thickness_mm - 0.4), 0.25)),
                 "recess_inset": float(p.front_recess_inset_mm),
+            },
+            "retention_bumps": {
+                "enabled": bool(p.retention_bumps_enabled),
+                "count": 4 if p.retention_bumps_enabled else 0,
+                "depth_mm": float(min(p.retention_bump_depth_mm, 1.5)) if p.retention_bumps_enabled else 0.0,
+                "width_mm": float(max(min(p.retention_bump_width_mm, min(plug_w, plug_h) - 6.0), 3.0)) if p.retention_bumps_enabled else 0.0,
+                "z_mm": float(max(min(p.retention_bump_z_mm, p.plug_depth_mm - 0.4), 1.2)) if p.retention_bumps_enabled else 0.0,
+                "setback_mm": float(
+                    min(
+                        max(p.retention_bump_setback_mm, 0.5 * max(min(p.retention_bump_z_mm, p.plug_depth_mm - 0.4), 1.2) + 0.2),
+                        p.plug_depth_mm - 0.5 * max(min(p.retention_bump_z_mm, p.plug_depth_mm - 0.4), 1.2),
+                    )
+                ) if p.retention_bumps_enabled else 0.0,
             },
         },
         "cutouts": {

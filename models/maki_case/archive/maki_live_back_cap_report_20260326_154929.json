@@ -8,14 +8,9 @@
     "sleeve_clearance_mm": 2.3,
     "sleeve_wall_mm": 3.0,
     "cap_thickness_mm": 3.0,
-    "plug_depth_mm": 3.4,
+    "plug_depth_mm": 1.8,
     "plug_clearance_mm": 0.28,
     "cap_plate_extra_mm": 0.0,
-    "retention_bumps_enabled": true,
-    "retention_bump_depth_mm": 1.1,
-    "retention_bump_width_mm": 7.2,
-    "retention_bump_z_mm": 2.0,
-    "retention_bump_setback_mm": 3.0,
     "cutout_extra_mm": 1.5,
     "front_recess_depth_mm": 1.2,
     "front_recess_inset_mm": 3.0,
@@ -76,14 +71,6 @@
       "front_bezel_mm": {
         "recess_depth": 1.2,
         "recess_inset": 3.0
-      },
-      "retention_bumps": {
-        "enabled": true,
-        "count": 4,
-        "depth_mm": 1.1,
-        "width_mm": 7.2,
-        "z_mm": 2.0,
-        "setback_mm": 2.4
       }
     },
     "cutouts": {
