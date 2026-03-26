@@ -26,6 +26,7 @@ class MakiDualBodyParams:
 
     # ASA shell defaults
     asa_clearance_mm: float = 2.3
+    asa_rear_extension_mm: float = 6.0
     asa_wall_mm: float = 3.0
 
     # TPU sleeve defaults
@@ -34,6 +35,7 @@ class MakiDualBodyParams:
     tpu_device_clearance_mm: float | None = 0.15
     tpu_wall_mm: float = 2.0
     tpu_end_clearance_mm: float = 0.2
+    tpu_rear_extension_mm: float = 6.0
     target_interface_gap_each_mm: float = 0.0
     interface_gap_tolerance_mm: float = 0.02
     tpu_front_edge_wrap_mm: float = 2.5
@@ -82,6 +84,7 @@ def _largest_solid(shape):
 def build_dual_body(p: MakiDualBodyParams):
     asa_p = MakiCaseParams(step_path=p.step_path)
     asa_p.clearance_mm = p.asa_clearance_mm
+    asa_p.rear_extension_mm = p.asa_rear_extension_mm
     asa_p.wall_mm = p.asa_wall_mm
     asa_p.tripod_use_rect_cutout = p.tripod_use_rect_cutout
     asa_p.tripod_rect_long_mm = p.tripod_rect_long_mm
@@ -102,6 +105,7 @@ def build_dual_body(p: MakiDualBodyParams):
     tpu_p.device_clearance_mm = effective_tpu_clearance
     tpu_p.shell_thickness_mm = p.tpu_wall_mm
     tpu_p.end_clearance_mm = p.tpu_end_clearance_mm
+    tpu_p.rear_extension_mm = p.tpu_rear_extension_mm
     tpu_p.asa_shell_clearance_mm = p.asa_clearance_mm
     tpu_p.edge_wrap_depth_mm = p.tpu_front_edge_wrap_mm
     tpu_p.edge_wrap_radial_mm = p.tpu_edge_wrap_radial_mm
@@ -228,10 +232,12 @@ def main():
         help="STEP model path",
     )
     parser.add_argument("--asa-clearance", type=float, default=None, help="ASA internal clearance (mm)")
+    parser.add_argument("--asa-rear-extension", type=float, default=None, help="Extra rear-only depth added to the ASA shell (mm)")
     parser.add_argument("--asa-wall", type=float, default=None, help="ASA wall thickness (mm)")
     parser.add_argument("--tpu-clearance", type=float, default=None, help="TPU internal clearance (mm)")
     parser.add_argument("--tpu-wall", type=float, default=None, help="TPU wall thickness (mm)")
     parser.add_argument("--tpu-end-clearance", type=float, default=None, help="TPU end clearance (mm)")
+    parser.add_argument("--tpu-rear-extension", type=float, default=None, help="Extra rear-only depth added to the TPU frame (mm)")
     parser.add_argument(
         "--disable-front-tpu-edge-wrap",
         action="store_true",
@@ -252,6 +258,8 @@ def main():
     params = MakiDualBodyParams(step_path=args.step)
     if args.asa_clearance is not None:
         params.asa_clearance_mm = args.asa_clearance
+    if args.asa_rear_extension is not None:
+        params.asa_rear_extension_mm = args.asa_rear_extension
     if args.asa_wall is not None:
         params.asa_wall_mm = args.asa_wall
     if args.tpu_clearance is not None:
@@ -260,6 +268,8 @@ def main():
         params.tpu_wall_mm = args.tpu_wall
     if args.tpu_end_clearance is not None:
         params.tpu_end_clearance_mm = args.tpu_end_clearance
+    if args.tpu_rear_extension is not None:
+        params.tpu_rear_extension_mm = args.tpu_rear_extension
     if args.disable_front_tpu_edge_wrap:
         params.include_tpu_front_edge_wrap = False
     if args.enable_rear_tpu_edge_wrap:

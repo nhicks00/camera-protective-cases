@@ -57,6 +57,7 @@ class MakiTpuLinerParams:
     # Fit against camera body (snug)
     device_clearance_mm: float = 0.15
     end_clearance_mm: float = 0.2
+    rear_extension_mm: float = 6.0
     asa_shell_clearance_mm: float = 2.3
     asa_cap_plug_depth_mm: float = 1.8
 
@@ -688,7 +689,7 @@ def build_liner(p: MakiTpuLinerParams):
 
     inner_corner_r = min(base_corner_r + p.device_clearance_mm, 0.5 * min(inner_w, inner_h) - 0.2)
     outer_corner_r = min(inner_corner_r + p.shell_thickness_mm, 0.5 * min(outer_w, outer_h) - 0.2)
-    inner_depth = p.nominal_length_mm + 2.0 * p.end_clearance_mm
+    inner_depth = p.nominal_length_mm + 2.0 * p.end_clearance_mm + p.rear_extension_mm
     shell_depth = inner_depth
     edge_wrap_depth = max(min(p.edge_wrap_depth_mm, 0.35 * shell_depth), 0.6)
     front_edge_wrap_radial = max(p.edge_wrap_radial_mm, 0.6)
@@ -1074,6 +1075,7 @@ def build_liner(p: MakiTpuLinerParams):
             "open_sleeve": True,
             "inner_depth_mm": float(inner_depth),
             "shell_depth_mm": float(shell_depth),
+            "rear_extension_mm": float(p.rear_extension_mm),
             "nominal_asa_fit_mm": {
                 "asa_clearance_each_side": float(p.asa_shell_clearance_mm),
                 "expected_radial_gap_each_side": float(
@@ -1142,6 +1144,7 @@ def main():
     parser.add_argument("--edge-wrap-depth", type=float, default=None, help="Front/rear edge wrap depth (mm)")
     parser.add_argument("--edge-wrap-radial", type=float, default=None, help="Edge wrap radial hold on face perimeter (mm)")
     parser.add_argument("--end-clearance", type=float, default=None, help="Front/rear clearance to camera (mm each end)")
+    parser.add_argument("--rear-extension", type=float, default=None, help="Extra rear-only depth added to the TPU frame (mm)")
     parser.add_argument("--no-step-side-features", action="store_true", help="Disable STEP-derived side vents/tripod")
     parser.add_argument("--tpu-side-vents", action="store_true", help="Enable side vent cutouts in the TPU frame")
     parser.add_argument("--tripod-rect", action="store_true", help="Use rectangular cutout instead of circular tripod hole")
@@ -1162,6 +1165,8 @@ def main():
         params.edge_wrap_radial_mm = args.edge_wrap_radial
     if args.end_clearance is not None:
         params.end_clearance_mm = args.end_clearance
+    if args.rear_extension is not None:
+        params.rear_extension_mm = args.rear_extension
     if args.no_step_side_features:
         params.use_step_side_features = False
     if args.tpu_side_vents:

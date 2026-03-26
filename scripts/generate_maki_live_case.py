@@ -60,6 +60,7 @@ class MakiCaseParams:
 
     # Fit and shell
     clearance_mm: float = 2.3
+    rear_extension_mm: float = 6.0
     wall_mm: float = 3.0
     front_wall_mm: float = 3.0
     front_integrated: bool = True
@@ -822,7 +823,7 @@ def build_case(p: MakiCaseParams):
     inner_corner_r = min(base_corner_r + p.clearance_mm, 0.5 * min(inner_w, inner_h) - 0.2)
     outer_corner_r = min(inner_corner_r + p.wall_mm, 0.5 * min(outer_w, outer_h) - 0.2)
 
-    inner_depth = p.nominal_length_mm + 2.0 * p.clearance_mm
+    inner_depth = p.nominal_length_mm + 2.0 * p.clearance_mm + p.rear_extension_mm
     if p.front_integrated:
         cavity_front_z = p.front_wall_mm
         shell_depth = p.front_wall_mm + inner_depth
@@ -1568,6 +1569,7 @@ def build_case(p: MakiCaseParams):
         "derived": {
             "inner_depth_mm": float(inner_depth),
             "shell_depth_mm": float(shell_depth),
+            "rear_extension_mm": float(p.rear_extension_mm),
             "open_sleeve": not bool(p.front_integrated),
             "front_integrated": bool(p.front_integrated),
             "lens_hood": {
@@ -1634,6 +1636,7 @@ def main():
         help="STEP model path",
     )
     parser.add_argument("--clearance", type=float, default=None, help="Internal clearance (mm)")
+    parser.add_argument("--rear-extension", type=float, default=None, help="Extra rear-only depth added to the ASA shell (mm)")
     parser.add_argument("--wall", type=float, default=None, help="Wall thickness (mm)")
     parser.add_argument("--open-front", action="store_true", help="Legacy mode: keep front end fully open.")
     parser.add_argument("--no-front-cutouts", action="store_true", help="Disable front-wall cutouts in integrated-front mode.")
@@ -1656,6 +1659,8 @@ def main():
     params = MakiCaseParams(step_path=args.step)
     if args.clearance is not None:
         params.clearance_mm = args.clearance
+    if args.rear_extension is not None:
+        params.rear_extension_mm = args.rear_extension
     if args.wall is not None:
         params.wall_mm = args.wall
     if args.open_front:
