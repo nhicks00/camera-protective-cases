@@ -58,6 +58,8 @@ class MakiCapParams:
     retention_bump_width_mm: float = 7.2
     retention_bump_z_mm: float = 2.0
     retention_bump_setback_mm: float = 3.0
+    merged_usb_cutout_extra_w_mm: float = 1.0
+    merged_usb_cutout_extra_h_mm: float = 1.0
     cutout_extra_mm: float = 1.5
     front_recess_depth_mm: float = 1.2
     front_recess_inset_mm: float = 3.0
@@ -355,8 +357,8 @@ def _extract_end_cutouts(solids, p: MakiCapParams, sx: float, sy: float, zmin: f
                 "x": float(usb["x"]),
                 "y": float(0.5 * (usb_bottom + merged_top)),
                 "shape": "rect",
-                "w": float(usb_right - usb_left),
-                "h": float(merged_top - usb_bottom),
+                "w": float((usb_right - usb_left) + p.merged_usb_cutout_extra_w_mm),
+                "h": float((merged_top - usb_bottom) + p.merged_usb_cutout_extra_h_mm),
             }
         )
         rear = merged

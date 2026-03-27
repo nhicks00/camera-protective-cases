@@ -16,8 +16,6 @@
     "retention_bump_width_mm": 7.2,
     "retention_bump_z_mm": 2.0,
     "retention_bump_setback_mm": 3.0,
-    "merged_usb_cutout_extra_w_mm": 1.0,
-    "merged_usb_cutout_extra_h_mm": 1.0,
     "cutout_extra_mm": 1.5,
     "front_recess_depth_mm": 1.2,
     "front_recess_inset_mm": 3.0,
@@ -228,8 +226,8 @@
           "x": -13.000076200152492,
           "y": -10.825627807986661,
           "shape": "rect",
-          "w": 12.014710141794893,
-          "h": 13.239311135736518
+          "w": 11.014710141794893,
+          "h": 12.239311135736518
         }
       ]
     }
