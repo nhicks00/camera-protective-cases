@@ -315,7 +315,53 @@ def _extract_end_cutouts(solids, p: MakiCapParams, sx: float, sy: float, zmin: f
                 kept[key] = c
         return list(kept.values())
 
-    return dedupe(front), dedupe(rear), {
+    front = dedupe(front)
+    rear = dedupe(rear)
+
+    # Extend the smaller left USB-C opening upward so it absorbs the tiny
+    # circular hole directly above it into one taller access opening.
+    usb = None
+    for rc in rear:
+        if rc["shape"] in ("slot", "rect") and rc["x"] < 0.0:
+            if usb is None or (rc["w"] * rc["h"]) > (usb["w"] * usb["h"]):
+                usb = rc
+
+    if usb is not None:
+        merged = [rc for rc in rear if not (
+            abs(rc["x"] - usb["x"]) <= 0.6 * usb["w"]
+            and (
+                rc["shape"] in ("slot", "rect")
+                or (
+                    rc["shape"] == "circle"
+                    and rc["y"] >= usb["y"]
+                )
+            )
+        )]
+
+        usb_left = usb["x"] - 0.5 * usb["w"]
+        usb_right = usb["x"] + 0.5 * usb["w"]
+        usb_bottom = usb["y"] - 0.5 * usb["h"]
+        merged_top = usb["y"] + 1.5 * usb["h"]
+
+        for rc in rear:
+            if rc["shape"] != "circle":
+                continue
+            if abs(rc["x"] - usb["x"]) > 0.6 * usb["w"] or rc["y"] < usb["y"]:
+                continue
+            merged_top = max(merged_top, rc["y"] + 0.5 * rc["d"] + 0.4)
+
+        merged.append(
+            {
+                "x": float(usb["x"]),
+                "y": float(0.5 * (usb_bottom + merged_top)),
+                "shape": "rect",
+                "w": float(usb_right - usb_left),
+                "h": float(merged_top - usb_bottom),
+            }
+        )
+        rear = merged
+
+    return front, rear, {
         "front_plane_z_mm": float(front_plane_z) if front_plane_z is not None else None,
         "rear_plane_z_mm": float(rear_plane_z) if rear_plane_z is not None else None,
         "end_plane_tol_mm": float(p.end_plane_tol_mm),
