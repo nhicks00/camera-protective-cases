@@ -59,7 +59,7 @@ class MakiCapParams:
     retention_bump_z_mm: float = 2.0
     retention_bump_setback_mm: float = 3.0
     merged_usb_cutout_extra_w_mm: float = 1.0
-    merged_usb_cutout_extra_h_mm: float = 1.0
+    merged_usb_cutout_extra_h_mm: float = 2.0
     cutout_extra_mm: float = 1.5
     front_recess_depth_mm: float = 1.2
     front_recess_inset_mm: float = 3.0
