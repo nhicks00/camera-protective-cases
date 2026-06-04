@@ -85,11 +85,15 @@ class MevoCoreParams:
 
     # Lens hood (full circular tube encompassing lens)
     include_lens_hood: bool = True
-    lens_hood_depth_mm: float = 63.5    # 2.5 inches
+    lens_hood_depth_mm: float = 101.6   # 4.0 inches (2.5" + 1.5")
     lens_hood_wall_mm: float = 2.5
     lens_hood_clearance_mm: float = 2.5  # hood bore wider than front face hole for ledge/strength
     lens_hood_base_flare_mm: float = 6.0   # extra outer radius at root for strength
     lens_hood_base_depth_mm: float = 8.0   # axial depth of the taper zone
+    lens_hood_side_access_notches: bool = True
+    lens_hood_access_depth_mm: float = 31.75  # 1.25" from base along hood axis
+    lens_hood_access_height_mm: float = 50.8  # 2.0" tall opening on each side
+    lens_hood_access_radial_depth_mm: float = 25.4  # 1.0" radial bite through hood wall
 
     # Skeleton TPU frame
     tpu_corner_bumper_w_mm: float = 12.0
@@ -525,6 +529,13 @@ def build_asa_shell(p: MevoCoreParams):
                 Cylinder(hood_inner_r, p.lens_hood_depth_mm + 0.2, rotation=(180, 0, 0),
                          align=(Align.CENTER, Align.CENTER, Align.MIN),
                          mode=Mode.SUBTRACT)
+            if p.lens_hood_side_access_notches:
+                notch_depth = max(min(p.lens_hood_access_depth_mm, p.lens_hood_depth_mm), 0.0)
+                notch_height = max(min(p.lens_hood_access_height_mm, 2.0 * hood_outer_r + 2.0), 2.0)
+                notch_radial = max(p.lens_hood_access_radial_depth_mm, p.lens_hood_wall_mm + 2.0)
+                for sx in (-1.0, 1.0):
+                    with Locations((cx + sx * hood_outer_r, cy, -0.5 * notch_depth)):
+                        Box(2.0 * notch_radial, notch_height, notch_depth + 0.4, mode=Mode.SUBTRACT)
         hood_solid = hood_bp.part
         for fillet_r in (2.0, 1.5, 1.0, 0.5):
             try:
@@ -762,6 +773,13 @@ def build_asa_shell(p: MevoCoreParams):
                 "depth_mm": float(p.lens_hood_depth_mm),
                 "wall_mm": float(p.lens_hood_wall_mm),
                 "clearance_mm": float(p.lens_hood_clearance_mm),
+                "side_access_notches": {
+                    "enabled": bool(p.lens_hood_side_access_notches),
+                    "count": 2 if p.lens_hood_side_access_notches else 0,
+                    "depth_mm": float(p.lens_hood_access_depth_mm),
+                    "height_mm": float(p.lens_hood_access_height_mm),
+                    "radial_depth_mm": float(p.lens_hood_access_radial_depth_mm),
+                },
             },
             "tripod_cutout": {
                 "rect_w_mm": float(p.tripod_rect_w_mm),
