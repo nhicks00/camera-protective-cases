@@ -115,8 +115,8 @@ class MakiCaseParams:
     sun_shade_front_overhang_mm: float = 6.35
     sun_shade_rear_overhang_mm: float = 6.35
     sun_shade_end_edge_fillet_mm: float = 1.0
-    sun_shade_drip_lip_out_mm: float = 3.0
-    sun_shade_drip_lip_drop_mm: float = 3.0
+    sun_shade_drip_lip_out_mm: float = 1.5
+    sun_shade_drip_lip_drop_mm: float = 1.5
     sun_shade_drip_lip_overlap_mm: float = 0.5
 
     # Snap-latch flexure clips for rear cap retention
@@ -1966,7 +1966,6 @@ def build_case(p: MakiCaseParams):
                     max(shade_inner_r - inward, 0.4),
                     0.49 * min(terminal_inner_w, terminal_inner_h),
                 )
-                trim_z_start = min(start_z, terminal_z) - 1.0
                 with BuildPart() as lip_bp:
                     with BuildSketch(Plane.XY.offset(start_z)):
                         Rectangle(shade_outer_w, shade_outer_h)
@@ -1984,13 +1983,6 @@ def build_case(p: MakiCaseParams):
                     loft(mode=Mode.SUBTRACT)
                     with Locations((0.0, half_outer_h + 0.5 * bottom_cut_h, lip_mid_z)):
                         Box(shade_outer_w + 2.0, bottom_cut_h + 0.2, lip_z_len + 2.0, mode=Mode.SUBTRACT)
-                    if side_trim_h > 0.5:
-                        for sx_sign in (-1.0, 1.0):
-                            with BuildSketch(Plane.XY.offset(trim_z_start)):
-                                with Locations((sx_sign * side_trim_x_center, half_shade_outer_h - 0.5 * side_trim_h)):
-                                    Rectangle(side_trim_x_depth, side_trim_h + 0.2)
-                                    fillet(vertices(), side_trim_corner_r)
-                            extrude(amount=lip_z_len + 2.0, mode=Mode.SUBTRACT)
                 return lip_bp.part, terminal_z
 
             if shade_front_overhang > 0.0:
@@ -2028,7 +2020,7 @@ def build_case(p: MakiCaseParams):
                     edge_count += len(end_edges)
                     if not end_edges or preferred_r <= 0.0:
                         continue
-                    for fillet_r in (preferred_r, 0.75, 0.5, 0.3):
+                    for fillet_r in (preferred_r, 0.75, 0.5, 0.3, 0.2, 0.1):
                         if fillet_r > preferred_r:
                             continue
                         try:
@@ -2163,7 +2155,7 @@ def build_case(p: MakiCaseParams):
                 "support_depth_mm": float(shade_support_z_len),
                 "connector_direct_fuse_count": int(connector_direct_fuse_count),
                 "drip_lip_count": int(drip_lip_count),
-                "drip_lip_style": "lofted_inward_shade_extension",
+                "drip_lip_style": "cut_back_lofted_inward_shade_extension_mevo_style",
                 "drip_lip_out_mm": float(drip_lip_out),
                 "drip_lip_drop_mm": float(drip_lip_drop),
                 "drip_lip_inward_mm": float(drip_lip_drop),

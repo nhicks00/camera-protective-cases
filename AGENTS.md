@@ -137,7 +137,7 @@ Active hard-shell and TPU workflows:
   - Sunshade side skirt lower corners are rounded by the side-trim profile plus direct lower-edge fillets on the actual skirt edges:
     - outer lower skirt edges use up to `2.0 mm`,
     - inner lower skirt edges use up to `0.75 mm`.
-  - Sun shade cover extends `6.35 mm` (`0.25 in`) past both the front and rear shell ends; support ribs run only over the body depth and not into either overhang, and each shade end has a lofted `3.0 mm` outward shade-perimeter extension that shrinks `3.0 mm` inward toward the case.
+  - Sun shade cover extends `6.35 mm` (`0.25 in`) past both the front and rear shell ends; support ribs run only over the body depth and not into either overhang, and each shade end has a cut-back Mevo-style lofted `1.5 mm` outward shade-perimeter extension that shrinks `1.5 mm` inward toward the case with only the open-bottom cut applied.
   - Front camera aperture in the integrated ASA front wall and TPU front face pad uses a single circular `50.8 mm` cutout by default.
   - Through-cut depth increased so vents fully penetrate.
   - Vent row clustering now locks to the STEP-derived rear vent bank (8 rows) and ignores front outlier slots.
