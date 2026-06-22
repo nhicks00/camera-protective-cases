@@ -181,6 +181,7 @@ class MakiCaseParams:
     large_other_side_cutout_front_margin_mm: float = 8.0
     large_other_side_cutout_rear_margin_mm: float = 14.0
     large_other_side_cutout_corner_margin_mm: float = 2.0
+    large_other_side_cutout_support_bar_clearance_mm: float = 1.0
 
     # Shape processing
     section_z_ratio: float = 0.50
@@ -883,6 +884,13 @@ def _derive_large_other_side_cutouts(
         max(float(outer_corner_r) + corner_margin, p.wall_mm + 1.0),
         0.5 * min(float(outer_w), float(outer_h)) - 2.0,
     )
+    flat_face_half_span = max(0.5 * min(float(outer_w), float(outer_h)) - float(outer_corner_r), 0.0)
+    support_rib_center_abs = max(flat_face_half_span - 2.0, 0.0)
+    support_clearance = max(float(p.large_other_side_cutout_support_bar_clearance_mm), 0.0)
+    support_clear_half_span = max(
+        support_rib_center_abs - 0.5 * float(p.sun_shade_post_width_mm) - support_clearance,
+        1.0,
+    )
     min_z = max(
         cavity_front_z + p.front_wall_mm + float(p.large_other_side_cutout_front_margin_mm),
         1.0,
@@ -891,8 +899,8 @@ def _derive_large_other_side_cutouts(
     if max_z <= min_z + 1.0:
         return []
 
-    x_span = max(float(outer_w) - 2.0 * preserved_corner_band, 1.0)
-    y_span = max(float(outer_h) - 2.0 * preserved_corner_band, 1.0)
+    x_span = max(min(float(outer_w) - 2.0 * preserved_corner_band, 2.0 * support_clear_half_span), 1.0)
+    y_span = max(min(float(outer_h) - 2.0 * preserved_corner_band, 2.0 * support_clear_half_span), 1.0)
     z_span = max_z - min_z
     z_center = 0.5 * (min_z + max_z)
 
@@ -955,6 +963,11 @@ def _derive_large_other_side_cutouts(
                 "preserved_corner_radius_mm": float(outer_corner_r),
                 "corner_margin_mm": float(corner_margin),
                 "preserved_corner_band_mm": float(preserved_corner_band),
+                "support_bar_avoidance_enabled": True,
+                "support_rib_center_abs_mm": float(support_rib_center_abs),
+                "support_bar_width_mm": float(p.sun_shade_post_width_mm),
+                "support_bar_clearance_mm": float(support_clearance),
+                "support_clear_half_span_mm": float(support_clear_half_span),
                 "front_margin_mm": float(p.large_other_side_cutout_front_margin_mm),
                 "rear_margin_mm": float(p.large_other_side_cutout_rear_margin_mm),
             }
