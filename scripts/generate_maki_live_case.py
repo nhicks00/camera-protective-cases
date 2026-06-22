@@ -108,6 +108,7 @@ class MakiCaseParams:
     sun_shade_side_support_height_mm: float = 0.0
     sun_shade_vent_relief_mm: float = 0.8
     sun_shade_side_skirt_corner_r_mm: float = 2.0
+    sun_shade_side_skirt_inner_edge_fillet_mm: float = 0.75
 
     # Snap-latch flexure clips for rear cap retention
     include_snap_clips: bool = False
@@ -1683,6 +1684,48 @@ def build_case(p: MakiCaseParams):
                             shade_support_relief_count += 1
 
             shade_solid = shade_shell_bp.part
+
+            lower_edge_cut_y = half_shade_outer_h - side_trim_h - 0.1
+
+            def fillet_side_skirt_edge_band(shape, min_abs_x: float, max_abs_x: float, preferred_r: float):
+                lower_edges = []
+                for edge in shape.edges():
+                    bb = edge.bounding_box()
+                    center = bb.center()
+                    size = bb.size
+                    is_lower_skirt_edge = (
+                        abs(center.Y - lower_edge_cut_y) <= 0.5
+                        and min_abs_x <= abs(center.X) <= max_abs_x
+                        and size.Z >= 0.75 * shell_depth
+                        and size.X <= 0.45
+                        and size.Y <= 0.6
+                    )
+                    if is_lower_skirt_edge:
+                        lower_edges.append(edge)
+
+                if lower_edges and preferred_r > 0.0:
+                    for fillet_r in (preferred_r, 1.5, 1.0, 0.75, 0.5, 0.3):
+                        if fillet_r > preferred_r:
+                            continue
+                        try:
+                            return fillet(lower_edges, fillet_r), fillet_r, len(lower_edges)
+                        except Exception:
+                            continue
+                return shape, 0.0, len(lower_edges)
+
+            shade_solid, side_skirt_outer_edge_fillet_applied, side_skirt_outer_edge_count = fillet_side_skirt_edge_band(
+                shade_solid,
+                half_shade_inner_w + 0.5,
+                half_shade_outer_w + 0.5,
+                p.sun_shade_side_skirt_corner_r_mm,
+            )
+            shade_solid, side_skirt_inner_edge_fillet_applied, side_skirt_inner_edge_count = fillet_side_skirt_edge_band(
+                shade_solid,
+                max(half_shade_inner_w - 1.2, 0.0),
+                half_shade_inner_w + 0.3,
+                p.sun_shade_side_skirt_inner_edge_fillet_mm,
+            )
+
             for rib_solid in shade_ribs_bp.part.solids():
                 shade_solid = _largest_solid(shade_solid + rib_solid)
             sleeve = _largest_solid(sleeve + shade_solid)
@@ -1796,6 +1839,10 @@ def build_case(p: MakiCaseParams):
                 "vent_relief_count": int(shade_support_relief_count),
                 "side_skirt_corner_r_mm": float(side_trim_corner_r),
                 "side_skirt_lower_trim_y_mm": float(half_shade_outer_h - side_trim_h - 0.1),
+                "side_skirt_outer_edge_fillet_mm": float(side_skirt_outer_edge_fillet_applied),
+                "side_skirt_outer_edge_count": int(side_skirt_outer_edge_count),
+                "side_skirt_inner_edge_fillet_mm": float(side_skirt_inner_edge_fillet_applied),
+                "side_skirt_inner_edge_count": int(side_skirt_inner_edge_count),
                 "cold_shoe_count": int(3 if p.cold_shoe_enabled else 0),
                 "coverage": "top + partial left/right sides (open bottom)",
             }
