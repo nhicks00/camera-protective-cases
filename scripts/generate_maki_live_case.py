@@ -114,6 +114,10 @@ class MakiCaseParams:
     sun_shade_front_overhang_mm: float = 6.35
     sun_shade_rear_overhang_mm: float = 6.35
     sun_shade_end_edge_fillet_mm: float = 1.0
+    sun_shade_drip_lip_out_mm: float = 3.0
+    sun_shade_drip_lip_drop_mm: float = 3.0
+    sun_shade_drip_lip_thickness_mm: float = 1.2
+    sun_shade_drip_lip_overlap_mm: float = 0.5
 
     # Snap-latch flexure clips for rear cap retention
     include_snap_clips: bool = False
@@ -1724,6 +1728,14 @@ def build_case(p: MakiCaseParams):
         shade_z_len = shade_z_end - shade_z_start
         shade_mid_z = shade_z_start + 0.5 * shade_z_len
         shade_support_mid_z = 0.5 * shell_depth
+        drip_lip_out = max(float(p.sun_shade_drip_lip_out_mm), 0.0)
+        drip_lip_drop = max(float(p.sun_shade_drip_lip_drop_mm), 0.0)
+        drip_lip_t = max(float(p.sun_shade_drip_lip_thickness_mm), 0.2)
+        drip_lip_overlap = min(
+            max(float(p.sun_shade_drip_lip_overlap_mm), 0.0),
+            max(drip_lip_out - 0.1, 0.0),
+        )
+        rear_drip_extension = drip_lip_out if shade_rear_overhang > 0.0 and drip_lip_drop > 0.0 else 0.0
 
         corner_support_clearance = max(float(p.sun_shade_corner_support_clearance_mm), 0.0)
         support_offsets = _sun_shade_corner_support_offsets(
@@ -1783,8 +1795,10 @@ def build_case(p: MakiCaseParams):
             "neg": -(half_outer_w + 0.5 * standoff),
             "pos": half_outer_w + 0.5 * standoff,
         }
-        side_rib_y_centers = (rib_y_offset,)
+        side_rib_y_centers = (-rib_y_offset, rib_y_offset)
         shade_support_relief_count = 0
+        drip_lip_count = 0
+        drip_lip_terminal_z_values = []
 
         side_drop = min(
             max(p.sun_shade_side_drop_ratio * shade_outer_h, 0.25 * shade_outer_h),
@@ -1918,30 +1932,64 @@ def build_case(p: MakiCaseParams):
             for rib_solid in top_diagonal_ribs:
                 shade_solid = _largest_solid(shade_solid + rib_solid)
 
-            def fillet_shade_end_edges(shape, preferred_r: float):
-                end_edges = []
-                end_z_values = (shade_z_start, shade_z_end)
-                for edge in shape.edges():
-                    bb = edge.bounding_box()
-                    center = bb.center()
-                    size = bb.size
-                    is_end_edge = (
-                        min(abs(center.Z - z) for z in end_z_values) <= 0.25
-                        and size.Z <= 0.35
-                        and (size.X >= 0.35 or size.Y >= 0.35)
-                    )
-                    if is_end_edge:
-                        end_edges.append(edge)
+            def build_shade_drip_lip(end_z: float, outward_sign: float):
+                if drip_lip_out <= 0.0 or drip_lip_drop <= 0.0:
+                    return None
+                slope_len = math.hypot(drip_lip_out, drip_lip_drop)
+                angle = -math.degrees(math.atan2(drip_lip_drop, drip_lip_out))
+                if outward_sign < 0.0:
+                    angle = -180.0 + math.degrees(math.atan2(drip_lip_drop, drip_lip_out))
+                center_y = -half_shade_outer_h + 0.5 * drip_lip_drop + 0.25 * drip_lip_t
+                center_z = end_z + outward_sign * (0.5 * drip_lip_out - 0.5 * drip_lip_overlap)
+                with BuildPart() as lip_bp:
+                    Box(shade_outer_w, drip_lip_t, slope_len)
+                return lip_bp.part.rotate(Axis.X, angle).translate((0.0, center_y, center_z))
 
-                if end_edges and preferred_r > 0.0:
+            if shade_front_overhang > 0.0:
+                front_drip = build_shade_drip_lip(shade_z_start, -1.0)
+                if front_drip is not None:
+                    shade_solid = _largest_solid(shade_solid + front_drip)
+                    drip_lip_count += 1
+                    drip_lip_terminal_z_values.append(shade_z_start - drip_lip_out + drip_lip_overlap)
+            if shade_rear_overhang > 0.0:
+                rear_drip = build_shade_drip_lip(shade_z_end, 1.0)
+                if rear_drip is not None:
+                    shade_solid = _largest_solid(shade_solid + rear_drip)
+                    drip_lip_count += 1
+                    drip_lip_terminal_z_values.append(shade_z_end + drip_lip_out - drip_lip_overlap)
+
+            def fillet_shade_end_edges(shape, preferred_r: float):
+                end_z_values = (shade_z_start, shade_z_end, *drip_lip_terminal_z_values)
+                result = shape
+                applied = 0.0
+                edge_count = 0
+                for target_z in end_z_values:
+                    end_edges = []
+                    for edge in result.edges():
+                        bb = edge.bounding_box()
+                        center = bb.center()
+                        size = bb.size
+                        is_end_edge = (
+                            abs(center.Z - target_z) <= 0.25
+                            and size.Z <= 0.35
+                            and (size.X >= 0.35 or size.Y >= 0.35)
+                        )
+                        if is_end_edge:
+                            end_edges.append(edge)
+
+                    edge_count += len(end_edges)
+                    if not end_edges or preferred_r <= 0.0:
+                        continue
                     for fillet_r in (preferred_r, 0.75, 0.5, 0.3):
                         if fillet_r > preferred_r:
                             continue
                         try:
-                            return fillet(end_edges, fillet_r), fillet_r, len(end_edges)
+                            result = fillet(end_edges, fillet_r)
+                            applied = max(applied, fillet_r)
+                            break
                         except Exception:
                             continue
-                return shape, 0.0, len(end_edges)
+                return result, applied, edge_count
 
             shade_solid, shade_end_edge_fillet_applied, shade_end_edge_count = fillet_shade_end_edges(
                 shade_solid,
@@ -1983,7 +2031,7 @@ def build_case(p: MakiCaseParams):
                 sleeve = _largest_solid(sleeve + right_boss_bp.part)
 
                 cs_front_z = cs_z_center - 0.5 * cs_boss_l
-                cs_slot_len = shade_z_end + 0.2 - cs_front_z
+                cs_slot_len = shade_z_end + rear_drip_extension + 0.2 - cs_front_z
                 cs_slot_mid_z = cs_front_z + 0.5 * cs_slot_len
                 boss_top_y = half_shade_outer_h + cs_boss_h
 
@@ -2057,6 +2105,11 @@ def build_case(p: MakiCaseParams):
                 "shade_z_end_mm": float(shade_z_end),
                 "support_z_start_mm": 0.0,
                 "support_z_end_mm": float(shell_depth),
+                "drip_lip_count": int(drip_lip_count),
+                "drip_lip_out_mm": float(drip_lip_out),
+                "drip_lip_drop_mm": float(drip_lip_drop),
+                "drip_lip_thickness_mm": float(drip_lip_t),
+                "drip_lip_overlap_mm": float(drip_lip_overlap),
                 "post_width_mm": float(post_w),
                 "side_drop_ratio": float(p.sun_shade_side_drop_ratio),
                 "side_support_height_mm": float(lower_side_support_h),

@@ -752,11 +752,6 @@
             "shade_z_end_mm": 140.26999999999998,
             "support_z_start_mm": 0.0,
             "support_z_end_mm": 133.92,
-            "drip_lip_count": 2,
-            "drip_lip_out_mm": 3.0,
-            "drip_lip_drop_mm": 3.0,
-            "drip_lip_thickness_mm": 1.2,
-            "drip_lip_overlap_mm": 0.5,
             "post_width_mm": 2.5,
             "side_drop_ratio": 0.72,
             "side_support_height_mm": 0.0,
@@ -794,9 +789,8 @@
               }
             ],
             "top_support_inner_edge_x_abs_mm": 26.075821533438372,
-            "side_support_count": 4,
+            "side_support_count": 2,
             "side_support_y_centers_mm": [
-              -13.9578431420533,
               13.9578431420533
             ],
             "side_support_y_center_abs_mm": 13.9578431420533,
@@ -808,7 +802,7 @@
             "side_skirt_inner_edge_fillet_mm": 0.75,
             "side_skirt_inner_edge_count": 4,
             "end_edge_fillet_mm": 0.5,
-            "end_edge_fillet_edges": 49,
+            "end_edge_fillet_edges": 36,
             "cold_shoe_count": 3,
             "coverage": "top + partial left/right sides (open bottom)"
           },
