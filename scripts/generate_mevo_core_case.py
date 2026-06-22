@@ -732,9 +732,27 @@ def build_asa_shell(p: MevoCoreParams):
             max(float(p.sun_shade_drip_lip_overlap_mm), 0.0),
             max(drip_lip_out - 0.1, 0.0),
         )
-        rear_drip_extension = drip_lip_out if shade_rear_overhang > 0.0 and drip_lip_drop > 0.0 else 0.0
-        drip_lip_count = 0
+        drip_lip_inward = 0.0
+        if drip_lip_out > 0.0 and drip_lip_drop > 0.0:
+            drip_lip_inward = min(
+                drip_lip_drop,
+                max(0.5 * min(shade_inner_w, shade_inner_h) - shade_w - 1.0, 0.0),
+            )
+        front_drip_enabled = shade_front_overhang > 0.0 and drip_lip_inward > 0.0
+        rear_drip_enabled = shade_rear_overhang > 0.0 and drip_lip_inward > 0.0
+        front_drip_terminal_z = shade_z_start - drip_lip_out if front_drip_enabled else shade_z_start
+        rear_drip_terminal_z = shade_z_end + drip_lip_out if rear_drip_enabled else shade_z_end
+        rear_drip_extension = drip_lip_out if rear_drip_enabled else 0.0
+        drip_lip_count = int(front_drip_enabled) + int(rear_drip_enabled)
         drip_lip_terminal_z_values = []
+        if front_drip_enabled:
+            drip_lip_terminal_z_values.append(front_drip_terminal_z)
+        if rear_drip_enabled:
+            drip_lip_terminal_z_values.append(rear_drip_terminal_z)
+        shade_total_z_start = front_drip_terminal_z if front_drip_enabled else shade_z_start
+        shade_total_z_end = rear_drip_terminal_z if rear_drip_enabled else shade_z_end
+        shade_total_z_len = shade_total_z_end - shade_total_z_start
+        shade_total_mid_z = shade_total_z_start + 0.5 * shade_total_z_len
 
         # Rib positions are shared with the support-aware vent notch sizing
         # above, so ribs stay outside the large side/top panel openings.
@@ -745,6 +763,20 @@ def build_asa_shell(p: MevoCoreParams):
         # Shell outer at half_asa_w, shade inner at half_asa_w + standoff
         # Rib extends from shell_outer - 1mm to shade_inner + 1mm
         rib_radial = standoff + 2.0  # 1mm overlap each side
+        terminal_outer_w = max(shade_outer_w - 2.0 * drip_lip_inward, 2.0 * shade_w + 2.0)
+        terminal_outer_h = max(shade_outer_h - 2.0 * drip_lip_inward, 2.0 * shade_w + 2.0)
+        terminal_inner_w = max(shade_inner_w - 2.0 * drip_lip_inward, 1.0)
+        terminal_inner_h = max(shade_inner_h - 2.0 * drip_lip_inward, 1.0)
+        terminal_inner_w = min(terminal_inner_w, terminal_outer_w - 2.0 * shade_w)
+        terminal_inner_h = min(terminal_inner_h, terminal_outer_h - 2.0 * shade_w)
+        terminal_outer_r = min(
+            max(shade_outer_r - drip_lip_inward, 0.6),
+            0.49 * min(terminal_outer_w, terminal_outer_h),
+        )
+        terminal_inner_r = min(
+            max(shade_inner_r - drip_lip_inward, 0.4),
+            0.49 * min(terminal_inner_w, terminal_inner_h),
+        )
 
         try:
             # Cold shoe boss dimensions (needed for shade BuildPart)
@@ -778,21 +810,65 @@ def build_asa_shell(p: MevoCoreParams):
                                 fillet(vertices(), rib_corner_r)
                     extrude(rib_sk.sketch, amount=shade_support_z_len)
 
-                # Shade tube (outer - inner)
-                with BuildSketch(Plane.XY.offset(shade_z_start)):
-                    Rectangle(shade_outer_w, shade_outer_h)
-                    fillet(vertices(), shade_outer_r)
-                extrude(amount=shade_z_len)
-                with BuildSketch(Plane.XY.offset(shade_z_start - 0.1)):
-                    Rectangle(shade_inner_w, shade_inner_h)
-                    fillet(vertices(), shade_inner_r)
-                extrude(amount=shade_z_len + 0.2, mode=Mode.SUBTRACT)
+                # Shade tube (outer - inner). The angled drip end is part of
+                # this same lofted shell, not a separate piece fused afterward.
+                outer_profiles = []
+                if front_drip_enabled:
+                    outer_profiles.append((
+                        front_drip_terminal_z,
+                        terminal_outer_w,
+                        terminal_outer_h,
+                        terminal_outer_r,
+                    ))
+                outer_profiles.extend([
+                    (shade_z_start, shade_outer_w, shade_outer_h, shade_outer_r),
+                    (shade_z_end, shade_outer_w, shade_outer_h, shade_outer_r),
+                ])
+                if rear_drip_enabled:
+                    outer_profiles.append((
+                        rear_drip_terminal_z,
+                        terminal_outer_w,
+                        terminal_outer_h,
+                        terminal_outer_r,
+                    ))
+                for profile_z, profile_w, profile_h, profile_r in outer_profiles:
+                    with BuildSketch(Plane.XY.offset(profile_z)):
+                        Rectangle(profile_w, profile_h)
+                        fillet(vertices(), profile_r)
+                loft(ruled=True)
+
+                inner_profiles = []
+                if front_drip_enabled:
+                    inner_profiles.append((
+                        front_drip_terminal_z - 0.1,
+                        terminal_inner_w,
+                        terminal_inner_h,
+                        terminal_inner_r,
+                    ))
+                    inner_profiles.append((shade_z_start + 0.1, shade_inner_w, shade_inner_h, shade_inner_r))
+                else:
+                    inner_profiles.append((shade_z_start - 0.1, shade_inner_w, shade_inner_h, shade_inner_r))
+                if rear_drip_enabled:
+                    inner_profiles.append((shade_z_end - 0.1, shade_inner_w, shade_inner_h, shade_inner_r))
+                    inner_profiles.append((
+                        rear_drip_terminal_z + 0.1,
+                        terminal_inner_w,
+                        terminal_inner_h,
+                        terminal_inner_r,
+                    ))
+                else:
+                    inner_profiles.append((shade_z_end + 0.1, shade_inner_w, shade_inner_h, shade_inner_r))
+                for profile_z, profile_w, profile_h, profile_r in inner_profiles:
+                    with BuildSketch(Plane.XY.offset(profile_z)):
+                        Rectangle(profile_w, profile_h)
+                        fillet(vertices(), profile_r)
+                loft(ruled=True, mode=Mode.SUBTRACT)
 
                 # Cut away Y+ panel (user's bottom / tripod side)
                 # Shade covers Y- (user's top) + X sides
                 cut_height = half_shade_outer_h - shade_bottom_cut_y + 1.0
-                with Locations((0.0, shade_bottom_cut_y + 0.5 * cut_height, shade_mid_z)):
-                    Box(shade_outer_w + 2.0, cut_height + 0.2, shade_z_len + 2.0,
+                with Locations((0.0, shade_bottom_cut_y + 0.5 * cut_height, shade_total_mid_z)):
+                    Box(shade_outer_w + 2.0, cut_height + 0.2, shade_total_z_len + 2.0,
                         mode=Mode.SUBTRACT)
 
                 # Connecting ribs (2 per face, near fillet transitions)
@@ -905,73 +981,8 @@ def build_asa_shell(p: MevoCoreParams):
                     except Exception:
                         continue
 
-            def build_shade_drip_lip(end_z: float, outward_sign: float):
-                if drip_lip_out <= 0.0 or drip_lip_drop <= 0.0:
-                    return None, None
-                direction = 1.0 if outward_sign >= 0.0 else -1.0
-                inward = min(
-                    drip_lip_drop,
-                    max(0.5 * min(shade_inner_w, shade_inner_h) - shade_w - 1.0, 0.0),
-                )
-                if inward <= 0.0:
-                    return None, None
-
-                start_z = end_z - direction * drip_lip_overlap
-                terminal_z = end_z + direction * drip_lip_out
-                inner_start_z = start_z - direction * 0.1
-                inner_terminal_z = terminal_z + direction * 0.1
-                lip_mid_z = 0.5 * (start_z + terminal_z)
-                lip_z_len = abs(terminal_z - start_z)
-
-                terminal_outer_w = max(shade_outer_w - 2.0 * inward, 2.0 * shade_w + 2.0)
-                terminal_outer_h = max(shade_outer_h - 2.0 * inward, 2.0 * shade_w + 2.0)
-                terminal_inner_w = max(shade_inner_w - 2.0 * inward, 1.0)
-                terminal_inner_h = max(shade_inner_h - 2.0 * inward, 1.0)
-                terminal_inner_w = min(terminal_inner_w, terminal_outer_w - 2.0 * shade_w)
-                terminal_inner_h = min(terminal_inner_h, terminal_outer_h - 2.0 * shade_w)
-                terminal_outer_r = min(
-                    max(shade_outer_r - inward, 0.6),
-                    0.49 * min(terminal_outer_w, terminal_outer_h),
-                )
-                terminal_inner_r = min(
-                    max(shade_inner_r - inward, 0.4),
-                    0.49 * min(terminal_inner_w, terminal_inner_h),
-                )
-
-                with BuildPart() as lip_bp:
-                    with BuildSketch(Plane.XY.offset(start_z)):
-                        Rectangle(shade_outer_w, shade_outer_h)
-                        fillet(vertices(), shade_outer_r)
-                    with BuildSketch(Plane.XY.offset(terminal_z)):
-                        Rectangle(terminal_outer_w, terminal_outer_h)
-                        fillet(vertices(), terminal_outer_r)
-                    loft()
-                    with BuildSketch(Plane.XY.offset(inner_start_z)):
-                        Rectangle(shade_inner_w, shade_inner_h)
-                        fillet(vertices(), shade_inner_r)
-                    with BuildSketch(Plane.XY.offset(inner_terminal_z)):
-                        Rectangle(terminal_inner_w, terminal_inner_h)
-                        fillet(vertices(), terminal_inner_r)
-                    loft(mode=Mode.SUBTRACT)
-                    with Locations((0.0, shade_bottom_cut_y + 0.5 * cut_height, lip_mid_z)):
-                        Box(shade_outer_w + 2.0, cut_height + 0.2, lip_z_len + 2.0, mode=Mode.SUBTRACT)
-                return lip_bp.part, terminal_z
-
-            if shade_front_overhang > 0.0:
-                front_drip, front_drip_terminal_z = build_shade_drip_lip(shade_z_start, -1.0)
-                if front_drip is not None:
-                    shade_solid = _largest_solid(shade_solid + front_drip)
-                    drip_lip_count += 1
-                    drip_lip_terminal_z_values.append(front_drip_terminal_z)
-            if shade_rear_overhang > 0.0:
-                rear_drip, rear_drip_terminal_z = build_shade_drip_lip(shade_z_end, 1.0)
-                if rear_drip is not None:
-                    shade_solid = _largest_solid(shade_solid + rear_drip)
-                    drip_lip_count += 1
-                    drip_lip_terminal_z_values.append(rear_drip_terminal_z)
-
             def fillet_end_edges(shape, preferred_r):
-                end_z_values = (shade_z_start, shade_z_end, *drip_lip_terminal_z_values)
+                end_z_values = tuple(drip_lip_terminal_z_values) or (shade_z_start, shade_z_end)
                 result = shape
                 applied = 0.0
                 edge_count = 0
@@ -1034,11 +1045,13 @@ def build_asa_shell(p: MevoCoreParams):
                 "support_z_start_mm": float(shade_support_z_start),
                 "support_z_end_mm": float(shade_support_z_start + shade_support_z_len),
                 "drip_lip_count": int(drip_lip_count),
-                "drip_lip_style": "cut_back_lofted_inward_shade_extension_low_overlap",
+                "drip_lip_style": "integrated_continuous_lofted_shade_end",
                 "drip_lip_out_mm": float(drip_lip_out),
                 "drip_lip_drop_mm": float(drip_lip_drop),
-                "drip_lip_inward_mm": float(drip_lip_drop),
-                "drip_lip_overlap_mm": float(drip_lip_overlap),
+                "drip_lip_inward_mm": float(drip_lip_inward),
+                "drip_lip_overlap_mm": 0.0,
+                "drip_lip_legacy_overlap_param_mm": float(drip_lip_overlap),
+                "drip_lip_terminal_z_values_mm": [float(v) for v in drip_lip_terminal_z_values],
                 "post_width_mm": float(post_w),
                 "rib_corner_r_mm": float(
                     min(

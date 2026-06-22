@@ -253,15 +253,11 @@
         "support_z_start_mm": 0.0,
         "support_z_end_mm": 80.55,
         "drip_lip_count": 1,
-        "drip_lip_style": "integrated_continuous_lofted_shade_end",
+        "drip_lip_style": "cut_back_lofted_inward_shade_extension_low_overlap",
         "drip_lip_out_mm": 1.5,
         "drip_lip_drop_mm": 1.5,
         "drip_lip_inward_mm": 1.5,
-        "drip_lip_overlap_mm": 0.0,
-        "drip_lip_legacy_overlap_param_mm": 0.15,
-        "drip_lip_terminal_z_values_mm": [
-          88.39999999999999
-        ],
+        "drip_lip_overlap_mm": 0.15,
         "post_width_mm": 4.0,
         "rib_corner_r_mm": 1.0,
         "rib_count": 6,
@@ -277,10 +273,10 @@
         "bottom_cut_y_mm": 29.9,
         "lower_outer_edge_fillet_mm": 2.0,
         "lower_outer_edge_fillet_edges": 2,
-        "lower_inner_edge_fillet_mm": 0.0,
+        "lower_inner_edge_fillet_mm": 0.75,
         "lower_inner_edge_fillet_edges": 4,
-        "end_edge_fillet_mm": 0.5,
-        "end_edge_fillet_edges": 16,
+        "end_edge_fillet_mm": 0.75,
+        "end_edge_fillet_edges": 104,
         "cold_shoe_count": 3
       }
     }
