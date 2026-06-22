@@ -175,6 +175,7 @@ class MakiCaseParams:
     side_trio_min_z_mm: float = 2.2
     side_trio_match_tripanel_size: bool = True
     merged_tripanel_cutout_margin_mm: float = 1.0
+    merged_tripanel_tripod_bridge_mm: float = 2.0
 
     # Shape processing
     section_z_ratio: float = 0.50
@@ -810,13 +811,23 @@ def _derive_merged_tripanel_cutout(
 
     min_x = min(vent_min_x, tripod_x - 0.5 * tripod_w) - margin
     max_x = max(vent_max_x, tripod_x + 0.5 * tripod_w) + margin
-    min_z = min(vent_min_z, tripod_z - 0.5 * tripod_h) - margin
-    max_z = max(vent_max_z, tripod_z + 0.5 * tripod_h) + margin
+    vent_only_min_z = vent_min_z - margin
+    vent_only_max_z = vent_max_z + margin
+    tripod_top_z = tripod_z + 0.5 * tripod_h
+    bridge_gap = max(float(p.merged_tripanel_tripod_bridge_mm), 0.0)
+    min_z = max(vent_only_min_z, tripod_top_z + bridge_gap)
+    max_z = vent_only_max_z
     width = max(max_x - min_x, 1.0)
     height = max(max_z - min_z, 1.0)
+    covered_logical_vents = sum(
+        1
+        for z in z_centers
+        if (float(z) - 0.5 * slot_z) >= min_z and (float(z) + 0.5 * slot_z) <= max_z
+    ) * len(panels)
+    logical_vents = int(len(panels) * len(z_centers))
 
     return {
-        "id": "tripod_side_merged_vent_panel",
+        "id": "tripod_side_separate_vent_panel",
         "axis": "y",
         "side": vent_pattern.get("panel_side", "neg"),
         "shape": "rect",
@@ -830,8 +841,17 @@ def _derive_merged_tripanel_cutout(
             "min_z": float(min_z),
             "max_z": float(max_z),
         },
-        "covers_tripanel_logical_vents": int(len(panels) * len(z_centers)),
-        "merged_with_tripod_cutout": True,
+        "vent_only_bounds_before_bridge": {
+            "min_z": float(vent_only_min_z),
+            "max_z": float(vent_only_max_z),
+        },
+        "covers_tripanel_logical_vents": int(covered_logical_vents),
+        "logical_tripanel_vent_locations": logical_vents,
+        "omitted_lowest_tripanel_logical_vents": int(logical_vents - covered_logical_vents),
+        "merged_with_tripod_cutout": False,
+        "separated_from_tripod_cutout": True,
+        "tripod_bridge_mm": float(bridge_gap),
+        "tripod_rect_top_z_mm": float(tripod_top_z),
         "tripod_rect_w_mm": float(tripod_w),
         "tripod_rect_h_mm": float(tripod_h),
         "margin_mm": float(margin),

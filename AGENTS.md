@@ -120,13 +120,13 @@ Active hard-shell and TPU workflows:
     - downward axis normal filter,
     - centerline/depth region filters,
     - circular-edge fallback only if cylindrical detection fails.
-  - Vent behavior uses a merged tripod-side panel cutout:
+  - Vent behavior uses a large separate tripod-side panel cutout:
     - the former 24-slot, 3-panel vent bank is now one rectangular ASA cutout,
-    - the merged cutout extends the existing bottom/tripod rectangle upward to cover the old vent-bank area,
-    - current merged cutout: `42.64 x 91.05 mm`, centered on the tripod side, with `1.0 mm` margin,
-    - logical vent coordinates are still emitted for validation; the physical merged cutout is emitted under `step_side_features.merged_vent_cutouts_applied_entries`,
+    - this vent-panel cutout is separate from the existing bottom/tripod rectangle, with a `2.0 mm` shell bridge between them,
+    - current vent-panel cutout is centered on the tripod side, aligned to the tripod rectangle width, with `1.0 mm` vent margin,
+    - logical vent coordinates are still emitted for validation; the physical vent-panel cutout is emitted under `step_side_features.merged_vent_cutouts_applied_entries`,
     - side vents remain 3 on left side + 3 on right side.
-  - The merged former 24-vent bank is constrained to bottom-connected panels (not direct side walls).
+  - The large former 24-vent bank is constrained to bottom-connected panels (not direct side walls).
   - Side 3+3 vent group is placed on the opposite end from the tripod-side vent bank.
   - Side 3+3 vent dimensions are matched to the main tripanel vent style size.
   - Side `3+3` vents use rounded-slot cuts; tripod-side ASA vents are covered by the merged rectangular cutout.

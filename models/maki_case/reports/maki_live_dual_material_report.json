@@ -115,7 +115,7 @@
               "pattern_source": "step_tripanel_cluster",
               "vent_family": "tripanel",
               "cutout_kind": "merged_panel",
-              "merged_cutout_id": "tripod_side_merged_vent_panel"
+              "merged_cutout_id": "tripod_side_separate_vent_panel"
             },
             {
               "axis": "y",
@@ -131,7 +131,7 @@
               "pattern_source": "step_tripanel_cluster",
               "vent_family": "tripanel",
               "cutout_kind": "merged_panel",
-              "merged_cutout_id": "tripod_side_merged_vent_panel"
+              "merged_cutout_id": "tripod_side_separate_vent_panel"
             },
             {
               "axis": "y",
@@ -147,7 +147,7 @@
               "pattern_source": "step_tripanel_cluster",
               "vent_family": "tripanel",
               "cutout_kind": "merged_panel",
-              "merged_cutout_id": "tripod_side_merged_vent_panel"
+              "merged_cutout_id": "tripod_side_separate_vent_panel"
             },
             {
               "axis": "y",
@@ -163,7 +163,7 @@
               "pattern_source": "step_tripanel_cluster",
               "vent_family": "tripanel",
               "cutout_kind": "merged_panel",
-              "merged_cutout_id": "tripod_side_merged_vent_panel"
+              "merged_cutout_id": "tripod_side_separate_vent_panel"
             },
             {
               "axis": "y",
@@ -179,7 +179,7 @@
               "pattern_source": "step_tripanel_cluster",
               "vent_family": "tripanel",
               "cutout_kind": "merged_panel",
-              "merged_cutout_id": "tripod_side_merged_vent_panel"
+              "merged_cutout_id": "tripod_side_separate_vent_panel"
             },
             {
               "axis": "y",
@@ -195,7 +195,7 @@
               "pattern_source": "step_tripanel_cluster",
               "vent_family": "tripanel",
               "cutout_kind": "merged_panel",
-              "merged_cutout_id": "tripod_side_merged_vent_panel"
+              "merged_cutout_id": "tripod_side_separate_vent_panel"
             },
             {
               "axis": "y",
@@ -211,7 +211,7 @@
               "pattern_source": "step_tripanel_cluster",
               "vent_family": "tripanel",
               "cutout_kind": "merged_panel",
-              "merged_cutout_id": "tripod_side_merged_vent_panel"
+              "merged_cutout_id": "tripod_side_separate_vent_panel"
             },
             {
               "axis": "y",
@@ -227,7 +227,7 @@
               "pattern_source": "step_tripanel_cluster",
               "vent_family": "tripanel",
               "cutout_kind": "merged_panel",
-              "merged_cutout_id": "tripod_side_merged_vent_panel"
+              "merged_cutout_id": "tripod_side_separate_vent_panel"
             },
             {
               "axis": "y",
@@ -243,7 +243,7 @@
               "pattern_source": "step_tripanel_cluster",
               "vent_family": "tripanel",
               "cutout_kind": "merged_panel",
-              "merged_cutout_id": "tripod_side_merged_vent_panel"
+              "merged_cutout_id": "tripod_side_separate_vent_panel"
             },
             {
               "axis": "y",
@@ -259,7 +259,7 @@
               "pattern_source": "step_tripanel_cluster",
               "vent_family": "tripanel",
               "cutout_kind": "merged_panel",
-              "merged_cutout_id": "tripod_side_merged_vent_panel"
+              "merged_cutout_id": "tripod_side_separate_vent_panel"
             },
             {
               "axis": "y",
@@ -275,7 +275,7 @@
               "pattern_source": "step_tripanel_cluster",
               "vent_family": "tripanel",
               "cutout_kind": "merged_panel",
-              "merged_cutout_id": "tripod_side_merged_vent_panel"
+              "merged_cutout_id": "tripod_side_separate_vent_panel"
             },
             {
               "axis": "y",
@@ -291,7 +291,7 @@
               "pattern_source": "step_tripanel_cluster",
               "vent_family": "tripanel",
               "cutout_kind": "merged_panel",
-              "merged_cutout_id": "tripod_side_merged_vent_panel"
+              "merged_cutout_id": "tripod_side_separate_vent_panel"
             },
             {
               "axis": "y",
@@ -307,7 +307,7 @@
               "pattern_source": "step_tripanel_cluster",
               "vent_family": "tripanel",
               "cutout_kind": "merged_panel",
-              "merged_cutout_id": "tripod_side_merged_vent_panel"
+              "merged_cutout_id": "tripod_side_separate_vent_panel"
             },
             {
               "axis": "y",
@@ -323,7 +323,7 @@
               "pattern_source": "step_tripanel_cluster",
               "vent_family": "tripanel",
               "cutout_kind": "merged_panel",
-              "merged_cutout_id": "tripod_side_merged_vent_panel"
+              "merged_cutout_id": "tripod_side_separate_vent_panel"
             },
             {
               "axis": "y",
@@ -339,7 +339,7 @@
               "pattern_source": "step_tripanel_cluster",
               "vent_family": "tripanel",
               "cutout_kind": "merged_panel",
-              "merged_cutout_id": "tripod_side_merged_vent_panel"
+              "merged_cutout_id": "tripod_side_separate_vent_panel"
             },
             {
               "axis": "y",
@@ -355,7 +355,7 @@
               "pattern_source": "step_tripanel_cluster",
               "vent_family": "tripanel",
               "cutout_kind": "merged_panel",
-              "merged_cutout_id": "tripod_side_merged_vent_panel"
+              "merged_cutout_id": "tripod_side_separate_vent_panel"
             },
             {
               "axis": "y",
@@ -371,7 +371,7 @@
               "pattern_source": "step_tripanel_cluster",
               "vent_family": "tripanel",
               "cutout_kind": "merged_panel",
-              "merged_cutout_id": "tripod_side_merged_vent_panel"
+              "merged_cutout_id": "tripod_side_separate_vent_panel"
             },
             {
               "axis": "y",
@@ -387,7 +387,7 @@
               "pattern_source": "step_tripanel_cluster",
               "vent_family": "tripanel",
               "cutout_kind": "merged_panel",
-              "merged_cutout_id": "tripod_side_merged_vent_panel"
+              "merged_cutout_id": "tripod_side_separate_vent_panel"
             },
             {
               "axis": "y",
@@ -403,7 +403,7 @@
               "pattern_source": "step_tripanel_cluster",
               "vent_family": "tripanel",
               "cutout_kind": "merged_panel",
-              "merged_cutout_id": "tripod_side_merged_vent_panel"
+              "merged_cutout_id": "tripod_side_separate_vent_panel"
             },
             {
               "axis": "y",
@@ -419,7 +419,7 @@
               "pattern_source": "step_tripanel_cluster",
               "vent_family": "tripanel",
               "cutout_kind": "merged_panel",
-              "merged_cutout_id": "tripod_side_merged_vent_panel"
+              "merged_cutout_id": "tripod_side_separate_vent_panel"
             },
             {
               "axis": "y",
@@ -435,7 +435,7 @@
               "pattern_source": "step_tripanel_cluster",
               "vent_family": "tripanel",
               "cutout_kind": "merged_panel",
-              "merged_cutout_id": "tripod_side_merged_vent_panel"
+              "merged_cutout_id": "tripod_side_separate_vent_panel"
             },
             {
               "axis": "y",
@@ -451,7 +451,7 @@
               "pattern_source": "step_tripanel_cluster",
               "vent_family": "tripanel",
               "cutout_kind": "merged_panel",
-              "merged_cutout_id": "tripod_side_merged_vent_panel"
+              "merged_cutout_id": "tripod_side_separate_vent_panel"
             },
             {
               "axis": "y",
@@ -467,7 +467,7 @@
               "pattern_source": "step_tripanel_cluster",
               "vent_family": "tripanel",
               "cutout_kind": "merged_panel",
-              "merged_cutout_id": "tripod_side_merged_vent_panel"
+              "merged_cutout_id": "tripod_side_separate_vent_panel"
             },
             {
               "axis": "y",
@@ -483,7 +483,7 @@
               "pattern_source": "step_tripanel_cluster",
               "vent_family": "tripanel",
               "cutout_kind": "merged_panel",
-              "merged_cutout_id": "tripod_side_merged_vent_panel"
+              "merged_cutout_id": "tripod_side_separate_vent_panel"
             },
             {
               "axis": "x",
@@ -567,22 +567,31 @@
           "merged_vent_cutouts_applied": 1,
           "merged_vent_cutouts_applied_entries": [
             {
-              "id": "tripod_side_merged_vent_panel",
+              "id": "tripod_side_separate_vent_panel",
               "axis": "y",
               "side": "neg",
               "shape": "rect",
               "x": 0.0,
-              "z": 66.16496349860677,
+              "z": 93.06496349860677,
               "w": 42.64,
-              "h": 91.05406555231748,
+              "h": 37.254065552317485,
               "bounds": {
                 "min_x": -21.32,
                 "max_x": 21.32,
-                "min_z": 20.637930722448033,
+                "min_z": 74.43793072244803,
                 "max_z": 111.69199627476551
               },
-              "covers_tripanel_logical_vents": 24,
-              "merged_with_tripod_cutout": true,
+              "vent_only_bounds_before_bridge": {
+                "min_z": 68.71762620600293,
+                "max_z": 111.69199627476551
+              },
+              "covers_tripanel_logical_vents": 21,
+              "logical_tripanel_vent_locations": 24,
+              "omitted_lowest_tripanel_logical_vents": 3,
+              "merged_with_tripod_cutout": false,
+              "separated_from_tripod_cutout": true,
+              "tripod_bridge_mm": 2.0,
+              "tripod_rect_top_z_mm": 72.43793072244803,
               "tripod_rect_w_mm": 40.64,
               "tripod_rect_h_mm": 50.8,
               "margin_mm": 1.0,
