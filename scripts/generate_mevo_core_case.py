@@ -78,6 +78,7 @@ class MevoCoreParams:
     lens_hood_clearance_mm: float = 2.5  # hood bore wider than front face hole for ledge/strength
     lens_hood_base_flare_mm: float = 6.0   # extra outer radius at root for strength
     lens_hood_base_depth_mm: float = 8.0   # axial depth of the taper zone
+    lens_hood_root_overlap_mm: float = 1.2  # positive-Z overlap into front wall for fused root
     lens_hood_side_access_notches: bool = True
     lens_hood_access_depth_mm: float = 31.75  # 1.25" from base along hood axis
     lens_hood_access_height_mm: float = 50.8  # 2.0" tall opening on each side
@@ -488,6 +489,48 @@ def build_asa_shell(p: MevoCoreParams):
 
     asa_shell = _largest_solid(asa_bp.part)
 
+    # Round body edges before adding the lens hood. Applying an all-edge fillet
+    # after the hood root is fused makes OCC chase the long tube/notch topology.
+    body_edge_fillet_applied = 0.0
+    for fillet_r in (3.0, 2.5, 2.0, 1.5, 1.0):
+        try:
+            asa_shell = fillet(asa_shell.edges(), fillet_r)
+            body_edge_fillet_applied = fillet_r
+            break
+        except Exception:
+            continue
+    asa_shell = _largest_solid(asa_shell)
+
+    front_face_edges = []
+    body_front_abs_min = half_asa_w - 0.5
+    body_front_abs_max = half_asa_w + 0.75
+    for edge in asa_shell.edges():
+        bb = edge.bounding_box()
+        center = bb.center()
+        size = bb.size
+        abs_extent = max(abs(bb.min.X), abs(bb.max.X), abs(bb.min.Y), abs(bb.max.Y))
+        is_body_front_edge = (
+            abs(center.Z) <= 0.2
+            and size.Z <= 0.2
+            and edge.length >= 5.0
+            and body_front_abs_min <= abs_extent <= body_front_abs_max
+        )
+        if is_body_front_edge:
+            front_face_edges.append(edge)
+
+    front_face_fillet_applied = body_edge_fillet_applied
+    if front_face_edges and p.front_face_side_fillet_mm > 0.0:
+        for fillet_r in (p.front_face_side_fillet_mm, 2.5, 2.0, 1.5, 1.0, 0.75, 0.5):
+            if fillet_r > p.front_face_side_fillet_mm:
+                continue
+            try:
+                asa_shell = fillet(front_face_edges, fillet_r)
+                front_face_fillet_applied = fillet_r
+                break
+            except Exception:
+                continue
+        asa_shell = _largest_solid(asa_shell)
+
     # Build full circular tube lens hood with flared base, then union
     if p.include_lens_hood and p.lens_hood_depth_mm > 0.0:
         hood_inner_r = 0.5 * p.lens_cutout_d_mm + p.lens_hood_clearance_mm
@@ -495,7 +538,13 @@ def build_asa_shell(p: MevoCoreParams):
         cx, cy = p.lens_center_x_mm, p.lens_center_y_mm
         flare_r = hood_outer_r + p.lens_hood_base_flare_mm
         flare_d = min(p.lens_hood_base_depth_mm, p.lens_hood_depth_mm * 0.4)
+        root_overlap = min(max(p.lens_hood_root_overlap_mm, 0.0), p.sun_hood_depth_mm + 0.2)
         with BuildPart() as hood_bp:
+            # Embed a short collar into the front wall. This gives OpenCascade
+            # overlapping solids at the root instead of a coplanar/tangent join.
+            if root_overlap > 0.0:
+                with Locations((cx, cy, 0.0)):
+                    Cylinder(flare_r, root_overlap, align=(Align.CENTER, Align.CENTER, Align.MIN))
             # Main straight tube
             with Locations((cx, cy, 0.0)):
                 Cylinder(hood_outer_r, p.lens_hood_depth_mm, rotation=(180, 0, 0),
@@ -505,11 +554,14 @@ def build_asa_shell(p: MevoCoreParams):
                 with Locations((cx, cy, 0.0)):
                     Cone(flare_r, hood_outer_r, flare_d, rotation=(180, 0, 0),
                          align=(Align.CENTER, Align.CENTER, Align.MIN))
-            # Subtract inner bore through full depth (constant inner radius)
-            with Locations((cx, cy, 0.1)):
-                Cylinder(hood_inner_r, p.lens_hood_depth_mm + 0.2, rotation=(180, 0, 0),
-                         align=(Align.CENTER, Align.CENTER, Align.MIN),
-                         mode=Mode.SUBTRACT)
+            # Subtract inner bore through the forward hood and the embedded root collar.
+            with Locations((cx, cy, -p.lens_hood_depth_mm - 0.2)):
+                Cylinder(
+                    hood_inner_r,
+                    p.lens_hood_depth_mm + root_overlap + 0.4,
+                    align=(Align.CENTER, Align.CENTER, Align.MIN),
+                    mode=Mode.SUBTRACT,
+                )
             if p.lens_hood_side_access_notches:
                 notch_depth = max(min(p.lens_hood_access_depth_mm, p.lens_hood_depth_mm), 0.0)
                 notch_height = max(min(p.lens_hood_access_height_mm, 2.0 * hood_outer_r + 2.0), 2.0)
@@ -518,25 +570,10 @@ def build_asa_shell(p: MevoCoreParams):
                     with Locations((cx + sx * hood_outer_r, cy, -0.5 * notch_depth)):
                         Box(2.0 * notch_radial, notch_height, notch_depth + 0.4, mode=Mode.SUBTRACT)
         hood_solid = hood_bp.part
-        for fillet_r in (2.0, 1.5, 1.0, 0.5):
-            try:
-                hood_solid = fillet(hood_solid.edges(), fillet_r)
-                break
-            except Exception:
-                continue
         try:
             asa_shell = _largest_solid(asa_shell + hood_solid)
         except Exception:
             pass
-
-    # Round the body edges (front-face-to-wall transitions, rear edges, etc.)
-    for fillet_r in (3.0, 2.5, 2.0, 1.5, 1.0):
-        try:
-            asa_shell = fillet(asa_shell.edges(), fillet_r)
-            break
-        except Exception:
-            continue
-    asa_shell = _largest_solid(asa_shell)
 
     # Sun shade canopy: floating external shell (top + sides), open bottom.
     # Connected to shell via full-length ribs on flat face sections.
@@ -843,36 +880,6 @@ def build_asa_shell(p: MevoCoreParams):
         except Exception as e:
             print(f"  WARNING: sun shade failed to build: {e}")
 
-    front_face_edges = []
-    body_front_abs_min = half_asa_w - 0.5
-    body_front_abs_max = half_asa_w + 0.75
-    for edge in asa_shell.edges():
-        bb = edge.bounding_box()
-        center = bb.center()
-        size = bb.size
-        abs_extent = max(abs(bb.min.X), abs(bb.max.X), abs(bb.min.Y), abs(bb.max.Y))
-        is_body_front_edge = (
-            abs(center.Z) <= 0.2
-            and size.Z <= 0.2
-            and edge.length >= 5.0
-            and body_front_abs_min <= abs_extent <= body_front_abs_max
-        )
-        if is_body_front_edge:
-            front_face_edges.append(edge)
-
-    front_face_fillet_applied = 0.0
-    if front_face_edges and p.front_face_side_fillet_mm > 0.0:
-        for fillet_r in (p.front_face_side_fillet_mm, 2.5, 2.0, 1.5, 1.0, 0.75, 0.5):
-            if fillet_r > p.front_face_side_fillet_mm:
-                continue
-            try:
-                asa_shell = fillet(front_face_edges, fillet_r)
-                front_face_fillet_applied = fillet_r
-                break
-            except Exception:
-                continue
-        asa_shell = _largest_solid(asa_shell)
-
     asa_shell.label = "ASA_Shell"
 
     corner_margin = max(p.vent_notch_corner_margin_mm, 0.0)
@@ -943,7 +950,7 @@ def build_asa_shell(p: MevoCoreParams):
                 "applied_radius_mm": float(front_face_fillet_applied),
                 "target_radius_mm": float(p.front_face_side_fillet_mm),
                 "edge_count": len(front_face_edges),
-                "scope": "main ASA body front perimeter only",
+                "scope": "main ASA body front perimeter, rounded before lens hood fusion",
             },
             "lens_hood": {
                 "enabled": bool(p.include_lens_hood),
@@ -951,6 +958,11 @@ def build_asa_shell(p: MevoCoreParams):
                 "depth_mm": float(p.lens_hood_depth_mm),
                 "wall_mm": float(p.lens_hood_wall_mm),
                 "clearance_mm": float(p.lens_hood_clearance_mm),
+                "connection": "embedded root overlap collar fused into ASA front wall",
+                "root_overlap_mm": float(p.lens_hood_root_overlap_mm),
+                "resolved_root_overlap_mm": float(
+                    min(max(p.lens_hood_root_overlap_mm, 0.0), p.sun_hood_depth_mm + 0.2)
+                ),
                 "side_access_notches": {
                     "enabled": bool(p.lens_hood_side_access_notches),
                     "count": 2 if p.lens_hood_side_access_notches else 0,
