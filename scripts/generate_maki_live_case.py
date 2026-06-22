@@ -173,6 +173,7 @@ class MakiCaseParams:
     side_trio_min_t_mm: float = 6.4
     side_trio_min_z_mm: float = 2.2
     side_trio_match_tripanel_size: bool = True
+    merged_tripanel_cutout_margin_mm: float = 1.0
 
     # Shape processing
     section_z_ratio: float = 0.50
@@ -766,6 +767,77 @@ def _derive_side_trio_vents(
     }
 
 
+def _derive_merged_tripanel_cutout(
+    vent_pattern: dict,
+    z_centers: list[float],
+    tripod_feature: dict | None,
+    map_x,
+    map_z,
+    sx: float,
+    fallback_tripod_z: float,
+    p: MakiCaseParams,
+) -> dict | None:
+    panels = vent_pattern.get("panels", [])
+    if not panels or not z_centers:
+        return None
+
+    slot_t = float(vent_pattern["slot_t"])
+    slot_z = float(vent_pattern["slot_z"])
+    margin = max(float(p.merged_tripanel_cutout_margin_mm), 0.0)
+
+    vent_min_x = min(float(panel.get("x", 0.0)) - 0.5 * slot_t for panel in panels)
+    vent_max_x = max(float(panel.get("x", 0.0)) + 0.5 * slot_t for panel in panels)
+    vent_min_z = min(float(z) - 0.5 * slot_z for z in z_centers)
+    vent_max_z = max(float(z) + 0.5 * slot_z for z in z_centers)
+
+    if tripod_feature is not None:
+        tripod_x = float(map_x(float(tripod_feature["x"])))
+        tripod_z = float(map_z(float(tripod_feature["z"])))
+        tripod_d = max(2.0 * float(tripod_feature["r"]) * sx + p.tripod_cutout_extra_mm, 2.0)
+    else:
+        tripod_x = 0.0
+        tripod_z = float(fallback_tripod_z)
+        tripod_d = float(p.tripod_hole_diameter_mm)
+
+    if p.tripod_use_rect_cutout:
+        tripod_z += p.tripod_rect_z_shift_mm
+        tripod_w = float(p.tripod_rect_short_mm if p.tripod_rect_long_along_z else p.tripod_rect_long_mm)
+        tripod_h = float(p.tripod_rect_long_mm if p.tripod_rect_long_along_z else p.tripod_rect_short_mm)
+    else:
+        tripod_w = tripod_d
+        tripod_h = tripod_d
+
+    min_x = min(vent_min_x, tripod_x - 0.5 * tripod_w) - margin
+    max_x = max(vent_max_x, tripod_x + 0.5 * tripod_w) + margin
+    min_z = min(vent_min_z, tripod_z - 0.5 * tripod_h) - margin
+    max_z = max(vent_max_z, tripod_z + 0.5 * tripod_h) + margin
+    width = max(max_x - min_x, 1.0)
+    height = max(max_z - min_z, 1.0)
+
+    return {
+        "id": "tripod_side_merged_vent_panel",
+        "axis": "y",
+        "side": vent_pattern.get("panel_side", "neg"),
+        "shape": "rect",
+        "x": float(0.5 * (min_x + max_x)),
+        "z": float(0.5 * (min_z + max_z)),
+        "w": float(width),
+        "h": float(height),
+        "bounds": {
+            "min_x": float(min_x),
+            "max_x": float(max_x),
+            "min_z": float(min_z),
+            "max_z": float(max_z),
+        },
+        "covers_tripanel_logical_vents": int(len(panels) * len(z_centers)),
+        "merged_with_tripod_cutout": True,
+        "tripod_rect_w_mm": float(tripod_w),
+        "tripod_rect_h_mm": float(tripod_h),
+        "margin_mm": float(margin),
+        "pattern_source": vent_pattern.get("source", "unknown"),
+    }
+
+
 def _extract_profile_xy(mesh: trimesh.Trimesh, z_mm: float) -> Polygon:
     sec = mesh.section(plane_origin=[0.0, 0.0, z_mm], plane_normal=[0.0, 0.0, 1.0])
     if sec is None:
@@ -847,6 +919,7 @@ def build_case(p: MakiCaseParams):
 
     resolved_tripod_side = _resolve_tripanel_side(step_features["vents"], p.tripod_expected_side)
     vents_used = []
+    merged_vent_cutouts_used = []
     tripod_used = None
     tripod_detected = step_features["tripod"]
     front_cutouts_applied = []
@@ -1054,17 +1127,35 @@ def build_case(p: MakiCaseParams):
                 )
                 resolved_tripod_side = vent_pattern.get("panel_side", resolved_tripod_side)
                 cut_depth = max(p.vent_cut_depth_mm, p.wall_mm + 3.0)
+                z_centers_shifted = [
+                    min(max(float(z_c) + p.tripanel_vent_z_shift_mm, 1.0), shell_depth - 1.0)
+                    for z_c in vent_pattern["z_centers"]
+                ]
+                merged_cutout = _derive_merged_tripanel_cutout(
+                    vent_pattern,
+                    z_centers_shifted,
+                    tripod_detected,
+                    map_x,
+                    map_z,
+                    sx,
+                    cavity_front_z + p.clearance_mm + p.tripod_center_from_front_mm,
+                    p,
+                )
+                if merged_cutout is not None:
+                    on_neg = merged_cutout["side"] == "neg"
+                    y_face = min_y - 0.2 if on_neg else max_y + 0.2
+                    with BuildSketch(Plane.XZ.offset(y_face)):
+                        with Locations((merged_cutout["x"], merged_cutout["z"])):
+                            Rectangle(merged_cutout["w"], merged_cutout["h"])
+                    extrude(amount=cut_depth if on_neg else -cut_depth, mode=Mode.SUBTRACT)
+                    merged_cutout["y"] = float(y_face)
+                    merged_cutout["cut_depth_mm"] = float(cut_depth)
+                    merged_vent_cutouts_used.append(merged_cutout)
                 for panel_idx, panel in enumerate(vent_pattern["panels"]):
-                    for z_c in vent_pattern["z_centers"]:
-                        z_shifted = min(max(z_c + p.tripanel_vent_z_shift_mm, 1.0), shell_depth - 1.0)
+                    for z_shifted in z_centers_shifted:
                         if panel["axis"] == "y":
                             on_neg = panel["side"] == "neg"
                             y_face = min_y - 0.2 if on_neg else max_y + 0.2
-                            # Oval/slot vent cuts to match device vent style.
-                            with BuildSketch(Plane.XZ.offset(y_face)):
-                                with Locations((panel["x"], z_shifted)):
-                                    SlotOverall(vent_pattern["slot_t"], vent_pattern["slot_z"])
-                            extrude(amount=cut_depth if on_neg else -cut_depth, mode=Mode.SUBTRACT)
                             vents_used.append(
                                 {
                                     "axis": "y",
@@ -1078,15 +1169,14 @@ def build_case(p: MakiCaseParams):
                                     "slot_h": float(vent_pattern["slot_z"]),
                                     "panel_index": panel_idx,
                                     "pattern_source": vent_pattern["source"],
+                                    "vent_family": "tripanel",
+                                    "cutout_kind": "merged_panel",
+                                    "merged_cutout_id": merged_cutout["id"] if merged_cutout else None,
                                 }
                             )
                         else:
                             on_neg = panel["side"] == "neg"
                             x_face = panel["x"] - 0.2 if on_neg else panel["x"] + 0.2
-                            with BuildSketch(Plane.YZ.offset(x_face)):
-                                with Locations((panel["y"], z_shifted)):
-                                    SlotOverall(vent_pattern["slot_t"], vent_pattern["slot_z"])
-                            extrude(amount=cut_depth if on_neg else -cut_depth, mode=Mode.SUBTRACT)
                             vents_used.append(
                                 {
                                     "axis": "x",
@@ -1100,6 +1190,9 @@ def build_case(p: MakiCaseParams):
                                     "slot_h": float(vent_pattern["slot_z"]),
                                     "panel_index": panel_idx,
                                     "pattern_source": vent_pattern["source"],
+                                    "vent_family": "tripanel",
+                                    "cutout_kind": "merged_panel",
+                                    "merged_cutout_id": merged_cutout["id"] if merged_cutout else None,
                                 }
                             )
                 if p.include_side_trio_vents:
@@ -1558,6 +1651,8 @@ def build_case(p: MakiCaseParams):
             "vents_detected": len(step_features["vents"]),
             "vents_applied": len(vents_used),
             "vents_applied_entries": vents_used,
+            "merged_vent_cutouts_applied": len(merged_vent_cutouts_used),
+            "merged_vent_cutouts_applied_entries": merged_vent_cutouts_used,
             "tripanel_vent_layout_enforced": p.enforce_tripanel_vent_layout,
             "tripod_detected": tripod_detected is not None,
             "tripod_source": step_features.get("tripod_source", "unknown"),

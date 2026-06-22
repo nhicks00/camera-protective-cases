@@ -112,7 +112,10 @@
               "slot_w": 10.58250126694423,
               "slot_h": 2.403846822694558,
               "panel_index": 0,
-              "pattern_source": "step_tripanel_cluster"
+              "pattern_source": "step_tripanel_cluster",
+              "vent_family": "tripanel",
+              "cutout_kind": "merged_panel",
+              "merged_cutout_id": "tripod_side_merged_vent_panel"
             },
             {
               "axis": "y",
@@ -125,7 +128,10 @@
               "slot_w": 10.58250126694423,
               "slot_h": 2.403846822694558,
               "panel_index": 0,
-              "pattern_source": "step_tripanel_cluster"
+              "pattern_source": "step_tripanel_cluster",
+              "vent_family": "tripanel",
+              "cutout_kind": "merged_panel",
+              "merged_cutout_id": "tripod_side_merged_vent_panel"
             },
             {
               "axis": "y",
@@ -138,7 +144,10 @@
               "slot_w": 10.58250126694423,
               "slot_h": 2.403846822694558,
               "panel_index": 0,
-              "pattern_source": "step_tripanel_cluster"
+              "pattern_source": "step_tripanel_cluster",
+              "vent_family": "tripanel",
+              "cutout_kind": "merged_panel",
+              "merged_cutout_id": "tripod_side_merged_vent_panel"
             },
             {
               "axis": "y",
@@ -151,7 +160,10 @@
               "slot_w": 10.58250126694423,
               "slot_h": 2.403846822694558,
               "panel_index": 0,
-              "pattern_source": "step_tripanel_cluster"
+              "pattern_source": "step_tripanel_cluster",
+              "vent_family": "tripanel",
+              "cutout_kind": "merged_panel",
+              "merged_cutout_id": "tripod_side_merged_vent_panel"
             },
             {
               "axis": "y",
@@ -164,7 +176,10 @@
               "slot_w": 10.58250126694423,
               "slot_h": 2.403846822694558,
               "panel_index": 0,
-              "pattern_source": "step_tripanel_cluster"
+              "pattern_source": "step_tripanel_cluster",
+              "vent_family": "tripanel",
+              "cutout_kind": "merged_panel",
+              "merged_cutout_id": "tripod_side_merged_vent_panel"
             },
             {
               "axis": "y",
@@ -177,7 +192,10 @@
               "slot_w": 10.58250126694423,
               "slot_h": 2.403846822694558,
               "panel_index": 0,
-              "pattern_source": "step_tripanel_cluster"
+              "pattern_source": "step_tripanel_cluster",
+              "vent_family": "tripanel",
+              "cutout_kind": "merged_panel",
+              "merged_cutout_id": "tripod_side_merged_vent_panel"
             },
             {
               "axis": "y",
@@ -190,7 +208,10 @@
               "slot_w": 10.58250126694423,
               "slot_h": 2.403846822694558,
               "panel_index": 0,
-              "pattern_source": "step_tripanel_cluster"
+              "pattern_source": "step_tripanel_cluster",
+              "vent_family": "tripanel",
+              "cutout_kind": "merged_panel",
+              "merged_cutout_id": "tripod_side_merged_vent_panel"
             },
             {
               "axis": "y",
@@ -203,7 +224,10 @@
               "slot_w": 10.58250126694423,
               "slot_h": 2.403846822694558,
               "panel_index": 0,
-              "pattern_source": "step_tripanel_cluster"
+              "pattern_source": "step_tripanel_cluster",
+              "vent_family": "tripanel",
+              "cutout_kind": "merged_panel",
+              "merged_cutout_id": "tripod_side_merged_vent_panel"
             },
             {
               "axis": "y",
@@ -216,7 +240,10 @@
               "slot_w": 10.58250126694423,
               "slot_h": 2.403846822694558,
               "panel_index": 1,
-              "pattern_source": "step_tripanel_cluster"
+              "pattern_source": "step_tripanel_cluster",
+              "vent_family": "tripanel",
+              "cutout_kind": "merged_panel",
+              "merged_cutout_id": "tripod_side_merged_vent_panel"
             },
             {
               "axis": "y",
@@ -229,7 +256,10 @@
               "slot_w": 10.58250126694423,
               "slot_h": 2.403846822694558,
               "panel_index": 1,
-              "pattern_source": "step_tripanel_cluster"
+              "pattern_source": "step_tripanel_cluster",
+              "vent_family": "tripanel",
+              "cutout_kind": "merged_panel",
+              "merged_cutout_id": "tripod_side_merged_vent_panel"
             },
             {
               "axis": "y",
@@ -242,7 +272,10 @@
               "slot_w": 10.58250126694423,
               "slot_h": 2.403846822694558,
               "panel_index": 1,
-              "pattern_source": "step_tripanel_cluster"
+              "pattern_source": "step_tripanel_cluster",
+              "vent_family": "tripanel",
+              "cutout_kind": "merged_panel",
+              "merged_cutout_id": "tripod_side_merged_vent_panel"
             },
             {
               "axis": "y",
@@ -255,7 +288,10 @@
               "slot_w": 10.58250126694423,
               "slot_h": 2.403846822694558,
               "panel_index": 1,
-              "pattern_source": "step_tripanel_cluster"
+              "pattern_source": "step_tripanel_cluster",
+              "vent_family": "tripanel",
+              "cutout_kind": "merged_panel",
+              "merged_cutout_id": "tripod_side_merged_vent_panel"
             },
             {
               "axis": "y",
@@ -268,7 +304,10 @@
               "slot_w": 10.58250126694423,
               "slot_h": 2.403846822694558,
               "panel_index": 1,
-              "pattern_source": "step_tripanel_cluster"
+              "pattern_source": "step_tripanel_cluster",
+              "vent_family": "tripanel",
+              "cutout_kind": "merged_panel",
+              "merged_cutout_id": "tripod_side_merged_vent_panel"
             },
             {
               "axis": "y",
@@ -281,7 +320,10 @@
               "slot_w": 10.58250126694423,
               "slot_h": 2.403846822694558,
               "panel_index": 1,
-              "pattern_source": "step_tripanel_cluster"
+              "pattern_source": "step_tripanel_cluster",
+              "vent_family": "tripanel",
+              "cutout_kind": "merged_panel",
+              "merged_cutout_id": "tripod_side_merged_vent_panel"
             },
             {
               "axis": "y",
@@ -294,7 +336,10 @@
               "slot_w": 10.58250126694423,
               "slot_h": 2.403846822694558,
               "panel_index": 1,
-              "pattern_source": "step_tripanel_cluster"
+              "pattern_source": "step_tripanel_cluster",
+              "vent_family": "tripanel",
+              "cutout_kind": "merged_panel",
+              "merged_cutout_id": "tripod_side_merged_vent_panel"
             },
             {
               "axis": "y",
@@ -307,7 +352,10 @@
               "slot_w": 10.58250126694423,
               "slot_h": 2.403846822694558,
               "panel_index": 1,
-              "pattern_source": "step_tripanel_cluster"
+              "pattern_source": "step_tripanel_cluster",
+              "vent_family": "tripanel",
+              "cutout_kind": "merged_panel",
+              "merged_cutout_id": "tripod_side_merged_vent_panel"
             },
             {
               "axis": "y",
@@ -320,7 +368,10 @@
               "slot_w": 10.58250126694423,
               "slot_h": 2.403846822694558,
               "panel_index": 2,
-              "pattern_source": "step_tripanel_cluster"
+              "pattern_source": "step_tripanel_cluster",
+              "vent_family": "tripanel",
+              "cutout_kind": "merged_panel",
+              "merged_cutout_id": "tripod_side_merged_vent_panel"
             },
             {
               "axis": "y",
@@ -333,7 +384,10 @@
               "slot_w": 10.58250126694423,
               "slot_h": 2.403846822694558,
               "panel_index": 2,
-              "pattern_source": "step_tripanel_cluster"
+              "pattern_source": "step_tripanel_cluster",
+              "vent_family": "tripanel",
+              "cutout_kind": "merged_panel",
+              "merged_cutout_id": "tripod_side_merged_vent_panel"
             },
             {
               "axis": "y",
@@ -346,7 +400,10 @@
               "slot_w": 10.58250126694423,
               "slot_h": 2.403846822694558,
               "panel_index": 2,
-              "pattern_source": "step_tripanel_cluster"
+              "pattern_source": "step_tripanel_cluster",
+              "vent_family": "tripanel",
+              "cutout_kind": "merged_panel",
+              "merged_cutout_id": "tripod_side_merged_vent_panel"
             },
             {
               "axis": "y",
@@ -359,7 +416,10 @@
               "slot_w": 10.58250126694423,
               "slot_h": 2.403846822694558,
               "panel_index": 2,
-              "pattern_source": "step_tripanel_cluster"
+              "pattern_source": "step_tripanel_cluster",
+              "vent_family": "tripanel",
+              "cutout_kind": "merged_panel",
+              "merged_cutout_id": "tripod_side_merged_vent_panel"
             },
             {
               "axis": "y",
@@ -372,7 +432,10 @@
               "slot_w": 10.58250126694423,
               "slot_h": 2.403846822694558,
               "panel_index": 2,
-              "pattern_source": "step_tripanel_cluster"
+              "pattern_source": "step_tripanel_cluster",
+              "vent_family": "tripanel",
+              "cutout_kind": "merged_panel",
+              "merged_cutout_id": "tripod_side_merged_vent_panel"
             },
             {
               "axis": "y",
@@ -385,7 +448,10 @@
               "slot_w": 10.58250126694423,
               "slot_h": 2.403846822694558,
               "panel_index": 2,
-              "pattern_source": "step_tripanel_cluster"
+              "pattern_source": "step_tripanel_cluster",
+              "vent_family": "tripanel",
+              "cutout_kind": "merged_panel",
+              "merged_cutout_id": "tripod_side_merged_vent_panel"
             },
             {
               "axis": "y",
@@ -398,7 +464,10 @@
               "slot_w": 10.58250126694423,
               "slot_h": 2.403846822694558,
               "panel_index": 2,
-              "pattern_source": "step_tripanel_cluster"
+              "pattern_source": "step_tripanel_cluster",
+              "vent_family": "tripanel",
+              "cutout_kind": "merged_panel",
+              "merged_cutout_id": "tripod_side_merged_vent_panel"
             },
             {
               "axis": "y",
@@ -411,7 +480,10 @@
               "slot_w": 10.58250126694423,
               "slot_h": 2.403846822694558,
               "panel_index": 2,
-              "pattern_source": "step_tripanel_cluster"
+              "pattern_source": "step_tripanel_cluster",
+              "vent_family": "tripanel",
+              "cutout_kind": "merged_panel",
+              "merged_cutout_id": "tripod_side_merged_vent_panel"
             },
             {
               "axis": "x",
@@ -490,6 +562,33 @@
               "slot_h": 3.9952787506158813,
               "pattern_source": "step_side_trio",
               "vent_family": "side_trio"
+            }
+          ],
+          "merged_vent_cutouts_applied": 1,
+          "merged_vent_cutouts_applied_entries": [
+            {
+              "id": "tripod_side_merged_vent_panel",
+              "axis": "y",
+              "side": "neg",
+              "shape": "rect",
+              "x": 0.0,
+              "z": 66.16496349860677,
+              "w": 42.64,
+              "h": 91.05406555231748,
+              "bounds": {
+                "min_x": -21.32,
+                "max_x": 21.32,
+                "min_z": 20.637930722448033,
+                "max_z": 111.69199627476551
+              },
+              "covers_tripanel_logical_vents": 24,
+              "merged_with_tripod_cutout": true,
+              "tripod_rect_w_mm": 40.64,
+              "tripod_rect_h_mm": 50.8,
+              "margin_mm": 1.0,
+              "pattern_source": "step_tripanel_cluster",
+              "y": -33.995000000000005,
+              "cut_depth_mm": 12.0
             }
           ],
           "tripanel_vent_layout_enforced": true,
@@ -657,6 +756,8 @@
           "vents_detected": 30,
           "vents_applied": 0,
           "vents_applied_entries": [],
+          "merged_vent_cutouts_applied": 0,
+          "merged_vent_cutouts_applied_entries": [],
           "tpu_side_vent_cutouts_enabled": false,
           "tripod_detected": true,
           "tripod_source": "cylindrical_face",

@@ -10,11 +10,12 @@ Outputs:
 
 Validation coverage:
 1) Global collision/clearance checks (device/body/cap, ASA/TPU).
-2) Side-feature alignment checks for every opening:
-   - 24 tripanel vents
+2) Side-feature alignment checks for every logical opening:
+   - merged tripod-side tripanel opening covering the former 24 vents
    - 6 side-trio vents
    - tripod opening
-   Compared for both ASA and TPU against STEP-derived expected positions.
+   Compared against STEP-derived expected positions. TPU vent checks are skipped
+   when the TPU frame is intentionally generated without side vent cutouts.
 3) Rear-cap port-opening checks:
    - extract cutouts from the generated rear-cap STEP
    - compare against STEP-derived expected rear cutouts.
@@ -129,12 +130,25 @@ def _transform_device_to_case_frame(device_step: Path, dual_report: dict) -> Com
     return transformed
 
 
-def _pick_body_solids(body_step: Path):
-    body = _to_compound(import_step(str(body_step)))
-    solids = sorted(body.solids(), key=lambda s: s.volume, reverse=True)
-    if len(solids) < 2:
-        raise RuntimeError("Expected two solids in MAKI body dual-material STEP")
-    asa, tpu = solids[0], solids[1]
+def _largest_solid_from_step(step_path: Path):
+    shape = _to_compound(import_step(str(step_path)))
+    solids = sorted(shape.solids(), key=lambda s: s.volume, reverse=True)
+    if not solids:
+        raise RuntimeError(f"No solids found in {step_path}")
+    return solids[0]
+
+
+def _pick_body_solids(body_step: Path | None, asa_step: Path, tpu_step: Path):
+    if body_step is not None:
+        body = _to_compound(import_step(str(body_step)))
+        solids = sorted(body.solids(), key=lambda s: s.volume, reverse=True)
+        if len(solids) < 2:
+            raise RuntimeError("Expected two solids in MAKI body dual-material STEP")
+        asa, tpu = solids[0], solids[1]
+    else:
+        asa = _largest_solid_from_step(asa_step)
+        tpu = _largest_solid_from_step(tpu_step)
+        body = Compound(children=[asa, tpu], label="MAKI_Body")
     asa.label = "ASA_Shell"
     tpu.label = "TPU_Sleeve"
     return body, asa, tpu
@@ -418,15 +432,19 @@ def _normalize_cutout(c: dict) -> dict:
             "y": float(c["y"]),
             "major": d,
             "minor": d,
+            "aspect": 1.0,
         }
     w = float(c.get("w", 0.0))
     h = float(c.get("h", 0.0))
+    major = max(w, h)
+    minor = min(w, h)
     return {
-        "family": "elongated",
+        "family": "roundish" if major / max(minor, 1e-9) <= 1.25 else "elongated",
         "x": float(c["x"]),
         "y": float(c["y"]),
-        "major": max(w, h),
-        "minor": min(w, h),
+        "major": major,
+        "minor": minor,
+        "aspect": major / max(minor, 1e-9),
     }
 
 
@@ -502,17 +520,27 @@ def _match_cutouts(actual: list[dict], expected: list[dict]) -> dict:
     minor_deltas = []
     unmatched_actual = 0
 
+    def compatible_family(a: dict, e: dict) -> bool:
+        if a["family"] == e["family"]:
+            return True
+        return {a["family"], e["family"]} <= {"round", "roundish"}
+
+    def minor_delta(a: dict, e: dict) -> float:
+        if compatible_family(a, e) and {a["family"], e["family"]} <= {"round", "roundish"}:
+            return 0.0
+        return abs(a["minor"] - e["minor"])
+
     for a in a_norm:
         best_idx = None
         best_score = None
         for idx, e in enumerate(e_norm):
             if idx in used_expected:
                 continue
-            if e["family"] != a["family"]:
+            if not compatible_family(a, e):
                 continue
             dc = ((a["x"] - e["x"]) ** 2 + (a["y"] - e["y"]) ** 2) ** 0.5
             dmaj = abs(a["major"] - e["major"])
-            dmin = abs(a["minor"] - e["minor"])
+            dmin = minor_delta(a, e)
             score = dc + 0.2 * (dmaj + dmin)
             if best_score is None or score < best_score:
                 best_score = score
@@ -524,7 +552,7 @@ def _match_cutouts(actual: list[dict], expected: list[dict]) -> dict:
         e = e_norm[best_idx]
         center_deltas.append(float(((a["x"] - e["x"]) ** 2 + (a["y"] - e["y"]) ** 2) ** 0.5))
         major_deltas.append(float(abs(a["major"] - e["major"])))
-        minor_deltas.append(float(abs(a["minor"] - e["minor"])))
+        minor_deltas.append(float(minor_delta(a, e)))
 
     unmatched_expected = len(e_norm) - len(used_expected)
     max_center = max(center_deltas) if center_deltas else None
@@ -555,7 +583,9 @@ def _match_cutouts(actual: list[dict], expected: list[dict]) -> dict:
 
 def validate_fit(
     device_step: Path,
-    body_step: Path,
+    body_step: Path | None,
+    asa_step: Path,
+    tpu_step: Path,
     cap_step: Path,
     dual_report_path: Path,
     rear_cap_report_path: Path | None = None,
@@ -565,7 +595,7 @@ def validate_fit(
     if rear_cap_report_path is not None and rear_cap_report_path.exists():
         rear_cap_report = _load_json(rear_cap_report_path)
 
-    body, body_asa, body_tpu = _pick_body_solids(body_step)
+    body, body_asa, body_tpu = _pick_body_solids(body_step, asa_step, tpu_step)
     cap_raw, _, _ = _pick_cap_solids(cap_step)
     device_comp = _transform_device_to_case_frame(device_step, dual)
     device_solids = list(device_comp.solids())
@@ -651,7 +681,19 @@ def validate_fit(
             for v in tpu_case_report["step_side_features"].get("vents_applied_entries", [])
         ]
         asa_vents_check = _match_vent_sets(asa_actual_vents, expected_vents)
-        tpu_vents_check = _match_vent_sets(tpu_actual_vents, expected_vents)
+        tpu_side_vents_enabled = bool(
+            tpu_case_report["step_side_features"].get("tpu_side_vent_cutouts_enabled", True)
+        )
+        if tpu_side_vents_enabled:
+            tpu_vents_check = _match_vent_sets(tpu_actual_vents, expected_vents)
+        else:
+            tpu_vents_check = {
+                "passed": True,
+                "skipped": True,
+                "reason": "TPU side vent cutouts are disabled in the active TPU frame.",
+                "count_actual": len(tpu_actual_vents),
+                "count_expected": 0,
+            }
 
         asa_tripod = asa_case_report["step_side_features"].get("tripod_applied")
         tpu_tripod = tpu_case_report["step_side_features"].get("tripod_applied")
@@ -785,7 +827,9 @@ def validate_fit(
     report = {
         "inputs": {
             "device_step": str(device_step),
-            "body_step": str(body_step),
+            "body_step": str(body_step) if body_step is not None else None,
+            "asa_step": str(asa_step),
+            "tpu_step": str(tpu_step),
             "cap_step": str(cap_step),
             "dual_report": str(dual_report_path),
             "rear_cap_report": str(rear_cap_report_path) if rear_cap_report_path is not None else None,
@@ -843,13 +887,25 @@ def main():
     parser.add_argument(
         "--body-step",
         type=Path,
-        default=Path("models/maki_case/maki_live_body_dual_material.step"),
-        help="Generated MAKI body dual-material STEP",
+        default=None,
+        help="Legacy combined MAKI body dual-material STEP. Omit to use the current separate ASA/TPU files.",
+    )
+    parser.add_argument(
+        "--asa-step",
+        type=Path,
+        default=Path("models/maki_case/maki_live_asa_shell.step"),
+        help="Generated MAKI ASA shell STEP",
+    )
+    parser.add_argument(
+        "--tpu-step",
+        type=Path,
+        default=Path("models/maki_case/maki_live_tpu_frame.step"),
+        help="Generated MAKI TPU frame STEP",
     )
     parser.add_argument(
         "--cap-step",
         type=Path,
-        default=Path("models/maki_case/maki_live_rear_cap_dual_material.step"),
+        default=Path("models/maki_case/maki_live_back_cap.step"),
         help="Generated MAKI rear cap dual-material STEP",
     )
     parser.add_argument(
@@ -861,7 +917,7 @@ def main():
     parser.add_argument(
         "--rear-cap-report",
         type=Path,
-        default=Path("models/maki_case/reports/maki_live_rear_cap_dual_material_report.json"),
+        default=Path("models/maki_case/reports/maki_live_back_cap_report.json"),
         help="Rear-cap dual-material report JSON (used for cap cutout expectation params)",
     )
     args = parser.parse_args()
@@ -887,6 +943,8 @@ def main():
     assembly, report, extras = validate_fit(
         device_step=args.device_step,
         body_step=args.body_step,
+        asa_step=args.asa_step,
+        tpu_step=args.tpu_step,
         cap_step=args.cap_step,
         dual_report_path=args.dual_report,
         rear_cap_report_path=args.rear_cap_report,

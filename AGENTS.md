@@ -120,17 +120,18 @@ Active hard-shell and TPU workflows:
     - downward axis normal filter,
     - centerline/depth region filters,
     - circular-edge fallback only if cylindrical detection fails.
-  - Vent behavior updated to enforced tripod-side 3-panel layout:
-    - 8 vent slots on center panel
-    - 8 on each adjacent panel
-    - 24 total on that side
-    - plus side vents: 3 on left side + 3 on right side
-    - total applied vents on sleeve: 30
-  - The 24-vent bank is constrained to bottom-connected panels (not direct side walls).
+  - Vent behavior uses a merged tripod-side panel cutout:
+    - the former 24-slot, 3-panel vent bank is now one rectangular ASA cutout,
+    - the merged cutout extends the existing bottom/tripod rectangle upward to cover the old vent-bank area,
+    - current merged cutout: `42.64 x 91.05 mm`, centered on the tripod side, with `1.0 mm` margin,
+    - logical vent coordinates are still emitted for validation; the physical merged cutout is emitted under `step_side_features.merged_vent_cutouts_applied_entries`,
+    - side vents remain 3 on left side + 3 on right side.
+  - The merged former 24-vent bank is constrained to bottom-connected panels (not direct side walls).
   - Side 3+3 vent group is placed on the opposite end from the tripod-side vent bank.
   - Side 3+3 vent dimensions are matched to the main tripanel vent style size.
-  - Main `24` vent bank and side `3+3` vents use rounded-slot cuts on both ASA and TPU (not box/square cuts).
-  - Vent-bank/tripod side relationship is explicit: 24-bank and tripod opening remain on the same expected side (`tripod_expected_side`), with hood on the opposite side.
+  - Side `3+3` vents use rounded-slot cuts; tripod-side ASA vents are covered by the merged rectangular cutout.
+  - If TPU side vent cutouts are explicitly enabled, the TPU generator uses the same merged tripod-side panel behavior.
+  - Vent-bank/tripod side relationship is explicit: merged panel and tripod opening remain on the same expected side (`tripod_expected_side`), with hood on the opposite side.
   - Front camera aperture in integrated front wall is trimmed by `2.0 mm` vs prior extraction.
   - Through-cut depth increased so vents fully penetrate.
   - Vent row clustering now locks to the STEP-derived rear vent bank (8 rows) and ignores front outlier slots.
@@ -152,17 +153,13 @@ Active hard-shell and TPU workflows:
     - Provides distributed holding force for cap retention alongside snap clips.
     - Matching friction ridge on rear cap ASA plug outer surface.
     - Controlled by `friction_ridge_*` params; disable with `--no-friction-ridge`.
-  - Vent pass-through validated (`30/30` total) and vent coordinates emitted in report under `step_side_features.vents_applied_entries`.
+  - Vent pass-through validated at the former 30 logical vent positions; merged physical ASA cutout count is separately reported.
 - ASA caps:
   - Active outputs:
-    - `models/maki_case/maki_live_rear_cap_dual_material.step`
-  - Generator: `scripts/generate_maki_live_rear_cap_dual_material.py`
-  - Dual rear cap contains: `ASA_Back_Cap` + `TPU_Back_Gasket`.
-  - TPU rear-cap body now includes:
-    - full-face pad at plug-tip contact plane,
-    - perimeter edge-wrap collar for back-edge/corner shock isolation,
-    so the camera back contacts TPU instead of bare ASA.
-  - Legacy rear-cap-only generator remains available (`scripts/generate_maki_live_caps.py --profile asa`).
+    - `models/maki_case/maki_live_back_cap.step`
+  - Generator: `scripts/generate_maki_live_caps.py`
+  - Rear cap output is the active ASA back cap.
+  - Legacy dual rear-cap generator remains available as `scripts/generate_maki_live_rear_cap_dual_material.py`.
   - Rear cutouts are extracted from all STEP solids with tiny-hole filtering to preserve port access cutouts over corner fastener holes.
   - Rear cap port cutouts include default oversize clearance (`cutout_extra_mm=1.5`) for cable boot/plastic strain-relief fit.
   - Snap ridge on ASA plug (1.0 mm height, matching body clips); disable with `--no-snap-ridge`.
@@ -177,9 +174,9 @@ Active hard-shell and TPU workflows:
     - Lens opening and other front cutouts extracted from STEP and subtracted through pad.
     - In dual-material assembly, TPU is placed front-flush against ASA inner wall when pad is enabled.
   - Rear remains open for insertion; rear-side TPU contact is handled by rear cap TPU gasket.
-  - Side `3 + 3` vents are rounded-slot cuts to match ASA style.
+  - TPU side vent cuts are default-disabled in the active dual-body output; if enabled, side `3 + 3` vents are rounded-slot cuts and the tripod-side vent bank uses the merged panel behavior.
   - Does not use full TPU face caps.
-  - Vent pass-through validated (`30/30` through by ray-check), with tripod through-cut also validated.
+  - ASA vent pass-through is validated at all former logical vent positions, with tripod through-cut also validated; TPU vent validation is skipped when TPU side vent cutouts are disabled.
   - Vent rows are aligned to the ASA sleeve vent coordinates in device frame.
   - Applied empirical vent alignment deltas from tripod-registered overlay:
     - tripanel bank Z shift: `-4.226 mm`
@@ -200,7 +197,8 @@ Active hard-shell and TPU workflows:
     - Output report: `models/maki_case/reports/maki_live_fit_validation_report.json`
     - Validates real device STEP placement inside body + rear cap and reports pairwise hard-collision volumes.
     - Also validates all major opening geometry against STEP-derived expectations:
-      - 24 tripanel vents + 6 side vents for both ASA and TPU bodies,
+      - merged ASA tripanel panel coverage plus 6 side vents,
+      - TPU vent positions only when TPU side vent cutouts are enabled,
       - tripod opening alignment for both ASA and TPU,
       - rear-cap cutout center/size matching against STEP-derived rear port cutouts.
     - Current baseline result: no hard collisions and all feature checks passing.
@@ -317,7 +315,7 @@ Current preferred workflow:
 User shorthand often means:
 - “Maki sleeve” / “Maki ASA” = `maki_live_asa_shell.step`
 - “TPU sleeve for Maki” / “TPU frame for Maki” = `maki_live_tpu_frame.step` (skeleton frame)
-- “Maki caps” = rear cap by default (`maki_live_rear_cap_dual_material.step`)
+- “Maki caps” = rear cap by default (`maki_live_back_cap.step`)
 - “Mevo rear closure” / “Mevo back cap” = `mevo_start_back_cap.step` (ASA cap + TPU gasket)
 - “Mevo Core case” = 3 files in `models/mevo_core_case/`
 - “Zowietek case” = 3 files in `models/zowietek_case/`
@@ -342,7 +340,7 @@ MAKI:
 python scripts/generate_maki_live_case.py
 python scripts/generate_maki_live_tpu_liner.py
 python scripts/generate_maki_live_dual_material_body.py
-python scripts/generate_maki_live_rear_cap_dual_material.py
+python scripts/generate_maki_live_caps.py
 python scripts/validate_maki_live_fit.py
 ```
 
