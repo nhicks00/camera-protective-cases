@@ -125,11 +125,12 @@ Active hard-shell and TPU workflows:
     - this vent-panel cutout is separate from the existing bottom/tripod rectangle, with a `2.0 mm` shell bridge between them,
     - current vent-panel cutout is centered on the tripod side, aligned to the tripod rectangle width, with `1.0 mm` vent margin,
     - logical vent coordinates are still emitted for validation; the physical vent-panel cutout is emitted under `step_side_features.merged_vent_cutouts_applied_entries`,
-    - side vents remain 3 on left side + 3 on right side.
+    - the other 3 ASA shell sides now each get one large rectangular surface-panel cutout, inset from the front/back and rounded corner zones,
+    - side vent coordinates remain logical validation probes, but the left/right side openings are covered by the large side-panel cutouts.
   - The large former 24-vent bank is constrained to bottom-connected panels (not direct side walls).
   - Side 3+3 vent group is placed on the opposite end from the tripod-side vent bank.
   - Side 3+3 vent dimensions are matched to the main tripanel vent style size.
-  - Side `3+3` vents use rounded-slot cuts; tripod-side ASA vents are covered by the merged rectangular cutout.
+  - Side `3+3` vents are covered by large rectangular side-panel cutouts; tripod-side ASA vents are covered by the separated rectangular cutout.
   - If TPU side vent cutouts are explicitly enabled, the TPU generator uses the same merged tripod-side panel behavior.
   - Vent-bank/tripod side relationship is explicit: merged panel and tripod opening remain on the same expected side (`tripod_expected_side`), with hood on the opposite side.
   - Sunshade side skirt lower corners are rounded by the side-trim profile (`2.0 mm` corner radius), avoiding direct OCC edge fillets on the open skirt edges.
@@ -198,7 +199,7 @@ Active hard-shell and TPU workflows:
     - Output report: `models/maki_case/reports/maki_live_fit_validation_report.json`
     - Validates real device STEP placement inside body + rear cap and reports pairwise hard-collision volumes.
     - Also validates all major opening geometry against STEP-derived expectations:
-      - merged ASA tripanel panel coverage plus 6 side vents,
+      - separated ASA tripanel panel coverage plus large side-panel coverage for the 6 side vent probes,
       - TPU vent positions only when TPU side vent cutouts are enabled,
       - tripod opening alignment for both ASA and TPU,
       - rear-cap cutout center/size matching against STEP-derived rear port cutouts.

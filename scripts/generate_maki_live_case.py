@@ -176,6 +176,10 @@ class MakiCaseParams:
     side_trio_match_tripanel_size: bool = True
     merged_tripanel_cutout_margin_mm: float = 1.0
     merged_tripanel_tripod_bridge_mm: float = 2.0
+    include_large_other_side_cutouts: bool = True
+    large_other_side_cutout_front_margin_mm: float = 8.0
+    large_other_side_cutout_rear_margin_mm: float = 14.0
+    large_other_side_cutout_perimeter_margin_mm: float = 7.0
 
     # Shape processing
     section_z_ratio: float = 0.50
@@ -859,6 +863,97 @@ def _derive_merged_tripanel_cutout(
     }
 
 
+def _derive_large_other_side_cutouts(
+    resolved_tripod_side: str,
+    outer_w: float,
+    outer_h: float,
+    shell_depth: float,
+    cavity_front_z: float,
+    p: MakiCaseParams,
+) -> list[dict]:
+    if not p.include_large_other_side_cutouts:
+        return []
+
+    tripod_side = resolved_tripod_side if resolved_tripod_side in ("neg", "pos") else "neg"
+    opposite_tripod_side = "pos" if tripod_side == "neg" else "neg"
+    perimeter_margin = max(float(p.large_other_side_cutout_perimeter_margin_mm), p.wall_mm + 1.0)
+    min_z = max(
+        cavity_front_z + p.front_wall_mm + float(p.large_other_side_cutout_front_margin_mm),
+        1.0,
+    )
+    max_z = min(shell_depth - float(p.large_other_side_cutout_rear_margin_mm), shell_depth - 1.0)
+    if max_z <= min_z + 1.0:
+        return []
+
+    x_span = max(float(outer_w) - 2.0 * perimeter_margin, 1.0)
+    y_span = max(float(outer_h) - 2.0 * perimeter_margin, 1.0)
+    z_span = max_z - min_z
+    z_center = 0.5 * (min_z + max_z)
+
+    cutouts = [
+        {
+            "id": f"large_surface_panel_y_{opposite_tripod_side}",
+            "axis": "y",
+            "side": opposite_tripod_side,
+            "shape": "rect",
+            "x": 0.0,
+            "z": float(z_center),
+            "w": float(x_span),
+            "h": float(z_span),
+            "bounds": {
+                "min_x": float(-0.5 * x_span),
+                "max_x": float(0.5 * x_span),
+                "min_z": float(min_z),
+                "max_z": float(max_z),
+            },
+        },
+        {
+            "id": "large_surface_panel_x_neg",
+            "axis": "x",
+            "side": "neg",
+            "shape": "rect",
+            "y": 0.0,
+            "z": float(z_center),
+            "w": float(y_span),
+            "h": float(z_span),
+            "bounds": {
+                "min_y": float(-0.5 * y_span),
+                "max_y": float(0.5 * y_span),
+                "min_z": float(min_z),
+                "max_z": float(max_z),
+            },
+        },
+        {
+            "id": "large_surface_panel_x_pos",
+            "axis": "x",
+            "side": "pos",
+            "shape": "rect",
+            "y": 0.0,
+            "z": float(z_center),
+            "w": float(y_span),
+            "h": float(z_span),
+            "bounds": {
+                "min_y": float(-0.5 * y_span),
+                "max_y": float(0.5 * y_span),
+                "min_z": float(min_z),
+                "max_z": float(max_z),
+            },
+        },
+    ]
+    for cutout in cutouts:
+        cutout.update(
+            {
+                "cutout_kind": "large_surface_panel",
+                "preserves_tripod_side": True,
+                "tripod_side": tripod_side,
+                "perimeter_margin_mm": float(perimeter_margin),
+                "front_margin_mm": float(p.large_other_side_cutout_front_margin_mm),
+                "rear_margin_mm": float(p.large_other_side_cutout_rear_margin_mm),
+            }
+        )
+    return cutouts
+
+
 def _extract_profile_xy(mesh: trimesh.Trimesh, z_mm: float) -> Polygon:
     sec = mesh.section(plane_origin=[0.0, 0.0, z_mm], plane_normal=[0.0, 0.0, 1.0])
     if sec is None:
@@ -941,6 +1036,7 @@ def build_case(p: MakiCaseParams):
     resolved_tripod_side = _resolve_tripanel_side(step_features["vents"], p.tripod_expected_side)
     vents_used = []
     merged_vent_cutouts_used = []
+    large_side_cutouts_used = []
     tripod_used = None
     tripod_detected = step_features["tripod"]
     front_cutouts_applied = []
@@ -1172,6 +1268,37 @@ def build_case(p: MakiCaseParams):
                     merged_cutout["y"] = float(y_face)
                     merged_cutout["cut_depth_mm"] = float(cut_depth)
                     merged_vent_cutouts_used.append(merged_cutout)
+
+                for large_cutout in _derive_large_other_side_cutouts(
+                    resolved_tripod_side,
+                    outer_w,
+                    outer_h,
+                    shell_depth,
+                    cavity_front_z,
+                    p,
+                ):
+                    axis = large_cutout["axis"]
+                    side = large_cutout["side"]
+                    on_neg = side == "neg"
+                    if axis == "y":
+                        y_face = min_y - 0.2 if on_neg else max_y + 0.2
+                        with BuildSketch(Plane.XZ.offset(y_face)):
+                            with Locations((large_cutout["x"], large_cutout["z"])):
+                                Rectangle(large_cutout["w"], large_cutout["h"])
+                        extrude(amount=cut_depth if on_neg else -cut_depth, mode=Mode.SUBTRACT)
+                        large_cutout["y"] = float(y_face)
+                    elif axis == "x":
+                        x_face = min_x - 0.2 if on_neg else max_x + 0.2
+                        with BuildSketch(Plane.YZ.offset(x_face)):
+                            with Locations((large_cutout["y"], large_cutout["z"])):
+                                Rectangle(large_cutout["w"], large_cutout["h"])
+                        extrude(amount=cut_depth if on_neg else -cut_depth, mode=Mode.SUBTRACT)
+                        large_cutout["x"] = float(x_face)
+                    else:
+                        continue
+                    large_cutout["cut_depth_mm"] = float(cut_depth)
+                    large_side_cutouts_used.append(large_cutout)
+
                 for panel_idx, panel in enumerate(vent_pattern["panels"]):
                     for z_shifted in z_centers_shifted:
                         if panel["axis"] == "y":
@@ -1252,6 +1379,12 @@ def build_case(p: MakiCaseParams):
                                     "slot_h": float(trio["slot_z"]),
                                     "pattern_source": trio["source"],
                                     "vent_family": "side_trio",
+                                    "cutout_kind": "large_surface_panel"
+                                    if p.include_large_other_side_cutouts
+                                    else "individual_slot",
+                                    "large_cutout_id": f"large_surface_panel_x_{side}"
+                                    if p.include_large_other_side_cutouts
+                                    else None,
                                 }
                             )
             else:
@@ -1684,6 +1817,8 @@ def build_case(p: MakiCaseParams):
             "vents_applied_entries": vents_used,
             "merged_vent_cutouts_applied": len(merged_vent_cutouts_used),
             "merged_vent_cutouts_applied_entries": merged_vent_cutouts_used,
+            "large_side_cutouts_applied": len(large_side_cutouts_used),
+            "large_side_cutouts_applied_entries": large_side_cutouts_used,
             "tripanel_vent_layout_enforced": p.enforce_tripanel_vent_layout,
             "tripod_detected": tripod_detected is not None,
             "tripod_source": step_features.get("tripod_source", "unknown"),

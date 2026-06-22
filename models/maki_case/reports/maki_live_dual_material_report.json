@@ -496,7 +496,9 @@
               "slot_w": 17.35431182651025,
               "slot_h": 3.9952787506158813,
               "pattern_source": "step_side_trio",
-              "vent_family": "side_trio"
+              "vent_family": "side_trio",
+              "cutout_kind": "large_surface_panel",
+              "large_cutout_id": "large_surface_panel_x_neg"
             },
             {
               "axis": "x",
@@ -509,7 +511,9 @@
               "slot_w": 17.35431182651025,
               "slot_h": 3.9952787506158813,
               "pattern_source": "step_side_trio",
-              "vent_family": "side_trio"
+              "vent_family": "side_trio",
+              "cutout_kind": "large_surface_panel",
+              "large_cutout_id": "large_surface_panel_x_neg"
             },
             {
               "axis": "x",
@@ -522,7 +526,9 @@
               "slot_w": 17.35431182651025,
               "slot_h": 3.9952787506158813,
               "pattern_source": "step_side_trio",
-              "vent_family": "side_trio"
+              "vent_family": "side_trio",
+              "cutout_kind": "large_surface_panel",
+              "large_cutout_id": "large_surface_panel_x_neg"
             },
             {
               "axis": "x",
@@ -535,7 +541,9 @@
               "slot_w": 17.35431182651025,
               "slot_h": 3.9952787506158813,
               "pattern_source": "step_side_trio",
-              "vent_family": "side_trio"
+              "vent_family": "side_trio",
+              "cutout_kind": "large_surface_panel",
+              "large_cutout_id": "large_surface_panel_x_pos"
             },
             {
               "axis": "x",
@@ -548,7 +556,9 @@
               "slot_w": 17.35431182651025,
               "slot_h": 3.9952787506158813,
               "pattern_source": "step_side_trio",
-              "vent_family": "side_trio"
+              "vent_family": "side_trio",
+              "cutout_kind": "large_surface_panel",
+              "large_cutout_id": "large_surface_panel_x_pos"
             },
             {
               "axis": "x",
@@ -561,7 +571,9 @@
               "slot_w": 17.35431182651025,
               "slot_h": 3.9952787506158813,
               "pattern_source": "step_side_trio",
-              "vent_family": "side_trio"
+              "vent_family": "side_trio",
+              "cutout_kind": "large_surface_panel",
+              "large_cutout_id": "large_surface_panel_x_pos"
             }
           ],
           "merged_vent_cutouts_applied": 1,
@@ -597,6 +609,81 @@
               "margin_mm": 1.0,
               "pattern_source": "step_tripanel_cluster",
               "y": -33.995000000000005,
+              "cut_depth_mm": 12.0
+            }
+          ],
+          "large_side_cutouts_applied": 3,
+          "large_side_cutouts_applied_entries": [
+            {
+              "id": "large_surface_panel_y_pos",
+              "axis": "y",
+              "side": "pos",
+              "shape": "rect",
+              "x": 0.0,
+              "z": 66.96,
+              "w": 53.59,
+              "h": 105.91999999999999,
+              "bounds": {
+                "min_x": -26.795,
+                "max_x": 26.795,
+                "min_z": 14.0,
+                "max_z": 119.91999999999999
+              },
+              "cutout_kind": "large_surface_panel",
+              "preserves_tripod_side": true,
+              "tripod_side": "neg",
+              "perimeter_margin_mm": 7.0,
+              "front_margin_mm": 8.0,
+              "rear_margin_mm": 14.0,
+              "y": 33.995000000000005,
+              "cut_depth_mm": 12.0
+            },
+            {
+              "id": "large_surface_panel_x_neg",
+              "axis": "x",
+              "side": "neg",
+              "shape": "rect",
+              "y": 0.0,
+              "z": 66.96,
+              "w": 53.59,
+              "h": 105.91999999999999,
+              "bounds": {
+                "min_y": -26.795,
+                "max_y": 26.795,
+                "min_z": 14.0,
+                "max_z": 119.91999999999999
+              },
+              "cutout_kind": "large_surface_panel",
+              "preserves_tripod_side": true,
+              "tripod_side": "neg",
+              "perimeter_margin_mm": 7.0,
+              "front_margin_mm": 8.0,
+              "rear_margin_mm": 14.0,
+              "x": -33.995000000000005,
+              "cut_depth_mm": 12.0
+            },
+            {
+              "id": "large_surface_panel_x_pos",
+              "axis": "x",
+              "side": "pos",
+              "shape": "rect",
+              "y": 0.0,
+              "z": 66.96,
+              "w": 53.59,
+              "h": 105.91999999999999,
+              "bounds": {
+                "min_y": -26.795,
+                "max_y": 26.795,
+                "min_z": 14.0,
+                "max_z": 119.91999999999999
+              },
+              "cutout_kind": "large_surface_panel",
+              "preserves_tripod_side": true,
+              "tripod_side": "neg",
+              "perimeter_margin_mm": 7.0,
+              "front_margin_mm": 8.0,
+              "rear_margin_mm": 14.0,
+              "x": 33.995000000000005,
               "cut_depth_mm": 12.0
             }
           ],
