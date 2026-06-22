@@ -127,7 +127,7 @@ Active hard-shell and TPU workflows:
     - logical vent coordinates are still emitted for validation; the physical vent-panel cutout is emitted under `step_side_features.merged_vent_cutouts_applied_entries`,
     - the other 3 ASA shell sides each get one rectangular surface-panel cutout sized like Mevo Core: cutout width is based on the flat face span, preserving `outer_corner_radius + 2.0 mm` at each rounded corner,
     - sun-shade support ribs are moved into those preserved curved-corner bands with `1.0 mm` clearance from the large surface-panel openings, so the openings can maximize heat vent area without exposing the support ribs,
-    - sun-shade support ribs are intentionally lightened to `2.5 mm`; the top has 2 corner-shifted ribs and each side has only the upper corner rib, with the former middle side rib removed,
+    - sun-shade support ribs are intentionally lightened to `2.5 mm`; the top has 2 diagonal 45-degree corner ribs that overlap both the case corner and shade corner, and each side keeps only the opposite-side skirt rib after removing the visible middle side rib,
     - side vent coordinates remain logical validation probes, but the left/right side openings are covered by the large side-panel cutouts.
   - The large former 24-vent bank is constrained to bottom-connected panels (not direct side walls).
   - Side 3+3 vent group is placed on the opposite end from the tripod-side vent bank.

@@ -637,12 +637,14 @@
               "preserved_corner_band_mm": 24.087156857946702,
               "support_bar_avoidance_enabled": false,
               "support_bar_placement": "curved_corner_bands",
-              "support_group": "top_corner",
-              "support_rib_center_abs_mm": 24.96013725682132,
+              "support_group": "top_diagonal_corner",
+              "support_rib_center_abs_mm": 27.325821533438372,
               "support_bar_width_mm": 2.5,
               "support_bar_clearance_mm": 1.0,
-              "support_bar_inner_edge_abs_mm": 23.71013725682132,
-              "top_support_rib_center_abs_mm": 24.96013725682132,
+              "support_bar_inner_edge_abs_mm": 26.075821533438372,
+              "top_support_shell_contact_x_abs_mm": 27.325821533438372,
+              "top_support_shell_contact_y_abs_mm": 27.32582153343837,
+              "top_support_angle_deg": 45.0,
               "side_support_rib_center_abs_mm": 13.9578431420533,
               "front_margin_mm": 8.0,
               "rear_margin_mm": 14.0,
@@ -672,12 +674,14 @@
               "preserved_corner_band_mm": 24.087156857946702,
               "support_bar_avoidance_enabled": false,
               "support_bar_placement": "curved_corner_bands",
-              "support_group": "side_upper_corner",
+              "support_group": "side_opposite_skirt_corner",
               "support_rib_center_abs_mm": 13.9578431420533,
               "support_bar_width_mm": 2.5,
               "support_bar_clearance_mm": 1.0,
               "support_bar_inner_edge_abs_mm": 12.7078431420533,
-              "top_support_rib_center_abs_mm": 24.96013725682132,
+              "top_support_shell_contact_x_abs_mm": 27.325821533438372,
+              "top_support_shell_contact_y_abs_mm": 27.32582153343837,
+              "top_support_angle_deg": 45.0,
               "side_support_rib_center_abs_mm": 13.9578431420533,
               "front_margin_mm": 8.0,
               "rear_margin_mm": 14.0,
@@ -707,12 +711,14 @@
               "preserved_corner_band_mm": 24.087156857946702,
               "support_bar_avoidance_enabled": false,
               "support_bar_placement": "curved_corner_bands",
-              "support_group": "side_upper_corner",
+              "support_group": "side_opposite_skirt_corner",
               "support_rib_center_abs_mm": 13.9578431420533,
               "support_bar_width_mm": 2.5,
               "support_bar_clearance_mm": 1.0,
               "support_bar_inner_edge_abs_mm": 12.7078431420533,
-              "top_support_rib_center_abs_mm": 24.96013725682132,
+              "top_support_shell_contact_x_abs_mm": 27.325821533438372,
+              "top_support_shell_contact_y_abs_mm": 27.32582153343837,
+              "top_support_angle_deg": 45.0,
               "side_support_rib_center_abs_mm": 13.9578431420533,
               "front_margin_mm": 8.0,
               "rear_margin_mm": 14.0,
@@ -829,12 +835,37 @@
             "support_placement": "curved_corner_bands",
             "corner_support_clearance_mm": 1.0,
             "top_support_count": 2,
-            "top_support_x_center_abs_mm": 24.96013725682132,
-            "top_support_inner_edge_x_abs_mm": 23.71013725682132,
-            "top_support_span_y_mm": 11.341637094793082,
+            "top_support_style": "diagonal_corner_ribs",
+            "top_support_angle_deg": 45.0,
+            "top_support_overlap_mm": 1.25,
+            "top_support_corner_contacts": [
+              {
+                "side": "left",
+                "shell_contact_xy_mm": [
+                  -27.325821533438372,
+                  -27.32582153343837
+                ],
+                "shade_contact_xy_mm": [
+                  -32.982675782930755,
+                  -32.98267578293075
+                ]
+              },
+              {
+                "side": "right",
+                "shell_contact_xy_mm": [
+                  27.325821533438372,
+                  -27.32582153343837
+                ],
+                "shade_contact_xy_mm": [
+                  32.982675782930755,
+                  -32.98267578293075
+                ]
+              }
+            ],
+            "top_support_inner_edge_x_abs_mm": 26.075821533438372,
             "side_support_count": 2,
             "side_support_y_centers_mm": [
-              -13.9578431420533
+              13.9578431420533
             ],
             "side_support_y_center_abs_mm": 13.9578431420533,
             "side_support_inner_edge_y_abs_mm": 12.7078431420533,

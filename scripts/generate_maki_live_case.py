@@ -110,7 +110,7 @@ class MakiCaseParams:
     sun_shade_side_skirt_corner_r_mm: float = 2.0
     sun_shade_side_skirt_inner_edge_fillet_mm: float = 0.75
     sun_shade_corner_support_clearance_mm: float = 1.0
-    sun_shade_top_corner_support_ratio: float = 0.60
+    sun_shade_top_corner_support_angle_deg: float = 45.0
 
     # Snap-latch flexure clips for rear cap retention
     include_snap_clips: bool = False
@@ -239,12 +239,50 @@ def _add_rounded_rectangle(width: float, height: float, radius: float) -> None:
     fillet(vertices(), _safe_fillet_radius(width, height, radius))
 
 
-def _rounded_rect_extent_at_x(x_abs: float, half_w: float, half_h: float, corner_r: float) -> float:
-    flat_half = max(half_w - corner_r, 0.0)
-    if x_abs <= flat_half or corner_r <= 0.0:
-        return half_h
-    dx = min(max(x_abs - flat_half, 0.0), corner_r)
-    return max(half_h - corner_r, 0.0) + math.sqrt(max(corner_r * corner_r - dx * dx, 0.0))
+def _rounded_rect_corner_point(
+    half_w: float,
+    half_h: float,
+    corner_r: float,
+    sx: float,
+    sy: float,
+    angle_deg: float,
+) -> tuple[float, float]:
+    theta = math.radians(max(min(float(angle_deg), 85.0), 5.0))
+    flat_x = max(float(half_w) - float(corner_r), 0.0)
+    flat_y = max(float(half_h) - float(corner_r), 0.0)
+    x = flat_x + float(corner_r) * math.cos(theta)
+    y = flat_y + float(corner_r) * math.sin(theta)
+    return float(sx) * x, float(sy) * y
+
+
+def _xy_box_between_points(
+    start_xy: tuple[float, float],
+    end_xy: tuple[float, float],
+    width: float,
+    depth: float,
+    z_center: float,
+    overlap: float,
+):
+    sx, sy = start_xy
+    ex, ey = end_xy
+    dx = ex - sx
+    dy = ey - sy
+    length = math.hypot(dx, dy)
+    if length <= 0.1:
+        raise ValueError("Cannot build diagonal rib with coincident endpoints")
+    ux = dx / length
+    uy = dy / length
+    sx -= ux * overlap
+    sy -= uy * overlap
+    ex += ux * overlap
+    ey += uy * overlap
+    length += 2.0 * overlap
+    center_x = 0.5 * (sx + ex)
+    center_y = 0.5 * (sy + ey)
+    angle_deg = math.degrees(math.atan2(ey - sy, ex - sx))
+    with BuildPart() as rib_bp:
+        Box(length, width, depth)
+    return rib_bp.part.rotate(Axis.Z, angle_deg).translate((center_x, center_y, z_center))
 
 
 def _sun_shade_corner_support_offsets(
@@ -253,26 +291,27 @@ def _sun_shade_corner_support_offsets(
     outer_corner_r: float,
     post_w: float,
     clearance: float,
-    top_corner_ratio: float,
+    top_corner_angle_deg: float,
 ) -> dict[str, float]:
-    flat_extent_half_x = max(half_outer_w - outer_corner_r, 0.0)
     flat_extent_half_y = max(half_outer_h - outer_corner_r, 0.0)
     side_center_y = min(
         max(flat_extent_half_y + 0.5 * post_w + clearance, 0.0),
         max(half_outer_h - 0.5 * post_w - 0.5, 0.0),
     )
-    top_center_x = min(
-        max(
-            flat_extent_half_x + max(top_corner_ratio * outer_corner_r, 0.5 * post_w + clearance),
-            0.0,
-        ),
-        max(half_outer_w - 0.5 * post_w - 0.5, 0.0),
+    top_shell_x, top_shell_y = _rounded_rect_corner_point(
+        half_outer_w,
+        half_outer_h,
+        outer_corner_r,
+        1.0,
+        -1.0,
+        top_corner_angle_deg,
     )
     return {
         "side_y_center_abs": float(side_center_y),
-        "top_x_center_abs": float(top_center_x),
+        "top_shell_contact_x_abs": float(abs(top_shell_x)),
+        "top_shell_contact_y_abs": float(abs(top_shell_y)),
         "side_inner_edge_abs": float(max(side_center_y - 0.5 * post_w, 0.0)),
-        "top_inner_edge_abs": float(max(top_center_x - 0.5 * post_w, 0.0)),
+        "top_inner_edge_abs": float(max(abs(top_shell_x) - 0.5 * post_w, 0.0)),
     }
 
 
@@ -929,7 +968,7 @@ def _derive_large_other_side_cutouts(
         float(outer_corner_r),
         float(p.sun_shade_post_width_mm),
         support_clearance,
-        float(p.sun_shade_top_corner_support_ratio),
+        float(p.sun_shade_top_corner_support_angle_deg),
     )
     min_z = max(
         cavity_front_z + p.front_wall_mm + float(p.large_other_side_cutout_front_margin_mm),
@@ -996,13 +1035,13 @@ def _derive_large_other_side_cutouts(
     ]
     for cutout in cutouts:
         if cutout.get("axis") == "y":
-            support_center_abs = support_offsets["top_x_center_abs"]
+            support_center_abs = support_offsets["top_shell_contact_x_abs"]
             support_inner_edge_abs = support_offsets["top_inner_edge_abs"]
-            support_group = "top_corner"
+            support_group = "top_diagonal_corner"
         else:
             support_center_abs = support_offsets["side_y_center_abs"]
             support_inner_edge_abs = support_offsets["side_inner_edge_abs"]
-            support_group = "side_upper_corner"
+            support_group = "side_opposite_skirt_corner"
         cutout.update(
             {
                 "cutout_kind": "large_surface_panel",
@@ -1018,7 +1057,9 @@ def _derive_large_other_side_cutouts(
                 "support_bar_width_mm": float(p.sun_shade_post_width_mm),
                 "support_bar_clearance_mm": float(support_clearance),
                 "support_bar_inner_edge_abs_mm": float(support_inner_edge_abs),
-                "top_support_rib_center_abs_mm": float(support_offsets["top_x_center_abs"]),
+                "top_support_shell_contact_x_abs_mm": float(support_offsets["top_shell_contact_x_abs"]),
+                "top_support_shell_contact_y_abs_mm": float(support_offsets["top_shell_contact_y_abs"]),
+                "top_support_angle_deg": float(p.sun_shade_top_corner_support_angle_deg),
                 "side_support_rib_center_abs_mm": float(support_offsets["side_y_center_abs"]),
                 "front_margin_mm": float(p.large_other_side_cutout_front_margin_mm),
                 "rear_margin_mm": float(p.large_other_side_cutout_rear_margin_mm),
@@ -1668,28 +1709,53 @@ def build_case(p: MakiCaseParams):
             outer_corner_r,
             post_w,
             corner_support_clearance,
-            float(p.sun_shade_top_corner_support_ratio),
+            float(p.sun_shade_top_corner_support_angle_deg),
         )
-        rib_x_offset = support_offsets["top_x_center_abs"]
         rib_y_offset = support_offsets["side_y_center_abs"]
         rib_radial = standoff + 2.0
-        top_rib_overlap = 1.0
-        top_shell_extent = _rounded_rect_extent_at_x(rib_x_offset, half_outer_w, half_outer_h, outer_corner_r)
-        top_shade_outer_extent = _rounded_rect_extent_at_x(
-            rib_x_offset,
-            half_shade_outer_w,
-            half_shade_outer_h,
-            shade_outer_r,
-        )
-        top_rib_min_y = -top_shade_outer_extent - top_rib_overlap
-        top_rib_max_y = -top_shell_extent + top_rib_overlap
-        top_rib_span_y = max(top_rib_max_y - top_rib_min_y, rib_radial)
-        top_rib_y_center = 0.5 * (top_rib_min_y + top_rib_max_y)
+        top_rib_overlap = 1.25
+        top_corner_angle = float(p.sun_shade_top_corner_support_angle_deg)
+        top_diagonal_ribs = []
+        top_diagonal_entries = []
+        for sx_sign in (-1.0, 1.0):
+            shell_contact = _rounded_rect_corner_point(
+                half_outer_w,
+                half_outer_h,
+                outer_corner_r,
+                sx_sign,
+                -1.0,
+                top_corner_angle,
+            )
+            shade_contact = _rounded_rect_corner_point(
+                half_shade_outer_w,
+                half_shade_outer_h,
+                shade_outer_r,
+                sx_sign,
+                -1.0,
+                top_corner_angle,
+            )
+            top_diagonal_ribs.append(
+                _xy_box_between_points(
+                    shell_contact,
+                    shade_contact,
+                    post_w,
+                    shell_depth,
+                    shade_mid_z,
+                    top_rib_overlap,
+                )
+            )
+            top_diagonal_entries.append(
+                {
+                    "side": "left" if sx_sign < 0.0 else "right",
+                    "shell_contact_xy_mm": [float(shell_contact[0]), float(shell_contact[1])],
+                    "shade_contact_xy_mm": [float(shade_contact[0]), float(shade_contact[1])],
+                }
+            )
         side_rib_x_centers = {
             "neg": -(half_outer_w + 0.5 * standoff),
             "pos": half_outer_w + 0.5 * standoff,
         }
-        side_rib_y_centers = (-rib_y_offset,)
+        side_rib_y_centers = (rib_y_offset,)
         shade_support_relief_count = 0
 
         side_drop = min(
@@ -1745,9 +1811,6 @@ def build_case(p: MakiCaseParams):
                 for rib_y in side_rib_y_centers:
                     with Locations((-(half_outer_w + 0.5 * standoff), rib_y, shade_mid_z)):
                         Box(rib_radial, post_w, shell_depth)
-                for rx in (-1.0, 1.0):
-                    with Locations((rx * rib_x_offset, top_rib_y_center, shade_mid_z)):
-                        Box(post_w, top_rib_span_y, shell_depth)
 
                 if lower_side_support_h > 0.0:
                     for sx_sign in (-1.0, 1.0):
@@ -1821,6 +1884,8 @@ def build_case(p: MakiCaseParams):
             )
 
             for rib_solid in shade_ribs_bp.part.solids():
+                shade_solid = _largest_solid(shade_solid + rib_solid)
+            for rib_solid in top_diagonal_ribs:
                 shade_solid = _largest_solid(shade_solid + rib_solid)
             sleeve = _largest_solid(sleeve + shade_solid)
 
@@ -1934,9 +1999,11 @@ def build_case(p: MakiCaseParams):
                 "support_placement": "curved_corner_bands",
                 "corner_support_clearance_mm": float(corner_support_clearance),
                 "top_support_count": 2,
-                "top_support_x_center_abs_mm": float(rib_x_offset),
+                "top_support_style": "diagonal_corner_ribs",
+                "top_support_angle_deg": float(top_corner_angle),
+                "top_support_overlap_mm": float(top_rib_overlap),
+                "top_support_corner_contacts": top_diagonal_entries,
                 "top_support_inner_edge_x_abs_mm": float(support_offsets["top_inner_edge_abs"]),
-                "top_support_span_y_mm": float(top_rib_span_y),
                 "side_support_count": int(2 * len(side_rib_y_centers)),
                 "side_support_y_centers_mm": [float(v) for v in side_rib_y_centers],
                 "side_support_y_center_abs_mm": float(rib_y_offset),
