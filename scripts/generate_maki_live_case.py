@@ -1966,6 +1966,13 @@ def build_case(p: MakiCaseParams):
                     max(shade_inner_r - inward, 0.4),
                     0.49 * min(terminal_inner_w, terminal_inner_h),
                 )
+                lip_side_trim_inner_x = max(0.5 * terminal_inner_w - 1.0, 0.0)
+                lip_side_trim_outer_x = half_shade_outer_w + 1.0
+                lip_side_trim_x_depth = max(
+                    lip_side_trim_outer_x - lip_side_trim_inner_x,
+                    shade_w + 2.0,
+                )
+                lip_side_trim_x_center = 0.5 * (lip_side_trim_outer_x + lip_side_trim_inner_x)
                 with BuildPart() as lip_bp:
                     with BuildSketch(Plane.XY.offset(start_z)):
                         Rectangle(shade_outer_w, shade_outer_h)
@@ -1983,6 +1990,21 @@ def build_case(p: MakiCaseParams):
                     loft(mode=Mode.SUBTRACT)
                     with Locations((0.0, half_outer_h + 0.5 * bottom_cut_h, lip_mid_z)):
                         Box(shade_outer_w + 2.0, bottom_cut_h + 0.2, lip_z_len + 2.0, mode=Mode.SUBTRACT)
+                    if side_trim_h > 0.5:
+                        for sx_sign in (-1.0, 1.0):
+                            with Locations(
+                                (
+                                    sx_sign * lip_side_trim_x_center,
+                                    half_shade_outer_h - 0.5 * side_trim_h,
+                                    lip_mid_z,
+                                )
+                            ):
+                                Box(
+                                    lip_side_trim_x_depth,
+                                    side_trim_h + 0.4,
+                                    lip_z_len + 2.0,
+                                    mode=Mode.SUBTRACT,
+                                )
                 return lip_bp.part, terminal_z
 
             if shade_front_overhang > 0.0:
@@ -2155,7 +2177,7 @@ def build_case(p: MakiCaseParams):
                 "support_depth_mm": float(shade_support_z_len),
                 "connector_direct_fuse_count": int(connector_direct_fuse_count),
                 "drip_lip_count": int(drip_lip_count),
-                "drip_lip_style": "cut_back_lofted_inward_shade_extension_mevo_style",
+                "drip_lip_style": "cut_back_lofted_inward_shade_extension_aligned_to_side_skirt",
                 "drip_lip_out_mm": float(drip_lip_out),
                 "drip_lip_drop_mm": float(drip_lip_drop),
                 "drip_lip_inward_mm": float(drip_lip_drop),

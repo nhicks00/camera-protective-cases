@@ -755,7 +755,7 @@
             "support_depth_mm": 133.92,
             "connector_direct_fuse_count": 4,
             "drip_lip_count": 2,
-            "drip_lip_style": "cut_back_lofted_inward_shade_extension_aligned_to_side_skirt",
+            "drip_lip_style": "cut_back_lofted_inward_shade_extension_mevo_style",
             "drip_lip_out_mm": 1.5,
             "drip_lip_drop_mm": 1.5,
             "drip_lip_inward_mm": 1.5,
