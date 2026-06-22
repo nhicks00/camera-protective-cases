@@ -69,7 +69,7 @@ Mevo Core:
 - Thermal cutouts: large rectangular panel notches replacing individual slots:
   - one notch per side face spanning the former 6-row side vent bank,
   - one top notch spanning the former 4-row top vent bank, enlarged and Z-aligned to match the side notches,
-  - cutout width expands across the flat face and stops before corner curvature.
+  - cutout width expands across the flat face while the shade support ribs are pushed into the curved-corner bands with `1.0 mm` clearance from the notch edges.
 
 Zowietek 4K NDI POV Zoom Camera:
 - Device envelope: `68.6 x 60.2 x 51.0 mm` (L x W x H), black aluminum, 225g
@@ -278,7 +278,11 @@ Current preferred workflow:
     - hood base flare is clamped with a `3.0 mm` front-edge inset so the flared root does not hang past the rounded front face perimeter.
   - Single bottom tripod mount, rectangular cutout (63.5 × 50.8 mm)
   - Cold shoe mount (ISO 518) on top rear
-  - External sun shade side skirts stop just past the lower support rib: lower rib center `Y=22.9 mm`, rib outside edge `Y=24.9 mm`, skirt bottom cutoff `Y=28.9 mm` (`4.0 mm` overhang past the rib), with `2.0 mm` outside-edge and `0.75 mm` inner-edge lower fillets.
+  - External sun shade support ribs are pushed into the curved-corner bands so they clear the large vent panels:
+    - side rib centers sit at `|Y|=25.9 mm`, with rib inner edge at `|Y|=23.9 mm`,
+    - top rib centers sit at `|X|=25.9 mm`, with rib inner edge at `|X|=23.9 mm`,
+    - side/top vent panel half-width remains `22.9 mm`, leaving `1.0 mm` clearance to the nearest rib edge.
+  - External sun shade side skirts stop just past the lower support rib: lower rib outside edge `Y=27.9 mm`, skirt bottom cutoff `Y=29.9 mm` (`2.0 mm` overhang past the rib), with `2.0 mm` outside-edge and `0.75 mm` inner-edge lower fillets.
   - Other external right-angle details are softened unless they are cold-shoe boss/post geometry:
     - large side/top thermal notches use `2.0 mm` corner radii,
     - sun-shade support ribs use `1.0 mm` rounded-rectangle cross-section corners.
@@ -288,7 +292,7 @@ Current preferred workflow:
   - Thermal cutouts are large rectangular panel notches, not individual slit vents:
     - one per side face across the former 6-row side vent bank,
     - one top-face notch across the former 4-row top vent bank, enlarged and Z-aligned to match the side notches,
-    - each notch widens across the flat panel and stops before corner curvature.
+    - each notch uses support-aware sizing so it stays clear of the relocated shade support ribs.
   - Dimension-driven workflow (no manufacturer STEP reference)
 - Optional flags: `--no-cold-shoe`, `--no-friction-ridge`, `--no-snap-latches`, `--no-hood`, `--no-vents`, `--no-sun-shade`, `--lens-diameter`, `--hood-depth`
 

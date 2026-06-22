@@ -174,7 +174,8 @@ class MevoCoreParams:
     sun_shade_wall_mm: float = 2.0        # shade panel thickness
     sun_shade_post_width_mm: float = 4.0   # rib width along each face
     sun_shade_rib_corner_r_mm: float = 1.0
-    sun_shade_lower_support_overhang_mm: float = 4.0
+    sun_shade_support_vent_clearance_mm: float = 1.0
+    sun_shade_lower_support_overhang_mm: float = 2.0
     sun_shade_lower_outer_edge_fillet_mm: float = 2.0
     sun_shade_lower_inner_edge_fillet_mm: float = 1.0
 
@@ -295,6 +296,43 @@ def build_asa_shell(p: MevoCoreParams):
             if z < (cs_pad_z - cs_pad_half_l) or z > (cs_pad_z + cs_pad_half_l)
         ]
 
+    corner_margin = max(p.vent_notch_corner_margin_mm, 0.0)
+    base_side_notch_y = max(asa_outer_h - 2.0 * (p.asa_outer_corner_r_mm + corner_margin), 4.0)
+    base_top_notch_x = max(asa_outer_w - 2.0 * (p.asa_outer_corner_r_mm + corner_margin), 4.0)
+
+    # The large panel notches and shade support ribs share the same face span.
+    # Push ribs into the rounded corner bands, then clamp notch width so there
+    # is a measured gap between the cutout edge and each rib inner edge.
+    support_clearance = max(p.sun_shade_support_vent_clearance_mm, 0.0)
+    side_flat_extent_half = max(half_asa_h - p.asa_outer_corner_r_mm, 0.0)
+    top_flat_extent_half = max(half_asa_w - p.asa_outer_corner_r_mm, 0.0)
+    default_side_rib_offset = max(side_flat_extent_half - 2.0, 0.0)
+    default_top_rib_offset = max(top_flat_extent_half - 2.0, 0.0)
+    side_rib_offset = default_side_rib_offset
+    top_rib_offset = default_top_rib_offset
+    if p.include_sun_shade:
+        side_rib_offset = max(
+            default_side_rib_offset,
+            0.5 * base_side_notch_y + 0.5 * p.sun_shade_post_width_mm + support_clearance,
+        )
+        top_rib_offset = max(
+            default_top_rib_offset,
+            0.5 * base_top_notch_x + 0.5 * p.sun_shade_post_width_mm + support_clearance,
+        )
+        side_rib_offset = min(side_rib_offset, max(half_asa_h - 0.5 * p.sun_shade_post_width_mm, 0.0))
+        top_rib_offset = min(top_rib_offset, max(half_asa_w - 0.5 * p.sun_shade_post_width_mm, 0.0))
+
+    side_support_limited_y = max(
+        2.0 * (side_rib_offset - 0.5 * p.sun_shade_post_width_mm - support_clearance),
+        4.0,
+    )
+    top_support_limited_x = max(
+        2.0 * (top_rib_offset - 0.5 * p.sun_shade_post_width_mm - support_clearance),
+        4.0,
+    )
+    side_notch_y = min(base_side_notch_y, side_support_limited_y) if p.include_sun_shade else base_side_notch_y
+    top_notch_x = min(base_top_notch_x, top_support_limited_x) if p.include_sun_shade else base_top_notch_x
+
     # --- ASA Shell ---
     with BuildPart() as asa_bp:
         # Outer solid
@@ -362,8 +400,6 @@ def build_asa_shell(p: MevoCoreParams):
         # Thermal vents
         if p.include_thermal_vents:
             side_cut_depth = max(p.side_vent_cut_depth_mm, p.asa_wall_mm + 1.0)
-            corner_margin = max(p.vent_notch_corner_margin_mm, 0.0)
-            side_notch_y = max(asa_outer_h - 2.0 * (p.asa_outer_corner_r_mm + corner_margin), 4.0)
             cutout_corner_r = max(p.external_cutout_corner_r_mm, 0.0)
             side_notch_match_z = 0.0
             side_notch_match_center_z = None
@@ -389,7 +425,6 @@ def build_asa_shell(p: MevoCoreParams):
                             mode=Mode.SUBTRACT)
 
             top_cut_depth = max(p.top_vent_cut_depth_mm, p.asa_wall_mm + 1.0)
-            top_notch_x = max(asa_outer_w - 2.0 * (p.asa_outer_corner_r_mm + corner_margin), 4.0)
             if top_vent_z_centers:
                 top_notch_z_min = min(top_vent_z_centers) - 0.5 * p.top_vent_pitch_z_mm
                 top_notch_z_max = max(top_vent_z_centers) + 0.5 * p.top_vent_pitch_z_mm
@@ -604,13 +639,9 @@ def build_asa_shell(p: MevoCoreParams):
         shade_z_len = body_depth
         shade_mid_z = shade_z_start + 0.5 * shade_z_len
 
-        # The flat section of each face starts at corner_r from the edge.
-        # Place ribs at the boundaries of the flat sections (near fillets)
-        # so they don't block vents in the middle.
-        flat_extent_half = half_asa_w - p.asa_outer_corner_r_mm  # half-width of flat section
-        # Rib positions along each face (near the fillet transitions)
-        rib_offset = max(flat_extent_half - 2.0, 0.0)  # 2mm inside from fillet start
-        lower_support_y_max = rib_offset + 0.5 * post_w
+        # Rib positions are shared with the support-aware vent notch sizing
+        # above, so ribs stay outside the large side/top panel openings.
+        lower_support_y_max = side_rib_offset + 0.5 * post_w
         shade_bottom_cut_y = lower_support_y_max + max(p.sun_shade_lower_support_overhang_mm, 0.0)
 
         # Rib radial span: must overlap both shell outer wall and shade inner wall
@@ -669,12 +700,12 @@ def build_asa_shell(p: MevoCoreParams):
 
                 # Connecting ribs (2 per face, near fillet transitions)
                 for ry in (-1.0, 1.0):
-                    add_rounded_rib(half_asa_w + 0.5 * standoff, ry * rib_offset, rib_radial, post_w)
+                    add_rounded_rib(half_asa_w + 0.5 * standoff, ry * side_rib_offset, rib_radial, post_w)
                 for ry in (-1.0, 1.0):
-                    add_rounded_rib(-(half_asa_w + 0.5 * standoff), ry * rib_offset, rib_radial, post_w)
+                    add_rounded_rib(-(half_asa_w + 0.5 * standoff), ry * side_rib_offset, rib_radial, post_w)
                 # Y- face ribs (user's top)
                 for rx in (-1.0, 1.0):
-                    add_rounded_rib(rx * rib_offset, -(half_asa_h + 0.5 * standoff), post_w, rib_radial)
+                    add_rounded_rib(rx * top_rib_offset, -(half_asa_h + 0.5 * standoff), post_w, rib_radial)
 
                 # Cold shoe solid bosses on shade outer surfaces (no T-slot
                 # cuts yet — cuts would break the overlap and _largest_solid
@@ -805,7 +836,12 @@ def build_asa_shell(p: MevoCoreParams):
                 ),
                 "rib_count": 6,
                 "coverage": "top + left + right (open bottom)",
-                "lower_support_center_y_mm": float(rib_offset),
+                "support_vent_clearance_mm": float(support_clearance),
+                "side_support_center_y_abs_mm": float(side_rib_offset),
+                "side_support_inner_edge_y_abs_mm": float(side_rib_offset - 0.5 * post_w),
+                "top_support_center_x_abs_mm": float(top_rib_offset),
+                "top_support_inner_edge_x_abs_mm": float(top_rib_offset - 0.5 * post_w),
+                "lower_support_center_y_mm": float(side_rib_offset),
                 "lower_support_outer_y_mm": float(lower_support_y_max),
                 "lower_support_overhang_mm": float(max(p.sun_shade_lower_support_overhang_mm, 0.0)),
                 "bottom_cut_y_mm": float(shade_bottom_cut_y),
@@ -888,9 +924,6 @@ def build_asa_shell(p: MevoCoreParams):
 
     asa_shell.label = "ASA_Shell"
 
-    corner_margin = max(p.vent_notch_corner_margin_mm, 0.0)
-    side_notch_y = max(asa_outer_h - 2.0 * (p.asa_outer_corner_r_mm + corner_margin), 4.0)
-    top_notch_x = max(asa_outer_w - 2.0 * (p.asa_outer_corner_r_mm + corner_margin), 4.0)
     side_notch_info = {"enabled": False}
     side_notch_report_z = 0.0
     side_notch_report_center_z = None
@@ -904,6 +937,8 @@ def build_asa_shell(p: MevoCoreParams):
             "type": "single_rectangular_panel_cutout_per_side",
             "source_rows_per_side": len(side_slot_z_centers),
             "width_y_mm": float(side_notch_y),
+            "base_width_y_mm": float(base_side_notch_y),
+            "support_limited_width_y_mm": float(side_support_limited_y),
             "height_z_mm": float(side_notch_report_z),
             "center_y_mm": float(p.side_vent_center_y_mm),
             "center_z_mm": float(side_notch_report_center_z),
@@ -914,6 +949,9 @@ def build_asa_shell(p: MevoCoreParams):
                 )
             ),
             "corner_margin_mm": float(corner_margin),
+            "support_clearance_mm": float(support_clearance),
+            "support_aware_sizing": bool(p.include_sun_shade),
+            "side_support_inner_edge_y_abs_mm": float(side_rib_offset - 0.5 * p.sun_shade_post_width_mm),
         }
     top_notch_info = {"enabled": False}
     if p.include_thermal_vents and top_vent_z_centers:
@@ -926,6 +964,8 @@ def build_asa_shell(p: MevoCoreParams):
             "type": "single_rectangular_panel_cutout",
             "source_rows": len(top_vent_z_centers),
             "width_x_mm": float(top_notch_x),
+            "base_width_x_mm": float(base_top_notch_x),
+            "support_limited_width_x_mm": float(top_support_limited_x),
             "height_z_mm": float(top_notch_z),
             "raw_source_height_z_mm": float(raw_top_notch_z),
             "matched_side_notch_height": bool(top_notch_z > raw_top_notch_z),
@@ -943,6 +983,9 @@ def build_asa_shell(p: MevoCoreParams):
                 )
             ),
             "corner_margin_mm": float(corner_margin),
+            "support_clearance_mm": float(support_clearance),
+            "support_aware_sizing": bool(p.include_sun_shade),
+            "top_support_inner_edge_x_abs_mm": float(top_rib_offset - 0.5 * p.sun_shade_post_width_mm),
         }
 
     report = {
