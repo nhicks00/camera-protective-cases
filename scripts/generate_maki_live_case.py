@@ -116,8 +116,9 @@ class MakiCaseParams:
     sun_shade_rear_overhang_mm: float = 6.35
     sun_shade_end_edge_fillet_mm: float = 1.0
     sun_shade_drip_lip_out_mm: float = 1.5
-    sun_shade_drip_lip_drop_mm: float = 1.5
+    sun_shade_drip_lip_drop_mm: float = 0.75
     sun_shade_drip_lip_overlap_mm: float = 0.15
+    sun_shade_support_end_inset_mm: float = 2.0
 
     # Snap-latch flexure clips for rear cap retention
     include_snap_clips: bool = False
@@ -1727,8 +1728,12 @@ def build_case(p: MakiCaseParams):
         shade_z_end = shell_depth + shade_rear_overhang
         shade_z_len = shade_z_end - shade_z_start
         shade_mid_z = shade_z_start + 0.5 * shade_z_len
-        shade_support_z_start = 0.0
-        shade_support_z_end = shell_depth
+        shade_support_end_inset = min(
+            max(float(p.sun_shade_support_end_inset_mm), 0.0),
+            max(0.5 * shell_depth - 1.0, 0.0),
+        )
+        shade_support_z_start = shade_support_end_inset
+        shade_support_z_end = shell_depth - shade_support_end_inset
         shade_support_z_len = shade_support_z_end - shade_support_z_start
         shade_support_mid_z = shade_support_z_start + 0.5 * shade_support_z_len
         drip_lip_out = max(float(p.sun_shade_drip_lip_out_mm), 0.0)
@@ -2162,7 +2167,7 @@ def build_case(p: MakiCaseParams):
                 "support_depth_mm": float(shade_support_z_len),
                 "connector_direct_fuse_count": int(connector_direct_fuse_count),
                 "drip_lip_count": int(drip_lip_count),
-                "drip_lip_style": "cut_back_lofted_inward_shade_extension_side_skirt_matched_trim",
+                "drip_lip_style": "low_angle_cut_back_lofted_inward_shade_extension_side_skirt_matched_trim",
                 "drip_lip_out_mm": float(drip_lip_out),
                 "drip_lip_drop_mm": float(drip_lip_drop),
                 "drip_lip_inward_mm": float(drip_lip_drop),
@@ -2173,6 +2178,7 @@ def build_case(p: MakiCaseParams):
                 "vent_relief_mm": float(vent_relief_margin),
                 "vent_relief_count": int(shade_support_relief_count),
                 "support_placement": "curved_corner_bands_body_depth_only",
+                "support_end_inset_mm": float(shade_support_end_inset),
                 "corner_support_clearance_mm": float(corner_support_clearance),
                 "top_support_count": 2,
                 "top_support_style": "diagonal_corner_ribs",
