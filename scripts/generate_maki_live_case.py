@@ -180,7 +180,7 @@ class MakiCaseParams:
     include_large_other_side_cutouts: bool = True
     large_other_side_cutout_front_margin_mm: float = 8.0
     large_other_side_cutout_rear_margin_mm: float = 14.0
-    large_other_side_cutout_perimeter_margin_mm: float = 7.0
+    large_other_side_cutout_corner_margin_mm: float = 2.0
 
     # Shape processing
     section_z_ratio: float = 0.50
@@ -868,6 +868,7 @@ def _derive_large_other_side_cutouts(
     resolved_tripod_side: str,
     outer_w: float,
     outer_h: float,
+    outer_corner_r: float,
     shell_depth: float,
     cavity_front_z: float,
     p: MakiCaseParams,
@@ -877,7 +878,11 @@ def _derive_large_other_side_cutouts(
 
     tripod_side = resolved_tripod_side if resolved_tripod_side in ("neg", "pos") else "neg"
     opposite_tripod_side = "pos" if tripod_side == "neg" else "neg"
-    perimeter_margin = max(float(p.large_other_side_cutout_perimeter_margin_mm), p.wall_mm + 1.0)
+    corner_margin = max(float(p.large_other_side_cutout_corner_margin_mm), 0.0)
+    preserved_corner_band = min(
+        max(float(outer_corner_r) + corner_margin, p.wall_mm + 1.0),
+        0.5 * min(float(outer_w), float(outer_h)) - 2.0,
+    )
     min_z = max(
         cavity_front_z + p.front_wall_mm + float(p.large_other_side_cutout_front_margin_mm),
         1.0,
@@ -886,8 +891,8 @@ def _derive_large_other_side_cutouts(
     if max_z <= min_z + 1.0:
         return []
 
-    x_span = max(float(outer_w) - 2.0 * perimeter_margin, 1.0)
-    y_span = max(float(outer_h) - 2.0 * perimeter_margin, 1.0)
+    x_span = max(float(outer_w) - 2.0 * preserved_corner_band, 1.0)
+    y_span = max(float(outer_h) - 2.0 * preserved_corner_band, 1.0)
     z_span = max_z - min_z
     z_center = 0.5 * (min_z + max_z)
 
@@ -947,7 +952,9 @@ def _derive_large_other_side_cutouts(
                 "cutout_kind": "large_surface_panel",
                 "preserves_tripod_side": True,
                 "tripod_side": tripod_side,
-                "perimeter_margin_mm": float(perimeter_margin),
+                "preserved_corner_radius_mm": float(outer_corner_r),
+                "corner_margin_mm": float(corner_margin),
+                "preserved_corner_band_mm": float(preserved_corner_band),
                 "front_margin_mm": float(p.large_other_side_cutout_front_margin_mm),
                 "rear_margin_mm": float(p.large_other_side_cutout_rear_margin_mm),
             }
@@ -1274,6 +1281,7 @@ def build_case(p: MakiCaseParams):
                     resolved_tripod_side,
                     outer_w,
                     outer_h,
+                    outer_corner_r,
                     shell_depth,
                     cavity_front_z,
                     p,
