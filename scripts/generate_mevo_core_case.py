@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
-"""Generate a Mevo Core protective case: 3 separate STEP files.
+"""Generate a Mevo Core protective case: ASA shell + back cap.
 
 Primary outputs:
 - models/mevo_core_case/mevo_core_asa_shell.step
-- models/mevo_core_case/mevo_core_tpu_frame.step
 - models/mevo_core_case/mevo_core_back_cap.step
 - models/mevo_core_case/reports/mevo_core_report.json
 
 Design notes:
 - Square cross-section (90 x 90 mm) with rounded corners
 - Full circular tube lens hood (2.75" diameter, 2.5" depth)
-- Skeleton TPU frame (corner bumpers + edge rails)
 - Back cap with port cutout (bottom) and power button cutout (top center)
 - Single bottom tripod mount (1/4"-20 UNC), same rect as Mevo Start
+- Large side/top panel cutouts instead of individual vent slots
 - Cold shoe mount (ISO 518) on top rear
-- 3 separate output files: ASA shell, TPU frame, back cap
+- 2 separate output files: ASA shell, back cap
 """
 
 from __future__ import annotations
@@ -32,7 +31,6 @@ from build123d import (
     BuildPart,
     BuildSketch,
     Circle,
-    Compound,
     Cone,
     Cylinder,
     Location,
@@ -40,14 +38,10 @@ from build123d import (
     Mode,
     Plane,
     Rectangle,
-    SlotOverall,
     Vector,
-    add,
-    chamfer,
     export_step,
     extrude,
     fillet,
-    loft,
     vertices,
 )
 
@@ -59,21 +53,14 @@ class MevoCoreParams:
     device_nominal_h_mm: float = 90.0
     device_nominal_l_mm: float = 69.85  # 2.75 inches
 
-    # TPU clearance and wall
+    # Direct ASA fit. No TPU liner/frame is generated for Mevo Core.
+    asa_clearance_mm: float = 0.6       # per side/end for direct ASA print fit
     extra_length_mm: float = 1.5        # extra axial room for easy insertion
-    tpu_clearance_mm: float = 0.15      # per side
-    tpu_wall_mm: float = 1.8
-
-    # ASA shell
     asa_wall_mm: float = 3.3
-    interface_gap_mm: float = 0.25       # 0.25 per side = 0.5 mm total gap
-    bond_interface_tolerance_mm: float = 0.02
 
     # Corner fillets (rounded-rectangle profile — aggressive rounding)
     asa_outer_corner_r_mm: float = 24.0
     asa_inner_corner_r_mm: float = 22.0
-    tpu_outer_corner_r_mm: float = 22.0
-    tpu_inner_corner_r_mm: float = 20.0
 
     # Front wall / sun hood
     sun_hood_depth_mm: float = 3.0
@@ -95,15 +82,6 @@ class MevoCoreParams:
     lens_hood_access_height_mm: float = 50.8  # 2.0" tall opening on each side
     lens_hood_access_radial_depth_mm: float = 25.4  # 1.0" radial bite through hood wall
 
-    # Skeleton TPU frame
-    tpu_corner_bumper_w_mm: float = 12.0
-    tpu_edge_rail_w_mm: float = 4.0
-    tpu_front_edge_wrap_depth_mm: float = 5.0
-    tpu_front_edge_wrap_radial_mm: float = 4.0
-    include_tpu_front_edge_wrap: bool = True
-    tpu_front_gusset_r_mm: float = 4.0    # concave fillet at bumper-to-front junction
-    tpu_front_dome_mm: float = 1.5        # convex dome height on front face
-
     # Bottom tripod cutout (same as MAKI)
     tripod_rect_w_mm: float = 63.5      # 2.5 inches
     tripod_rect_l_mm: float = 50.8      # 2.0 inches (MAKI long dimension, along Z)
@@ -112,17 +90,16 @@ class MevoCoreParams:
 
     # Thermal vents
     include_thermal_vents: bool = True
-    side_vent_count: int = 7              # non-cold-shoe side gets all 7; cold-shoe side filtered
-    side_vent_slot_h_mm: float = 26.0     # +30% longer
-    side_vent_slot_w_mm: float = 3.0
+    side_vent_count: int = 7              # front-most is dropped, leaving 6 side cutout rows
+    side_vent_slot_w_mm: float = 3.0      # legacy source slot width for bank extents
     side_vent_pitch_z_mm: float = 9.0
     side_vent_center_y_mm: float = 0.0
     side_vent_cut_depth_mm: float = 6.0
-    top_vent_count: int = 7               # cold-shoe filter removes 2 rear slots; net +1 vs old 5
-    top_vent_slot_width_mm: float = 31.0  # +30% longer
-    top_vent_slot_height_mm: float = 3.5
+    top_vent_count: int = 6               # cold-shoe filter removes 2 rear slots; net 4 top source rows
+    top_vent_slot_width_mm: float = 31.0  # legacy source slot width for margin calculation
     top_vent_pitch_z_mm: float = 9.0
     top_vent_cut_depth_mm: float = 6.0
+    vent_notch_corner_margin_mm: float = 2.0
 
     # Cold shoe mount (ISO 518)
     include_cold_shoe: bool = True
@@ -205,15 +182,6 @@ class MevoCoreParams:
     sun_shade_wall_mm: float = 2.0        # shade panel thickness
     sun_shade_post_width_mm: float = 4.0   # rib width along each face
 
-    # Rear TPU corner bumpers
-    include_rear_tpu_bumpers: bool = True
-    tpu_rear_bumper_depth_mm: float = 3.0    # how far bumper wraps around rear corners
-    tpu_rear_bumper_wall_mm: float = 1.8     # wall thickness of rear bumper (same as TPU wall)
-
-    # Rear TPU relief
-    tpu_rear_cap_relief_depth_mm: float = 5.4
-    tpu_rear_cap_relief_radial_mm: float = 0.3
-
 
 def _largest_solid(shape):
     solids = shape.solids() if hasattr(shape, "solids") else []
@@ -241,32 +209,23 @@ def _archive_existing(paths: list[Path], out_dir: Path) -> list[tuple[str, str]]
 
 
 def _derived(p: MevoCoreParams) -> dict:
-    tpu_inner_w = p.device_nominal_w_mm + 2.0 * p.tpu_clearance_mm
-    tpu_inner_h = p.device_nominal_h_mm + 2.0 * p.tpu_clearance_mm
-    tpu_inner_depth = p.device_nominal_l_mm + 2.0 * p.tpu_clearance_mm + p.extra_length_mm
-
-    tpu_outer_w = tpu_inner_w + 2.0 * p.tpu_wall_mm
-    tpu_outer_h = tpu_inner_h + 2.0 * p.tpu_wall_mm
-
-    asa_inner_w = tpu_outer_w + 2.0 * p.interface_gap_mm
-    asa_inner_h = tpu_outer_h + 2.0 * p.interface_gap_mm
+    asa_inner_w = p.device_nominal_w_mm + 2.0 * p.asa_clearance_mm
+    asa_inner_h = p.device_nominal_h_mm + 2.0 * p.asa_clearance_mm
     asa_outer_w = asa_inner_w + 2.0 * p.asa_wall_mm
     asa_outer_h = asa_inner_h + 2.0 * p.asa_wall_mm
 
     cavity_start_z = p.sun_hood_depth_mm
     # Body depth must accommodate: front wall + camera space + cap plug intrusion
-    asa_cavity_depth = tpu_inner_depth + p.back_cap_lip_depth_mm
+    camera_space_depth = p.device_nominal_l_mm + 2.0 * p.asa_clearance_mm + p.extra_length_mm
+    asa_cavity_depth = camera_space_depth + p.back_cap_lip_depth_mm
     body_depth = p.sun_hood_depth_mm + asa_cavity_depth
 
     lip_tip_w = max(asa_inner_w - p.back_cap_lip_undersize_total_mm, 2.0)
     lip_tip_h = max(asa_inner_h - p.back_cap_lip_undersize_total_mm, 2.0)
 
     return {
-        "tpu_inner_w_mm": tpu_inner_w,
-        "tpu_inner_h_mm": tpu_inner_h,
-        "tpu_inner_depth_mm": tpu_inner_depth,
-        "tpu_outer_w_mm": tpu_outer_w,
-        "tpu_outer_h_mm": tpu_outer_h,
+        "asa_clearance_each_side_mm": p.asa_clearance_mm,
+        "camera_space_depth_mm": camera_space_depth,
         "asa_inner_w_mm": asa_inner_w,
         "asa_inner_h_mm": asa_inner_h,
         "asa_outer_w_mm": asa_outer_w,
@@ -332,16 +291,11 @@ def build_asa_shell(p: MevoCoreParams):
             ]
 
     # Remove vents in cold shoe zones (top + left side)
-    left_side_slot_z_centers = list(side_slot_z_centers)
     if p.include_cold_shoe:
         cs_pad_z = body_depth - p.cold_shoe_pad_z_from_rear_mm
         cs_pad_half_l = 0.5 * p.cold_shoe_pad_length_mm
         top_vent_z_centers = [
             z for z in top_vent_z_centers
-            if z < (cs_pad_z - cs_pad_half_l) or z > (cs_pad_z + cs_pad_half_l)
-        ]
-        left_side_slot_z_centers = [
-            z for z in side_slot_z_centers
             if z < (cs_pad_z - cs_pad_half_l) or z > (cs_pad_z + cs_pad_half_l)
         ]
 
@@ -411,24 +365,33 @@ def build_asa_shell(p: MevoCoreParams):
 
         # Thermal vents
         if p.include_thermal_vents:
-            side_cut_depth = max(p.side_vent_cut_depth_mm, p.asa_wall_mm + p.tpu_wall_mm + 1.0)
-            for side in ("neg", "pos"):
-                x_face = -half_asa_w - 0.2 if side == "neg" else half_asa_w + 0.2
-                # Both sides get full vent set (cold shoes moved to shade hood)
-                z_centers = side_slot_z_centers
-                for z_c in z_centers:
+            side_cut_depth = max(p.side_vent_cut_depth_mm, p.asa_wall_mm + 1.0)
+            corner_margin = max(p.vent_notch_corner_margin_mm, 0.0)
+            side_notch_y = max(asa_outer_h - 2.0 * (p.asa_outer_corner_r_mm + corner_margin), 4.0)
+            if side_slot_z_centers:
+                side_notch_z_min = min(side_slot_z_centers) - 0.5 * p.side_vent_pitch_z_mm
+                side_notch_z_max = max(side_slot_z_centers) + 0.5 * p.side_vent_pitch_z_mm
+                side_notch_z = max(side_notch_z_max - side_notch_z_min, 4.0)
+                side_notch_center_z = 0.5 * (side_notch_z_min + side_notch_z_max)
+                for side in ("neg", "pos"):
+                    x_face = -half_asa_w - 0.2 if side == "neg" else half_asa_w + 0.2
                     with BuildSketch(Plane.YZ.offset(x_face)):
-                        with Locations((p.side_vent_center_y_mm, z_c)):
-                            SlotOverall(p.side_vent_slot_h_mm, p.side_vent_slot_w_mm)
+                        with Locations((p.side_vent_center_y_mm, side_notch_center_z)):
+                            Rectangle(side_notch_y, side_notch_z)
                     extrude(amount=side_cut_depth if side == "neg" else -side_cut_depth,
                             mode=Mode.SUBTRACT)
 
-            top_cut_depth = max(p.top_vent_cut_depth_mm, p.asa_wall_mm + p.tpu_wall_mm + 1.0)
-            with BuildSketch(Plane.XZ.offset(half_asa_h + 0.2)):
-                for z_c in top_vent_z_centers:
-                    with Locations((0.0, z_c)):
-                        SlotOverall(p.top_vent_slot_width_mm, p.top_vent_slot_height_mm)
-            extrude(amount=-top_cut_depth, mode=Mode.SUBTRACT)
+            top_cut_depth = max(p.top_vent_cut_depth_mm, p.asa_wall_mm + 1.0)
+            top_notch_x = max(asa_outer_w - 2.0 * (p.asa_outer_corner_r_mm + corner_margin), 4.0)
+            if top_vent_z_centers:
+                top_notch_z_min = min(top_vent_z_centers) - 0.5 * p.top_vent_pitch_z_mm
+                top_notch_z_max = max(top_vent_z_centers) + 0.5 * p.top_vent_pitch_z_mm
+                top_notch_z = max(top_notch_z_max - top_notch_z_min, 4.0)
+                top_notch_center_z = 0.5 * (top_notch_z_min + top_notch_z_max)
+                with BuildSketch(Plane.XZ.offset(half_asa_h + 0.2)):
+                    with Locations((0.0, top_notch_center_z)):
+                        Rectangle(top_notch_x, top_notch_z)
+                extrude(amount=-top_cut_depth, mode=Mode.SUBTRACT)
 
         # Bottom tripod cutout (rounded corners for fluid transitions)
         tripod_cut_depth = half_asa_h
@@ -760,6 +723,38 @@ def build_asa_shell(p: MevoCoreParams):
 
     asa_shell.label = "ASA_Shell"
 
+    corner_margin = max(p.vent_notch_corner_margin_mm, 0.0)
+    side_notch_y = max(asa_outer_h - 2.0 * (p.asa_outer_corner_r_mm + corner_margin), 4.0)
+    top_notch_x = max(asa_outer_w - 2.0 * (p.asa_outer_corner_r_mm + corner_margin), 4.0)
+    side_notch_info = {"enabled": False}
+    if p.include_thermal_vents and side_slot_z_centers:
+        side_z_min = min(side_slot_z_centers) - 0.5 * p.side_vent_pitch_z_mm
+        side_z_max = max(side_slot_z_centers) + 0.5 * p.side_vent_pitch_z_mm
+        side_notch_info = {
+            "enabled": True,
+            "type": "single_rectangular_panel_cutout_per_side",
+            "source_rows_per_side": len(side_slot_z_centers),
+            "width_y_mm": float(side_notch_y),
+            "height_z_mm": float(max(side_z_max - side_z_min, 4.0)),
+            "center_y_mm": float(p.side_vent_center_y_mm),
+            "center_z_mm": float(0.5 * (side_z_min + side_z_max)),
+            "corner_margin_mm": float(corner_margin),
+        }
+    top_notch_info = {"enabled": False}
+    if p.include_thermal_vents and top_vent_z_centers:
+        top_z_min = min(top_vent_z_centers) - 0.5 * p.top_vent_pitch_z_mm
+        top_z_max = max(top_vent_z_centers) + 0.5 * p.top_vent_pitch_z_mm
+        top_notch_info = {
+            "enabled": True,
+            "type": "single_rectangular_panel_cutout",
+            "source_rows": len(top_vent_z_centers),
+            "width_x_mm": float(top_notch_x),
+            "height_z_mm": float(max(top_z_max - top_z_min, 4.0)),
+            "center_x_mm": 0.0,
+            "center_z_mm": float(0.5 * (top_z_min + top_z_max)),
+            "corner_margin_mm": float(corner_margin),
+        }
+
     report = {
         "derived_mm": d,
         "features_mm": {
@@ -787,14 +782,9 @@ def build_asa_shell(p: MevoCoreParams):
                 "center_from_front_mm": float(p.tripod_center_from_front_mm),
             },
             "thermal_vents": {
-                "side_slots": {
-                    "count_per_side": int(side_slot_count),
-                    "z_centers": [float(z) for z in side_slot_z_centers],
-                },
-                "top_slots": {
-                    "count": len(top_vent_z_centers),
-                    "z_centers": [float(z) for z in top_vent_z_centers],
-                },
+                "mode": "large_panel_notches",
+                "side_notches": side_notch_info,
+                "top_notch": top_notch_info,
             },
             "cold_shoe": cold_shoe_info if cold_shoe_info else {"enabled": False},
             "friction_ridge": friction_ridge_info if friction_ridge_info else {"enabled": False},
@@ -803,214 +793,7 @@ def build_asa_shell(p: MevoCoreParams):
         },
     }
 
-    return asa_shell, report, side_slot_z_centers, top_vent_z_centers, left_side_slot_z_centers
-
-
-def build_tpu_frame(p: MevoCoreParams, side_slot_z_centers, top_vent_z_centers, left_side_slot_z_centers):
-    d = _derived(p)
-
-    tpu_outer_w = d["tpu_outer_w_mm"]
-    tpu_outer_h = d["tpu_outer_h_mm"]
-    tpu_inner_w = d["tpu_inner_w_mm"]
-    tpu_inner_h = d["tpu_inner_h_mm"]
-
-    half_tpu_w = 0.5 * tpu_outer_w
-    half_tpu_h = 0.5 * tpu_outer_h
-
-    cavity_start_z = d["cavity_start_z_mm"]
-    cavity_depth = d["tpu_inner_depth_mm"]
-
-    wrap_depth = max(min(p.tpu_front_edge_wrap_depth_mm, 0.45 * cavity_depth), 0.6) if p.include_tpu_front_edge_wrap else 0.0
-    wrap_radial = max(p.tpu_front_edge_wrap_radial_mm, 0.6) if p.include_tpu_front_edge_wrap else 0.0
-
-    wrap_inner_w = max(tpu_inner_w - 2.0 * wrap_radial, 2.0) if wrap_radial > 0.0 else tpu_inner_w
-    wrap_inner_h = max(tpu_inner_h - 2.0 * wrap_radial, 2.0) if wrap_radial > 0.0 else tpu_inner_h
-    wrap_inner_corner_r = max(p.tpu_inner_corner_r_mm - wrap_radial, 0.5)
-
-    # Compute rear relief depth here so it's accessible outside BuildPart
-    rear_relief = min(max(p.tpu_rear_cap_relief_depth_mm, 0.0), max(cavity_depth - 1.0, 0.0))
-
-    # --- Stage 1: base tube with smooth lofted transition at front wrap ---
-    wrap_z = cavity_start_z + wrap_depth
-    with BuildPart() as tpu_stage1:
-        # Full TPU outer shell
-        with BuildSketch(Plane.XY.offset(cavity_start_z)):
-            Rectangle(tpu_outer_w, tpu_outer_h)
-            fillet(vertices(), p.tpu_outer_corner_r_mm)
-        extrude(amount=cavity_depth)
-
-        # Main cavity (behind the transition zone)
-        with BuildSketch(Plane.XY.offset(wrap_z - 0.1)):
-            Rectangle(tpu_inner_w, tpu_inner_h)
-            fillet(vertices(), p.tpu_inner_corner_r_mm)
-        extrude(amount=cavity_depth - wrap_depth + 0.3, mode=Mode.SUBTRACT)
-
-        # Smooth lofted transition: wrap_inner at front → tpu_inner at wrap_z
-        # Single continuous curved surface, no step or chamfer.
-        if p.include_tpu_front_edge_wrap and wrap_depth > 0.0 and wrap_radial > 0.0:
-            with BuildSketch(Plane.XY.offset(cavity_start_z)):
-                Rectangle(wrap_inner_w, wrap_inner_h)
-                fillet(vertices(), wrap_inner_corner_r)
-            with BuildSketch(Plane.XY.offset(wrap_z)):
-                Rectangle(tpu_inner_w, tpu_inner_h)
-                fillet(vertices(), p.tpu_inner_corner_r_mm)
-            loft(mode=Mode.SUBTRACT)
-
-    tpu_base = _largest_solid(tpu_stage1.part)
-
-    # --- Stage 2: skeleton cuts, vents, tripod on the chamfered base ---
-    bumper_w = p.tpu_corner_bumper_w_mm
-    rail_w = p.tpu_edge_rail_w_mm
-    wall_cut_depth = p.tpu_wall_mm + 1.0
-    skel_start_z = cavity_start_z + wrap_depth + rail_w
-    skel_end_z = cavity_start_z + cavity_depth - rail_w
-    skel_span = max(skel_end_z - skel_start_z, 0.0)
-
-    with BuildPart() as tpu_bp:
-        add(tpu_base)
-
-        # X walls (left/right) skeleton windows
-        x_wall_clear_h = max(tpu_outer_h - 2.0 * bumper_w, 0.0)
-        if x_wall_clear_h > 1.0 and skel_span > 1.0:
-            x_cut_center_z = skel_start_z + 0.5 * skel_span
-            for side in (-1.0, 1.0):
-                x_face = side * (half_tpu_w + 0.2)
-                with BuildSketch(Plane.YZ.offset(x_face)):
-                    with Locations((0.0, x_cut_center_z)):
-                        Rectangle(x_wall_clear_h, skel_span)
-                extrude(
-                    amount=wall_cut_depth if side < 0 else -wall_cut_depth,
-                    mode=Mode.SUBTRACT,
-                )
-
-        # Y walls (top/bottom) skeleton windows
-        y_wall_clear_w = max(tpu_outer_w - 2.0 * bumper_w, 0.0)
-        if y_wall_clear_w > 1.0 and skel_span > 1.0:
-            y_cut_center_z = skel_start_z + 0.5 * skel_span
-            for side in (-1.0, 1.0):
-                y_face = side * (half_tpu_h + 0.2)
-                with BuildSketch(Plane.XZ.offset(-y_face)):
-                    with Locations((0.0, y_cut_center_z)):
-                        Rectangle(y_wall_clear_w, skel_span)
-                extrude(
-                    amount=wall_cut_depth if side > 0 else -wall_cut_depth,
-                    mode=Mode.SUBTRACT,
-                )
-
-        # Rear TPU relief for cap insertion
-        rear_relief = min(max(p.tpu_rear_cap_relief_depth_mm, 0.0), max(cavity_depth - 1.0, 0.0))
-        if rear_relief > 0.0:
-            relief_start_z = cavity_start_z + cavity_depth - rear_relief
-            relief_w = tpu_outer_w + 2.0 * max(p.tpu_rear_cap_relief_radial_mm, 0.0)
-            relief_h = tpu_outer_h + 2.0 * max(p.tpu_rear_cap_relief_radial_mm, 0.0)
-            with BuildSketch(Plane.XY.offset(relief_start_z - 0.2)):
-                Rectangle(relief_w, relief_h)
-                fillet(vertices(), max(p.tpu_outer_corner_r_mm + 0.3, 0.5))
-            extrude(amount=rear_relief + 0.4, mode=Mode.SUBTRACT)
-
-        # Vent pass-through cuts
-        if p.include_thermal_vents:
-            tpu_side_cut = max(p.side_vent_cut_depth_mm, p.tpu_wall_mm + 1.5)
-            for side in ("neg", "pos"):
-                x_face = -half_tpu_w - 0.2 if side == "neg" else half_tpu_w + 0.2
-                z_centers = left_side_slot_z_centers if side == "neg" else side_slot_z_centers
-                for z_c in z_centers:
-                    with BuildSketch(Plane.YZ.offset(x_face)):
-                        with Locations((p.side_vent_center_y_mm, z_c)):
-                            SlotOverall(p.side_vent_slot_h_mm, p.side_vent_slot_w_mm)
-                    extrude(amount=tpu_side_cut if side == "neg" else -tpu_side_cut,
-                            mode=Mode.SUBTRACT)
-
-            tpu_top_cut = max(p.top_vent_cut_depth_mm, p.tpu_wall_mm + 1.5)
-            with BuildSketch(Plane.XZ.offset(half_tpu_h + 0.2)):
-                for z_c in top_vent_z_centers:
-                    with Locations((0.0, z_c)):
-                        SlotOverall(p.top_vent_slot_width_mm, p.top_vent_slot_height_mm)
-            extrude(amount=-tpu_top_cut, mode=Mode.SUBTRACT)
-
-        # Bottom tripod pass-through (rounded corners)
-        tripod_tpu_cut_depth = half_tpu_h
-        tpu_rect_w = p.tripod_rect_w_mm + 2.0
-        tpu_rect_l = p.tripod_rect_l_mm + 2.0
-        tripod_z = d["cavity_start_z_mm"] + p.tripod_center_from_front_mm
-        tripod_tpu_corner_r = min(3.0, 0.5 * min(tpu_rect_w, tpu_rect_l) - 0.5)
-        tpu_tripod_y_center = -half_tpu_h + 0.5 * tripod_tpu_cut_depth - 0.2
-        with BuildSketch(Plane.XZ.offset(tpu_tripod_y_center - 0.5 * tripod_tpu_cut_depth)):
-            with Locations((0.0, tripod_z)):
-                Rectangle(tpu_rect_w, tpu_rect_l)
-                fillet(vertices(), tripod_tpu_corner_r)
-        extrude(amount=tripod_tpu_cut_depth, mode=Mode.SUBTRACT)
-
-    tpu_frame = _largest_solid(tpu_bp.part)
-
-    # Rear edge wrap: full continuous rim mirroring the front edge wrap.
-    # Smooth lofted transition from normal wall thickness to a thicker rim
-    # that wraps over the camera's rear face — symmetrical with the front.
-    if p.include_rear_tpu_bumpers:
-        rear_z = cavity_start_z + cavity_depth
-        rb_overlap = 4.0  # overlap into surviving skeleton for fusion
-
-        # Use same wrap dimensions as front edge wrap for symmetry
-        rear_wrap_depth = wrap_depth   # same as front (5.0 mm)
-        rear_wrap_radial = wrap_radial  # same as front (4.0 mm)
-
-        rear_wrap_inner_w = max(tpu_inner_w - 2.0 * rear_wrap_radial, 2.0)
-        rear_wrap_inner_h = max(tpu_inner_h - 2.0 * rear_wrap_radial, 2.0)
-        rear_wrap_inner_r = max(p.tpu_inner_corner_r_mm - rear_wrap_radial, 0.5)
-
-        rear_wrap_start = rear_z - rear_wrap_depth  # where transition begins
-        overlap_start = rear_wrap_start - rb_overlap  # extends into frame for fusion
-
-        with BuildPart() as _rear_wrap:
-            # Full outer tube from overlap zone to rear face
-            with BuildSketch(Plane.XY.offset(overlap_start)):
-                Rectangle(tpu_outer_w, tpu_outer_h)
-                fillet(vertices(), p.tpu_outer_corner_r_mm)
-            extrude(amount=rear_wrap_depth + rb_overlap)
-
-            # Subtract normal cavity in the overlap zone (thin walls)
-            with BuildSketch(Plane.XY.offset(overlap_start - 0.1)):
-                Rectangle(tpu_inner_w, tpu_inner_h)
-                fillet(vertices(), p.tpu_inner_corner_r_mm)
-            extrude(amount=rb_overlap + 0.2, mode=Mode.SUBTRACT)
-
-            # Smooth lofted transition: tpu_inner at wrap_start → wrap_inner at rear_z
-            with BuildSketch(Plane.XY.offset(rear_wrap_start)):
-                Rectangle(tpu_inner_w, tpu_inner_h)
-                fillet(vertices(), p.tpu_inner_corner_r_mm)
-            with BuildSketch(Plane.XY.offset(rear_z)):
-                Rectangle(rear_wrap_inner_w, rear_wrap_inner_h)
-                fillet(vertices(), rear_wrap_inner_r)
-            loft(mode=Mode.SUBTRACT)
-
-        pre_vol = tpu_frame.volume
-        try:
-            tpu_frame = tpu_frame + _rear_wrap.part
-            post_vol = tpu_frame.volume
-            print(f"  Rear edge wrap (full rim): +{post_vol - pre_vol:.0f} mm³ (Z to {rear_z:.1f}, wrap_depth {rear_wrap_depth:.1f}mm)")
-        except Exception:
-            print("  WARNING: rear edge wrap failed to fuse")
-
-    # Global edge fillet for smooth rounded feel on all edges.
-    for fillet_r in (p.tpu_front_dome_mm, 1.5, 1.0, 0.8, 0.5):
-        try:
-            tpu_frame = fillet(tpu_frame.edges(), fillet_r)
-            break
-        except Exception:
-            continue
-    tpu_frame = _largest_solid(tpu_frame)
-    tpu_frame.label = "TPU_Frame"
-
-    report = {
-        "tpu_frame": {
-            "type": "skeleton",
-            "corner_bumper_w_mm": float(p.tpu_corner_bumper_w_mm),
-            "edge_rail_w_mm": float(p.tpu_edge_rail_w_mm),
-            "wall_thickness_mm": float(p.tpu_wall_mm),
-        },
-    }
-
-    return tpu_frame, report
+    return asa_shell, report
 
 
 def build_back_cap(p: MevoCoreParams):
@@ -1185,7 +968,7 @@ def build_back_cap(p: MevoCoreParams):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate Mevo Core case: ASA shell + TPU frame + back cap (3 separate files)"
+        description="Generate Mevo Core case: ASA shell + back cap"
     )
     parser.add_argument("--out", type=Path, default=Path("models/mevo_core_case"),
                         help="Output directory")
@@ -1226,8 +1009,7 @@ def main():
     if args.cold_shoe_z_from_rear is not None:
         p.cold_shoe_pad_z_from_rear_mm = float(args.cold_shoe_z_from_rear)
 
-    asa_shell, asa_report, side_z, top_z, left_z = build_asa_shell(p)
-    tpu_frame, tpu_report = build_tpu_frame(p, side_z, top_z, left_z)
+    asa_shell, asa_report = build_asa_shell(p)
     back_cap, cap_report = build_back_cap(p)
 
     # Collision check: cap PLATE only (not plug) vs ASA shell
@@ -1265,56 +1047,60 @@ def main():
     reports_dir.mkdir(parents=True, exist_ok=True)
 
     shell_step = args.out / "mevo_core_asa_shell.step"
-    tpu_step = args.out / "mevo_core_tpu_frame.step"
     cap_step = args.out / "mevo_core_back_cap.step"
     report_json = reports_dir / "mevo_core_report.json"
 
-    archived = _archive_existing([shell_step, tpu_step, cap_step, report_json], args.out)
+    archived = _archive_existing([shell_step, cap_step, report_json], args.out)
+
+    # Hard cutover from the prior TPU workflow: no current TPU deliverables.
+    removed_obsolete = []
+    for obsolete in (
+        args.out / "mevo_core_tpu_frame.step",
+        args.out / "mevo_core_tpu_frame.3mf",
+        args.out / "mevo_core_PETG_SHELL.3mf",
+    ):
+        if obsolete.exists():
+            obsolete.unlink()
+            removed_obsolete.append(str(obsolete))
 
     export_step(asa_shell, str(shell_step))
-    export_step(tpu_frame, str(tpu_step))
     export_step(back_cap, str(cap_step))
 
-    # Fit alignment verification
-    tpu_outer_w = d["tpu_outer_w_mm"]
-    tpu_outer_h = d["tpu_outer_h_mm"]
     asa_inner_w = d["asa_inner_w_mm"]
     asa_inner_h = d["asa_inner_h_mm"]
-    tpu_depth = d["tpu_inner_depth_mm"]
     asa_cav_depth = d["asa_cavity_depth_mm"]
     cap_plug_depth = p.back_cap_lip_depth_mm
-
-    radial_gap_w = 0.5 * (asa_inner_w - tpu_outer_w)
-    radial_gap_h = 0.5 * (asa_inner_h - tpu_outer_h)
-    axial_gap_behind_tpu = asa_cav_depth - tpu_depth - cap_plug_depth
     camera_space = asa_cav_depth - cap_plug_depth
+    radial_clearance_w = 0.5 * (asa_inner_w - p.device_nominal_w_mm)
+    radial_clearance_h = 0.5 * (asa_inner_h - p.device_nominal_h_mm)
+    axial_clearance_total = camera_space - p.device_nominal_l_mm
 
     fit_report = {
-        "radial_gap_w_each_mm": float(radial_gap_w),
-        "radial_gap_h_each_mm": float(radial_gap_h),
+        "radial_clearance_w_each_mm": float(radial_clearance_w),
+        "radial_clearance_h_each_mm": float(radial_clearance_h),
         "asa_cavity_depth_mm": float(asa_cav_depth),
-        "tpu_depth_mm": float(tpu_depth),
         "cap_plug_intrusion_mm": float(cap_plug_depth),
-        "axial_gap_behind_tpu_mm": float(axial_gap_behind_tpu),
         "effective_camera_space_mm": float(camera_space),
         "device_length_mm": float(p.device_nominal_l_mm),
+        "axial_clearance_total_mm": float(axial_clearance_total),
         "camera_fits": camera_space >= p.device_nominal_l_mm,
     }
 
     payload = {
         "params": asdict(p),
         "asa_shell_report": asa_report,
-        "tpu_frame_report": tpu_report,
         "back_cap_report": cap_report,
-        "fit_alignment": fit_report,
+        "direct_asa_fit": fit_report,
         "collision_check": collision_report,
+        "obsolete_outputs_removed": removed_obsolete,
     }
     report_json.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
     if archived:
         print(f"Archived {len(archived)} previous file(s) to {args.out / 'archive'}")
+    if removed_obsolete:
+        print(f"Removed {len(removed_obsolete)} obsolete file(s)")
     print(f"Wrote {shell_step}")
-    print(f"Wrote {tpu_step}")
     print(f"Wrote {cap_step}")
     print(f"Wrote {report_json}")
 

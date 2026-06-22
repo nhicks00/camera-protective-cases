@@ -52,23 +52,25 @@ BirdDog MAKI Live:
 
 Mevo Core:
 - Device envelope: `90.0 x 90.0 x 69.85 mm` (W x H x L), where L = 2.75"
-- TPU clearance: `0.15 mm` per side
-- TPU wall: `1.8 mm` (skeleton frame: corner bumpers + edge rails)
-- TPU corner bumper width: `12.0 mm`, edge rail width: `4.0 mm`
-- Interface gap: `0.0 mm` (coincident bond)
-- ASA wall: `2.2 mm`
-- ASA outer corner fillet: `6.0 mm`, inner: `4.0 mm`
+- ASA-only hard cutover: no TPU frame/liner output for Mevo Core
+- ASA direct device clearance: `0.6 mm` per side/end
+- ASA wall: `3.3 mm`
+- ASA outer corner fillet: `24.0 mm`, inner: `22.0 mm`
 - Front sun hood depth: `3.0 mm`
-- Front lens cutout: `69.85 mm` diameter (2.75"), centered on front face
-- Lens hood: full circular tube, `63.5 mm` depth (2.5"), `2.5 mm` wall, `0.0 mm` clearance
-- Bottom tripod cutout: `31.75 x 50.8 mm` rectangular, center `28.575 mm` from front (1-5/8" from back)
+- Front lens cutout: `76.2 mm` diameter (3.0"), centered on front face
+- Lens hood: full circular tube, `101.6 mm` depth (4.0"), `2.5 mm` wall, `2.5 mm` clearance, with side access notches
+- Bottom tripod cutout: `63.5 x 50.8 mm` rectangular, center `34.925 mm` from front
 - Cold shoe mount: ISO 518 on top rear
 - Back cap: ASA plate with two rectangular cutouts:
   - Port cutout (bottom): `63.5 x 12.7 mm` (2.5" x 0.5"), center at (-0.55, -19.6) mm
   - Power button cutout (top): `31.75 x 14.29 mm` (1.25" x ~9/16"), centered X, +33.1 mm Y
   - Cutout oversize: `1.0 mm` per side for cable boot clearance
 - Back cap plug lip: `5.0 mm` depth, `0.28 mm` total undersize
-- Retention: 4-point flush bump pockets
+- Retention: 3 snap-latch walls plus Y+ retention bump
+- Thermal cutouts: large rectangular panel notches replacing individual slots:
+  - one notch per side face spanning the former 6-row side vent bank,
+  - one top notch spanning the former 4-row top vent bank,
+  - cutout width expands across the flat face and stops before corner curvature.
 
 Zowietek 4K NDI POV Zoom Camera:
 - Device envelope: `68.6 x 60.2 x 51.0 mm` (L x W x H), black aluminum, 225g
@@ -94,12 +96,13 @@ Slicer baseline (ASA):
 - 4 wall loops/perimeters minimum.
 
 ## Output Organization Policy
-- All generators output **3 separate STEP files**: ASA shell, TPU frame, back cap.
+- Mevo Core outputs **2 separate STEP files**: ASA shell and back cap. It is ASA-only; do not regenerate a TPU frame for this case.
+- Other active dual-material workflows still output separate ASA shell, TPU frame, and back cap unless explicitly changed.
 - Current output directories:
   - `models/mevo_case/` + `reports/` + `archive/`
   - `models/mevo_core_case/` + `reports/` + `archive/`
   - `models/maki_case/` + `reports/` + `archive/`
-  - `models/zowietek_case/` + `reports/` + `archive/`
+- Zowietek model outputs were removed because that camera is no longer used.
 - Top-level in each case folder should show only latest STEP outputs for that case.
 - JSON reports should live in each case's `reports/` subfolder.
 
@@ -260,25 +263,27 @@ Current preferred workflow:
   Mevo workflow is dimension/spec-driven unless a full Mevo STEP is provided.
 
 ### Mevo Core
-- 3 separate output files:
+- ASA-only workflow with 2 separate output files:
   - `models/mevo_core_case/mevo_core_asa_shell.step`
-  - `models/mevo_core_case/mevo_core_tpu_frame.step`
   - `models/mevo_core_case/mevo_core_back_cap.step`
   - Generator: `scripts/generate_mevo_core_case.py`
 - Geometry intent:
-  - Square cross-section (90 × 90 mm, rounded-rectangle with 6 mm outer fillet)
-  - TPU is a skeleton frame (corner bumpers + edge rails, not solid walls)
-  - Front-integrated body with centered lens cutout (69.85 mm / 2.75”)
-  - Full circular tube lens hood (63.5 mm depth / 2.5”, 2.5 mm wall), NOT visor
-  - Single bottom tripod mount, rectangular cutout (31.75 × 50.8 mm, same as Mevo Start)
+  - Square cross-section (90 × 90 mm, rounded-rectangle with aggressive 24 mm outer fillet)
+  - Direct ASA camera fit with `0.6 mm` per-side clearance; no TPU assumptions in shell sizing
+  - Front-integrated body with centered lens cutout (76.2 mm / 3.0")
+  - Full circular tube lens hood (101.6 mm depth / 4.0”, 2.5 mm wall), NOT visor
+  - Single bottom tripod mount, rectangular cutout (63.5 × 50.8 mm)
   - Cold shoe mount (ISO 518) on top rear
   - Back cap = ASA plate with two rectangular cutouts:
     - Bottom port cutout (63.5 × 12.7 mm)
     - Top power button cutout (31.75 × 14.29 mm, centered)
-  - 4-point flush bump retention
-  - Thermal vents: 5 side slots per side + 5 top slots
+  - 3 snap-latch walls plus Y+ retention bump
+  - Thermal cutouts are large rectangular panel notches, not individual slit vents:
+    - one per side face across the former 6-row side vent bank,
+    - one top-face notch across the former 4-row top vent bank,
+    - each notch widens across the flat panel and stops before corner curvature.
   - Dimension-driven workflow (no manufacturer STEP reference)
-- Optional flags: `--no-cold-shoe`, `--no-friction-ridge`, `--no-hood`, `--no-vents`, `--lens-diameter`, `--hood-depth`
+- Optional flags: `--no-cold-shoe`, `--no-friction-ridge`, `--no-snap-latches`, `--no-hood`, `--no-vents`, `--no-sun-shade`, `--lens-diameter`, `--hood-depth`
 
 ### Zowietek 4K NDI POV Zoom Camera
 - 3 separate output files:
@@ -360,8 +365,9 @@ python scripts/generate_mevo_case.py --include-back-plate
 
 ## Session Continuity Guidance
 When the user gives brief or “random” update requests, assume they refer to this context and default behaviors unless they explicitly override:
-- All cameras output **3 separate STEP files** (ASA shell, TPU frame, back cap) — TPU is printed separately.
-- Keep all TPU as skeleton frame (corner bumpers + edge rails).
+- Mevo Core is ASA-only and outputs only ASA shell + back cap.
+- Other active dual-material camera workflows output separate ASA shell, TPU frame, and back cap.
+- Keep remaining TPU workflows as skeleton frames (corner bumpers + edge rails) unless explicitly changed.
 - Maintain archive hygiene policy.
 - Preserve smooth B-REP output quality.
 - Lens hoods: Mevo Core uses full circular tube; all others use top-visor (clipped arc).

@@ -3,11 +3,16 @@
     "device_nominal_w_mm": 90.0,
     "device_nominal_h_mm": 90.0,
     "device_nominal_l_mm": 69.85,
-    "asa_clearance_mm": 0.6,
     "extra_length_mm": 1.5,
+    "tpu_clearance_mm": 0.15,
+    "tpu_wall_mm": 1.8,
     "asa_wall_mm": 3.3,
+    "interface_gap_mm": 0.25,
+    "bond_interface_tolerance_mm": 0.02,
     "asa_outer_corner_r_mm": 24.0,
     "asa_inner_corner_r_mm": 22.0,
+    "tpu_outer_corner_r_mm": 22.0,
+    "tpu_inner_corner_r_mm": 20.0,
     "sun_hood_depth_mm": 3.0,
     "lens_cutout_d_mm": 76.2,
     "lens_center_x_mm": 0.0,
@@ -22,20 +27,28 @@
     "lens_hood_access_depth_mm": 31.75,
     "lens_hood_access_height_mm": 50.8,
     "lens_hood_access_radial_depth_mm": 25.4,
+    "tpu_corner_bumper_w_mm": 12.0,
+    "tpu_edge_rail_w_mm": 4.0,
+    "tpu_front_edge_wrap_depth_mm": 5.0,
+    "tpu_front_edge_wrap_radial_mm": 4.0,
+    "include_tpu_front_edge_wrap": true,
+    "tpu_front_gusset_r_mm": 4.0,
+    "tpu_front_dome_mm": 1.5,
     "tripod_rect_w_mm": 63.5,
     "tripod_rect_l_mm": 50.8,
     "tripod_center_from_front_mm": 34.925,
     "include_thermal_vents": true,
     "side_vent_count": 7,
+    "side_vent_slot_h_mm": 26.0,
     "side_vent_slot_w_mm": 3.0,
     "side_vent_pitch_z_mm": 9.0,
     "side_vent_center_y_mm": 0.0,
     "side_vent_cut_depth_mm": 6.0,
-    "top_vent_count": 6,
+    "top_vent_count": 7,
     "top_vent_slot_width_mm": 31.0,
+    "top_vent_slot_height_mm": 3.5,
     "top_vent_pitch_z_mm": 9.0,
     "top_vent_cut_depth_mm": 6.0,
-    "vent_notch_corner_margin_mm": 2.0,
     "include_cold_shoe": true,
     "cold_shoe_pad_width_mm": 28.0,
     "cold_shoe_pad_length_mm": 30.0,
@@ -97,21 +110,29 @@
     "include_sun_shade": true,
     "sun_shade_standoff_mm": 6.0,
     "sun_shade_wall_mm": 2.0,
-    "sun_shade_post_width_mm": 4.0
+    "sun_shade_post_width_mm": 4.0,
+    "include_rear_tpu_bumpers": true,
+    "tpu_rear_bumper_depth_mm": 3.0,
+    "tpu_rear_bumper_wall_mm": 1.8,
+    "tpu_rear_cap_relief_depth_mm": 5.4,
+    "tpu_rear_cap_relief_radial_mm": 0.3
   },
   "asa_shell_report": {
     "derived_mm": {
-      "asa_clearance_each_side_mm": 0.6,
-      "camera_space_depth_mm": 72.55,
-      "asa_inner_w_mm": 91.2,
-      "asa_inner_h_mm": 91.2,
-      "asa_outer_w_mm": 97.8,
-      "asa_outer_h_mm": 97.8,
-      "asa_cavity_depth_mm": 77.55,
+      "tpu_inner_w_mm": 90.3,
+      "tpu_inner_h_mm": 90.3,
+      "tpu_inner_depth_mm": 71.64999999999999,
+      "tpu_outer_w_mm": 93.89999999999999,
+      "tpu_outer_h_mm": 93.89999999999999,
+      "asa_inner_w_mm": 94.39999999999999,
+      "asa_inner_h_mm": 94.39999999999999,
+      "asa_outer_w_mm": 100.99999999999999,
+      "asa_outer_h_mm": 100.99999999999999,
+      "asa_cavity_depth_mm": 76.64999999999999,
       "cavity_start_z_mm": 3.0,
-      "body_depth_mm": 80.55,
-      "lip_tip_w_mm": 90.92,
-      "lip_tip_h_mm": 90.92
+      "body_depth_mm": 79.64999999999999,
+      "lip_tip_w_mm": 94.11999999999999,
+      "lip_tip_h_mm": 94.11999999999999
     },
     "features_mm": {
       "lens_cutout_d": 76.2,
@@ -138,26 +159,26 @@
         "center_from_front_mm": 34.925
       },
       "thermal_vents": {
-        "mode": "large_panel_notches",
-        "side_notches": {
-          "enabled": true,
-          "type": "single_rectangular_panel_cutout_per_side",
-          "source_rows_per_side": 6,
-          "width_y_mm": 45.8,
-          "height_z_mm": 54.00000000000001,
-          "center_y_mm": 0.0,
-          "center_z_mm": 44.775000000000006,
-          "corner_margin_mm": 2.0
+        "side_slots": {
+          "count_per_side": 7,
+          "z_centers": [
+            21.824999999999996,
+            30.824999999999996,
+            39.824999999999996,
+            48.824999999999996,
+            57.824999999999996,
+            66.82499999999999
+          ]
         },
-        "top_notch": {
-          "enabled": true,
-          "type": "single_rectangular_panel_cutout",
-          "source_rows": 4,
-          "width_x_mm": 45.8,
-          "height_z_mm": 35.129999999999995,
-          "center_x_mm": 0.0,
-          "center_z_mm": 31.564999999999998,
-          "corner_margin_mm": 2.0
+        "top_slots": {
+          "count": 5,
+          "z_centers": [
+            18.5,
+            25.60833333333333,
+            32.71666666666666,
+            39.824999999999996,
+            46.93333333333332
+          ]
         }
       },
       "cold_shoe": {
@@ -167,7 +188,7 @@
           "left_X-",
           "right_X+"
         ],
-        "pad_z_center_mm": 65.55,
+        "pad_z_center_mm": 64.64999999999999,
         "boss_height_mm": 4.3,
         "slot_width_mm": 18.8,
         "rail_opening_mm": 13.5,
@@ -185,7 +206,7 @@
           "X-",
           "Y-"
         ],
-        "hole_z_mm": 76.8,
+        "hole_z_mm": 75.89999999999999,
         "hole_width_mm": 10.0,
         "hole_height_mm": 4.0
       },
@@ -193,8 +214,8 @@
         "enabled": true,
         "standoff_mm": 6.0,
         "wall_mm": 2.0,
-        "shade_outer_w_mm": 113.8,
-        "shade_outer_h_mm": 113.8,
+        "shade_outer_w_mm": 116.99999999999999,
+        "shade_outer_h_mm": 116.99999999999999,
         "post_width_mm": 4.0,
         "rib_count": 6,
         "coverage": "top + left + right (open bottom)",
@@ -202,12 +223,20 @@
       }
     }
   },
+  "tpu_frame_report": {
+    "tpu_frame": {
+      "type": "skeleton",
+      "corner_bumper_w_mm": 12.0,
+      "edge_rail_w_mm": 4.0,
+      "wall_thickness_mm": 1.8
+    }
+  },
   "back_cap_report": {
     "back_cap_mm": {
-      "plate_w": 97.8,
-      "plate_h": 97.8,
-      "lip_tip_w": 90.92,
-      "lip_tip_h": 90.92,
+      "plate_w": 100.99999999999999,
+      "plate_h": 100.99999999999999,
+      "lip_tip_w": 94.11999999999999,
+      "lip_tip_h": 94.11999999999999,
       "lip_depth": 5.0,
       "thickness": 3.0,
       "lip_undersize_total": 0.28,
@@ -241,20 +270,20 @@
       "ASA_Back_Cap"
     ]
   },
-  "direct_asa_fit": {
-    "radial_clearance_w_each_mm": 0.6000000000000014,
-    "radial_clearance_h_each_mm": 0.6000000000000014,
-    "asa_cavity_depth_mm": 77.55,
+  "fit_alignment": {
+    "radial_gap_w_each_mm": 0.25,
+    "radial_gap_h_each_mm": 0.25,
+    "asa_cavity_depth_mm": 76.64999999999999,
+    "tpu_depth_mm": 71.64999999999999,
     "cap_plug_intrusion_mm": 5.0,
-    "effective_camera_space_mm": 72.55,
+    "axial_gap_behind_tpu_mm": 0.0,
+    "effective_camera_space_mm": 71.64999999999999,
     "device_length_mm": 69.85,
-    "axial_clearance_total_mm": 2.700000000000003,
     "camera_fits": true
   },
   "collision_check": {
     "cap_vs_body_mm3": 0.0,
     "collision_pass": true,
-    "cap_seated_z_mm": 80.64999999999999
-  },
-  "obsolete_outputs_removed": []
+    "cap_seated_z_mm": 79.74999999999999
+  }
 }
