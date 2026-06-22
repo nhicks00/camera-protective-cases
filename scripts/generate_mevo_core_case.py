@@ -181,7 +181,9 @@ class MevoCoreParams:
     sun_shade_standoff_mm: float = 6.0    # air gap between shell and shade
     sun_shade_wall_mm: float = 2.0        # shade panel thickness
     sun_shade_post_width_mm: float = 4.0   # rib width along each face
-    sun_shade_lower_edge_fillet_mm: float = 2.0
+    sun_shade_lower_tip_lift_mm: float = 4.0
+    sun_shade_lower_outer_edge_fillet_mm: float = 2.0
+    sun_shade_lower_inner_edge_fillet_mm: float = 1.0
 
 
 def _largest_solid(shape):
@@ -548,6 +550,7 @@ def build_asa_shell(p: MevoCoreParams):
 
         half_shade_outer_w = 0.5 * shade_outer_w
         half_shade_outer_h = 0.5 * shade_outer_h
+        shade_bottom_cut_y = half_asa_h - max(p.sun_shade_lower_tip_lift_mm, 0.0)
 
         shade_z_start = 0.0
         shade_z_len = body_depth
@@ -597,8 +600,8 @@ def build_asa_shell(p: MevoCoreParams):
 
                 # Cut away Y+ panel (user's bottom / tripod side)
                 # Shade covers Y- (user's top) + X sides
-                cut_height = half_shade_outer_h - half_asa_h + 1.0
-                with Locations((0.0, half_asa_h + 0.5 * cut_height, shade_mid_z)):
+                cut_height = half_shade_outer_h - shade_bottom_cut_y + 1.0
+                with Locations((0.0, shade_bottom_cut_y + 0.5 * cut_height, shade_mid_z)):
                     Box(shade_outer_w + 2.0, cut_height + 0.2, shade_z_len + 2.0,
                         mode=Mode.SUBTRACT)
 
@@ -636,7 +639,7 @@ def build_asa_shell(p: MevoCoreParams):
 
             shade_solid = _largest_solid(shade_bp.part)
 
-            lower_edge_cut_y = half_asa_h - 0.1
+            lower_edge_cut_y = shade_bottom_cut_y - 0.1
             lower_edge_corner_y = half_shade_outer_h - shade_outer_r
             lower_edge_dy = lower_edge_cut_y - lower_edge_corner_y
             lower_outer_x = half_shade_outer_w - shade_outer_r
@@ -649,32 +652,68 @@ def build_asa_shell(p: MevoCoreParams):
                 ) ** 0.5
             lower_outer_edge_min_x = 0.5 * (lower_outer_x + lower_inner_x)
 
-            lower_edges = []
-            for edge in shade_solid.edges():
-                bb = edge.bounding_box()
-                center = bb.center()
-                size = bb.size
-                is_lower_side_edge = (
-                    abs(center.Y - lower_edge_cut_y) <= 0.25
-                    and size.Z >= 0.8 * shade_z_len
-                    and size.X <= 0.25
-                    and size.Y <= 0.25
-                    and abs(center.X) >= lower_outer_edge_min_x
-                )
-                if is_lower_side_edge:
-                    lower_edges.append(edge)
+            def fillet_lower_edges(shape, min_abs_x, max_abs_x, preferred_r):
+                lower_edges = []
+                for edge in shape.edges():
+                    bb = edge.bounding_box()
+                    center = bb.center()
+                    size = bb.size
+                    abs_x = abs(center.X)
+                    is_lower_side_edge = (
+                        abs(center.Y - lower_edge_cut_y) <= 0.25
+                        and size.Z >= 0.8 * shade_z_len
+                        and size.X <= 0.25
+                        and size.Y <= 0.25
+                        and min_abs_x <= abs_x <= max_abs_x
+                    )
+                    if is_lower_side_edge:
+                        lower_edges.append(edge)
 
-            lower_edge_fillet_applied = 0.0
-            if lower_edges and p.sun_shade_lower_edge_fillet_mm > 0.0:
-                for fillet_r in (
-                    p.sun_shade_lower_edge_fillet_mm,
-                    1.5,
-                    1.0,
-                    0.5,
-                ):
+                applied = 0.0
+                if lower_edges and preferred_r > 0.0:
+                    for fillet_r in (preferred_r, 1.5, 1.0, 0.75, 0.5):
+                        if fillet_r > preferred_r:
+                            continue
+                        try:
+                            return fillet(lower_edges, fillet_r), fillet_r, len(lower_edges)
+                        except Exception:
+                            continue
+                return shape, applied, len(lower_edges)
+
+            shade_solid, lower_outer_edge_fillet_applied, lower_outer_edge_count = fillet_lower_edges(
+                shade_solid,
+                lower_outer_edge_min_x,
+                half_shade_outer_w + 0.25,
+                p.sun_shade_lower_outer_edge_fillet_mm,
+            )
+            shade_solid, lower_inner_edge_fillet_applied, lower_inner_edge_count = fillet_lower_edges(
+                shade_solid,
+                max(lower_inner_x - 0.25, 0.0),
+                lower_outer_edge_min_x,
+                p.sun_shade_lower_inner_edge_fillet_mm,
+            )
+
+            if lower_inner_edge_fillet_applied == 0.0 and lower_outer_edge_fillet_applied == 0.0:
+                lower_edges = []
+                for edge in shade_solid.edges():
+                    bb = edge.bounding_box()
+                    center = bb.center()
+                    size = bb.size
+                    is_lower_side_edge = (
+                        abs(center.Y - lower_edge_cut_y) <= 0.25
+                        and size.Z >= 0.8 * shade_z_len
+                        and size.X <= 0.25
+                        and size.Y <= 0.25
+                    )
+                    if is_lower_side_edge:
+                        lower_edges.append(edge)
+                for fillet_r in (0.5,):
                     try:
                         shade_solid = fillet(lower_edges, fillet_r)
-                        lower_edge_fillet_applied = fillet_r
+                        lower_inner_edge_fillet_applied = fillet_r
+                        lower_outer_edge_fillet_applied = fillet_r
+                        lower_inner_edge_count = len(lower_edges)
+                        lower_outer_edge_count = len(lower_edges)
                         break
                     except Exception:
                         continue
@@ -701,8 +740,11 @@ def build_asa_shell(p: MevoCoreParams):
                 "post_width_mm": float(post_w),
                 "rib_count": 6,
                 "coverage": "top + left + right (open bottom)",
-                "lower_edge_fillet_mm": float(lower_edge_fillet_applied),
-                "lower_edge_fillet_edges": len(lower_edges),
+                "lower_tip_lift_mm": float(max(p.sun_shade_lower_tip_lift_mm, 0.0)),
+                "lower_outer_edge_fillet_mm": float(lower_outer_edge_fillet_applied),
+                "lower_outer_edge_fillet_edges": lower_outer_edge_count,
+                "lower_inner_edge_fillet_mm": float(lower_inner_edge_fillet_applied),
+                "lower_inner_edge_fillet_edges": lower_inner_edge_count,
             }
             print(f"  Sun shade canopy added: {shade_outer_w:.1f} x {shade_outer_h:.1f} mm outer, {standoff:.1f}mm gap, 6 ribs")
 

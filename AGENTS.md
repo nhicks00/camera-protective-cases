@@ -274,7 +274,7 @@ Current preferred workflow:
   - Full circular tube lens hood (101.6 mm depth / 4.0”, 2.5 mm wall), NOT visor
   - Single bottom tripod mount, rectangular cutout (63.5 × 50.8 mm)
   - Cold shoe mount (ISO 518) on top rear
-  - External sun shade lower side-skirt edges use a `2.0 mm` outside-edge fillet to remove the sharp bottom corner/point.
+  - External sun shade lower side-skirt tips are lifted `4.0 mm`, then rounded with a `2.0 mm` outside-edge fillet and `0.75 mm` inner-edge fillet to remove the sharp bottom corner/point.
   - Back cap = ASA plate with two rectangular cutouts:
     - Bottom port cutout (63.5 × 12.7 mm)
     - Top power button cutout (31.75 × 14.29 mm, centered)
