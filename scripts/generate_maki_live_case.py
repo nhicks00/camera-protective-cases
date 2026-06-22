@@ -42,6 +42,7 @@ from build123d import (
     extrude,
     fillet,
     import_step,
+    loft,
     vertices,
 )
 from scipy.spatial import ConvexHull
@@ -116,7 +117,6 @@ class MakiCaseParams:
     sun_shade_end_edge_fillet_mm: float = 1.0
     sun_shade_drip_lip_out_mm: float = 3.0
     sun_shade_drip_lip_drop_mm: float = 3.0
-    sun_shade_drip_lip_thickness_mm: float = 1.2
     sun_shade_drip_lip_overlap_mm: float = 0.5
 
     # Snap-latch flexure clips for rear cap retention
@@ -1733,7 +1733,6 @@ def build_case(p: MakiCaseParams):
         shade_support_mid_z = shade_mid_z
         drip_lip_out = max(float(p.sun_shade_drip_lip_out_mm), 0.0)
         drip_lip_drop = max(float(p.sun_shade_drip_lip_drop_mm), 0.0)
-        drip_lip_t = max(float(p.sun_shade_drip_lip_thickness_mm), 0.2)
         drip_lip_overlap = min(
             max(float(p.sun_shade_drip_lip_overlap_mm), 0.0),
             max(drip_lip_out - 0.1, 0.0),
@@ -1937,29 +1936,75 @@ def build_case(p: MakiCaseParams):
 
             def build_shade_drip_lip(end_z: float, outward_sign: float):
                 if drip_lip_out <= 0.0 or drip_lip_drop <= 0.0:
-                    return None
-                slope_len = math.hypot(drip_lip_out, drip_lip_drop)
-                angle = -math.degrees(math.atan2(drip_lip_drop, drip_lip_out))
-                if outward_sign < 0.0:
-                    angle = -180.0 + math.degrees(math.atan2(drip_lip_drop, drip_lip_out))
-                center_y = -half_shade_outer_h + 0.5 * drip_lip_drop + 0.25 * drip_lip_t
-                center_z = end_z + outward_sign * (0.5 * drip_lip_out - 0.5 * drip_lip_overlap)
+                    return None, None
+                direction = 1.0 if outward_sign >= 0.0 else -1.0
+                inward = min(
+                    drip_lip_drop,
+                    max(0.5 * min(shade_inner_w, shade_inner_h) - shade_w - 1.0, 0.0),
+                )
+                if inward <= 0.0:
+                    return None, None
+
+                start_z = end_z - direction * drip_lip_overlap
+                terminal_z = end_z + direction * drip_lip_out
+                inner_start_z = start_z - direction * 0.1
+                inner_terminal_z = terminal_z + direction * 0.1
+                lip_mid_z = 0.5 * (start_z + terminal_z)
+                lip_z_len = abs(terminal_z - start_z)
+
+                terminal_outer_w = max(shade_outer_w - 2.0 * inward, 2.0 * shade_w + 2.0)
+                terminal_outer_h = max(shade_outer_h - 2.0 * inward, 2.0 * shade_w + 2.0)
+                terminal_inner_w = max(shade_inner_w - 2.0 * inward, 1.0)
+                terminal_inner_h = max(shade_inner_h - 2.0 * inward, 1.0)
+                terminal_inner_w = min(terminal_inner_w, terminal_outer_w - 2.0 * shade_w)
+                terminal_inner_h = min(terminal_inner_h, terminal_outer_h - 2.0 * shade_w)
+                terminal_outer_r = min(
+                    max(shade_outer_r - inward, 0.6),
+                    0.49 * min(terminal_outer_w, terminal_outer_h),
+                )
+                terminal_inner_r = min(
+                    max(shade_inner_r - inward, 0.4),
+                    0.49 * min(terminal_inner_w, terminal_inner_h),
+                )
+                trim_z_start = min(start_z, terminal_z) - 1.0
                 with BuildPart() as lip_bp:
-                    Box(shade_outer_w, drip_lip_t, slope_len)
-                return lip_bp.part.rotate(Axis.X, angle).translate((0.0, center_y, center_z))
+                    with BuildSketch(Plane.XY.offset(start_z)):
+                        Rectangle(shade_outer_w, shade_outer_h)
+                        fillet(vertices(), shade_outer_r)
+                    with BuildSketch(Plane.XY.offset(terminal_z)):
+                        Rectangle(terminal_outer_w, terminal_outer_h)
+                        fillet(vertices(), terminal_outer_r)
+                    loft()
+                    with BuildSketch(Plane.XY.offset(inner_start_z)):
+                        Rectangle(shade_inner_w, shade_inner_h)
+                        fillet(vertices(), shade_inner_r)
+                    with BuildSketch(Plane.XY.offset(inner_terminal_z)):
+                        Rectangle(terminal_inner_w, terminal_inner_h)
+                        fillet(vertices(), terminal_inner_r)
+                    loft(mode=Mode.SUBTRACT)
+                    with Locations((0.0, half_outer_h + 0.5 * bottom_cut_h, lip_mid_z)):
+                        Box(shade_outer_w + 2.0, bottom_cut_h + 0.2, lip_z_len + 2.0, mode=Mode.SUBTRACT)
+                    if side_trim_h > 0.5:
+                        for sx_sign in (-1.0, 1.0):
+                            with BuildSketch(Plane.XY.offset(trim_z_start)):
+                                with Locations((sx_sign * side_trim_x_center, half_shade_outer_h - 0.5 * side_trim_h)):
+                                    Rectangle(side_trim_x_depth, side_trim_h + 0.2)
+                                    fillet(vertices(), side_trim_corner_r)
+                            extrude(amount=lip_z_len + 2.0, mode=Mode.SUBTRACT)
+                return lip_bp.part, terminal_z
 
             if shade_front_overhang > 0.0:
-                front_drip = build_shade_drip_lip(shade_z_start, -1.0)
+                front_drip, front_drip_terminal_z = build_shade_drip_lip(shade_z_start, -1.0)
                 if front_drip is not None:
                     shade_solid = _largest_solid(shade_solid + front_drip)
                     drip_lip_count += 1
-                    drip_lip_terminal_z_values.append(shade_z_start - drip_lip_out + drip_lip_overlap)
+                    drip_lip_terminal_z_values.append(front_drip_terminal_z)
             if shade_rear_overhang > 0.0:
-                rear_drip = build_shade_drip_lip(shade_z_end, 1.0)
+                rear_drip, rear_drip_terminal_z = build_shade_drip_lip(shade_z_end, 1.0)
                 if rear_drip is not None:
                     shade_solid = _largest_solid(shade_solid + rear_drip)
                     drip_lip_count += 1
-                    drip_lip_terminal_z_values.append(shade_z_end + drip_lip_out - drip_lip_overlap)
+                    drip_lip_terminal_z_values.append(rear_drip_terminal_z)
 
             def fillet_shade_end_edges(shape, preferred_r: float):
                 end_z_values = (shade_z_start, shade_z_end, *drip_lip_terminal_z_values)
@@ -2118,9 +2163,10 @@ def build_case(p: MakiCaseParams):
                 "support_depth_mm": float(shade_support_z_len),
                 "connector_direct_fuse_count": int(connector_direct_fuse_count),
                 "drip_lip_count": int(drip_lip_count),
+                "drip_lip_style": "lofted_inward_shade_extension",
                 "drip_lip_out_mm": float(drip_lip_out),
                 "drip_lip_drop_mm": float(drip_lip_drop),
-                "drip_lip_thickness_mm": float(drip_lip_t),
+                "drip_lip_inward_mm": float(drip_lip_drop),
                 "drip_lip_overlap_mm": float(drip_lip_overlap),
                 "post_width_mm": float(post_w),
                 "side_drop_ratio": float(p.sun_shade_side_drop_ratio),
