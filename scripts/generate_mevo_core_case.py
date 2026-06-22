@@ -81,6 +81,7 @@ class MevoCoreParams:
     lens_hood_base_depth_mm: float = 8.0   # axial depth of the taper zone
     lens_hood_base_edge_inset_mm: float = 3.0  # keep flared root inside rounded front edge
     lens_hood_root_overlap_mm: float = 1.2  # positive-Z overlap into front wall for fused root
+    lens_hood_root_fuse_overlap_mm: float = 0.25  # negative-Z overlap into flare to avoid mesh seam
     lens_hood_side_access_notches: bool = True
     lens_hood_access_depth_mm: float = 44.45  # 1.75" from base along hood axis
     lens_hood_access_height_mm: float = 50.8  # 2.0" tall opening on each side
@@ -595,12 +596,22 @@ def build_asa_shell(p: MevoCoreParams):
         flare_r = min(requested_flare_r, max_flare_r)
         flare_d = min(p.lens_hood_base_depth_mm, p.lens_hood_depth_mm * 0.4)
         root_overlap = min(max(p.lens_hood_root_overlap_mm, 0.0), p.sun_hood_depth_mm + 0.2)
+        root_fuse_overlap = min(
+            max(p.lens_hood_root_fuse_overlap_mm, 0.0),
+            max(root_overlap, 0.0),
+        )
         with BuildPart() as hood_bp:
             # Embed a short collar into the front wall. This gives OpenCascade
             # overlapping solids at the root instead of a coplanar/tangent join.
+            # The small negative-Z overlap closes the slicer-facing mesh seam
+            # between the flared cone and the root collar.
             if root_overlap > 0.0:
-                with Locations((cx, cy, 0.0)):
-                    Cylinder(flare_r, root_overlap, align=(Align.CENTER, Align.CENTER, Align.MIN))
+                with Locations((cx, cy, -root_fuse_overlap)):
+                    Cylinder(
+                        flare_r,
+                        root_overlap + root_fuse_overlap,
+                        align=(Align.CENTER, Align.CENTER, Align.MIN),
+                    )
             # Main straight tube
             with Locations((cx, cy, 0.0)):
                 Cylinder(hood_outer_r, p.lens_hood_depth_mm, rotation=(180, 0, 0),
@@ -670,11 +681,13 @@ def build_asa_shell(p: MevoCoreParams):
             def root_notch_edge(edge):
                 bb = edge.bounding_box()
                 center = bb.center()
+                y_limit = 0.5 * notch_height
+                y_band_inner = max(y_limit - max(p.lens_hood_access_corner_r_mm, 2.0), 0.0)
                 return (
-                    abs(center.X - cx) > hood_inner_r - 5.0
-                    and -1.0 <= center.Z <= 1.0
-                    and abs(center.Y - cy) <= 0.5 * notch_height + 0.75
-                    and edge.length <= 8.0
+                    abs(center.X - cx) >= flare_r - 2.0
+                    and (-root_fuse_overlap - 0.15) <= center.Z <= (root_overlap + 0.2)
+                    and y_band_inner <= abs(center.Y - cy) <= y_limit + 0.75
+                    and 0.4 <= edge.length <= 8.0
                 )
 
             hood_solid, hood_access_terminal_edge_fillet_applied, hood_access_terminal_edge_count = (
@@ -1238,6 +1251,15 @@ def build_asa_shell(p: MevoCoreParams):
                 "root_overlap_mm": float(p.lens_hood_root_overlap_mm),
                 "resolved_root_overlap_mm": float(
                     min(max(p.lens_hood_root_overlap_mm, 0.0), p.sun_hood_depth_mm + 0.2)
+                ),
+                "root_fuse_overlap_mm": float(
+                    min(
+                        max(p.lens_hood_root_fuse_overlap_mm, 0.0),
+                        max(
+                            min(max(p.lens_hood_root_overlap_mm, 0.0), p.sun_hood_depth_mm + 0.2),
+                            0.0,
+                        ),
+                    )
                 ),
                 "base_flare": {
                     "requested_extra_radius_mm": float(p.lens_hood_base_flare_mm),
