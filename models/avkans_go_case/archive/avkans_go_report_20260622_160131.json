@@ -1,0 +1,69 @@
+{
+  "params": {
+    "source_bottom_outer_w_mm": 57.764,
+    "source_bottom_outer_h_mm": 77.506,
+    "source_bottom_depth_mm": 139.498,
+    "source_hood_outer_w_mm": 63.866,
+    "source_hood_outer_h_mm": 81.928,
+    "source_hood_depth_mm": 159.308,
+    "asa_wall_mm": 3.2,
+    "rear_slide_clearance_mm": 0.6,
+    "outer_corner_r_mm": 4.0,
+    "inner_corner_r_mm": 2.0,
+    "front_wall_mm": 3.2,
+    "lens_cutout_d_mm": 58.0,
+    "lens_center_x_mm": 0.0,
+    "lens_center_y_mm": 0.0,
+    "front_vent_width_mm": 6.35,
+    "front_vent_top_bottom_margin_mm": 4.0,
+    "front_vent_corner_r_mm": 1.5,
+    "rear_opening_lead_in_mm": 0.6
+  },
+  "source_reference": {
+    "file": "refs/AVKANS_GO_RAIN_CASE.stl",
+    "source_kind": "two-body STL reference rebuilt as clean B-REP",
+    "source_bottom_outer_mm": {
+      "w": 57.764,
+      "h": 77.506,
+      "depth": 139.498
+    },
+    "source_hood_outer_mm": {
+      "w": 63.866,
+      "h": 81.928,
+      "depth": 159.308
+    }
+  },
+  "asa_shell_mm": {
+    "outer_w": 63.866,
+    "outer_h": 81.928,
+    "outer_depth": 159.308,
+    "inner_w": 58.066,
+    "inner_h": 76.12799999999999,
+    "front_wall": 3.2,
+    "rear_opening_w": 58.066,
+    "rear_opening_h": 76.12799999999999,
+    "wall": 3.2,
+    "single_fused_shell": true,
+    "rear_sliding_insertion": true,
+    "internal_partition_walls_removed": true
+  },
+  "features_mm": {
+    "front_lens_opening": {
+      "diameter": 58.0,
+      "center_x": 0.0,
+      "center_y": 0.0
+    },
+    "front_vertical_vent": {
+      "width": 6.35,
+      "height": 73.928,
+      "width_source": "0.25 inch",
+      "centered": true,
+      "intersects_lens_opening": true,
+      "corner_r": 1.5
+    }
+  },
+  "named_bodies": [
+    "AVKANS_GO_ASA_Shell"
+  ],
+  "archived_previous_outputs": []
+}

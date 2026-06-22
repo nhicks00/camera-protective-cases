@@ -337,12 +337,15 @@ Current preferred workflow:
   - Source STL contains two watertight mesh bodies:
     - bottom body: about `57.8 x 139.5 x 77.5 mm`
     - slide-on hood/top: about `63.9 x 81.9 x 159.3 mm`
-  - First-pass output combines those into one fused ASA shell using the hood envelope:
+  - Current output combines those into one fused ASA shell using a source-contour rebuild:
     - outer envelope `63.866 x 81.928 x 159.308 mm`
+    - arched hood/top profile follows the source hood envelope instead of a simple rectangular box
+    - lower body side skirts are narrowed to the source bottom width (`57.764 mm`) before widening into the hood shoulders
     - rear remains open for camera slide-in
     - original rear/front compartment divider walls are intentionally omitted
     - front face has a centered `6.35 mm` / `0.25 in` vertical vent slot through the front wall, intersecting the circular lens opening
     - circular front camera opening is `58.0 mm` diameter
+    - source-inspired side rails, side relief slots, and top relief slots are included for the review pass
   - No TPU, no back cap yet.
 
 ## Terminology Mapping (Important for user shorthand)

@@ -8,16 +8,40 @@
     "source_hood_depth_mm": 159.308,
     "asa_wall_mm": 3.2,
     "rear_slide_clearance_mm": 0.6,
-    "outer_corner_r_mm": 4.0,
-    "inner_corner_r_mm": 2.0,
     "front_wall_mm": 3.2,
+    "hood_arch_spring_y_mm": 14.0,
+    "lower_body_shoulder_y_mm": -22.0,
+    "arch_segments": 18,
     "lens_cutout_d_mm": 58.0,
     "lens_center_x_mm": 0.0,
     "lens_center_y_mm": 0.0,
     "front_vent_width_mm": 6.35,
     "front_vent_top_bottom_margin_mm": 4.0,
     "front_vent_corner_r_mm": 1.5,
-    "rear_opening_lead_in_mm": 0.6
+    "rear_opening_lead_in_mm": 0.6,
+    "include_side_relief_cutouts": true,
+    "side_relief_slot_h_mm": 5.0,
+    "side_relief_slot_len_mm": 26.0,
+    "side_relief_center_y_mm": 18.0,
+    "side_relief_z_centers_mm": [
+      42.0,
+      80.0,
+      118.0
+    ],
+    "side_relief_corner_r_mm": 1.2,
+    "include_top_relief_cutouts": true,
+    "top_relief_slot_w_mm": 24.0,
+    "top_relief_slot_len_mm": 24.0,
+    "top_relief_z_centers_mm": [
+      42.0,
+      80.0,
+      118.0
+    ],
+    "top_relief_corner_r_mm": 1.5,
+    "include_side_rails": true,
+    "side_rail_width_mm": 1.6,
+    "side_rail_height_mm": 8.0,
+    "side_rail_z_margin_mm": 12.0
   },
   "source_reference": {
     "file": "refs/AVKANS_GO_RAIN_CASE.stl",
@@ -37,12 +61,16 @@
     "outer_w": 63.866,
     "outer_h": 81.928,
     "outer_depth": 159.308,
-    "inner_w": 58.066,
-    "inner_h": 76.12799999999999,
+    "outer_profile": "arched hood with narrower lower body side skirts",
+    "lower_body_w": 57.764,
+    "inner_lower_w": 51.964,
+    "inner_hood_w": 58.066,
+    "inner_h": 76.128,
     "front_wall": 3.2,
     "rear_opening_w": 58.066,
-    "rear_opening_h": 76.12799999999999,
+    "rear_opening_h": 76.128,
     "wall": 3.2,
+    "effective_cavity_offset": 2.9000000000000004,
     "single_fused_shell": true,
     "rear_sliding_insertion": true,
     "internal_partition_walls_removed": true
@@ -60,10 +88,26 @@
       "centered": true,
       "intersects_lens_opening": true,
       "corner_r": 1.5
+    },
+    "source_inspired_contours": {
+      "arched_hood_profile": true,
+      "narrower_lower_body": true,
+      "side_relief_cutouts": true,
+      "top_relief_cutouts": true,
+      "side_rails": true
     }
   },
   "named_bodies": [
     "AVKANS_GO_ASA_Shell"
   ],
-  "archived_previous_outputs": []
+  "archived_previous_outputs": [
+    [
+      "models/avkans_go_case/avkans_go_asa_shell.step",
+      "models/avkans_go_case/archive/avkans_go_asa_shell_20260622_160131.step"
+    ],
+    [
+      "models/avkans_go_case/reports/avkans_go_report.json",
+      "models/avkans_go_case/archive/avkans_go_report_20260622_160131.json"
+    ]
+  ]
 }
