@@ -107,6 +107,7 @@ class MakiCaseParams:
     sun_shade_side_drop_ratio: float = 0.72
     sun_shade_side_support_height_mm: float = 0.0
     sun_shade_vent_relief_mm: float = 0.8
+    sun_shade_side_skirt_corner_r_mm: float = 2.0
 
     # Snap-latch flexure clips for rear cap retention
     include_snap_clips: bool = False
@@ -1451,6 +1452,11 @@ def build_case(p: MakiCaseParams):
         side_trim_h = max(side_panel_lower_y + half_shade_outer_h, 0.0)
         side_trim_x_depth = max(shade_outer_w - shade_inner_w + 2.0, shade_w + 1.0)
         side_trim_x_center = 0.5 * (half_shade_outer_w + half_shade_inner_w)
+        side_trim_corner_r = _safe_fillet_radius(
+            side_trim_x_depth,
+            side_trim_h + 0.2,
+            p.sun_shade_side_skirt_corner_r_mm,
+        ) if side_trim_h > 0.5 else 0.0
         lower_side_support_h = 0.0
         if p.sun_shade_side_support_height_mm > 0.0:
             lower_side_support_h = max(min(p.sun_shade_side_support_height_mm, side_drop - 1.0), 1.5)
@@ -1478,8 +1484,11 @@ def build_case(p: MakiCaseParams):
                 # shade behaves like a top visor wrap, not a full enclosure.
                 if side_trim_h > 0.5:
                     for sx_sign in (-1.0, 1.0):
-                        with Locations((sx_sign * side_trim_x_center, half_shade_outer_h - 0.5 * side_trim_h, shade_mid_z)):
-                            Box(side_trim_x_depth, side_trim_h + 0.2, shell_depth + 2.0, mode=Mode.SUBTRACT)
+                        with BuildSketch(Plane.XY.offset(-1.0)):
+                            with Locations((sx_sign * side_trim_x_center, half_shade_outer_h - 0.5 * side_trim_h)):
+                                Rectangle(side_trim_x_depth, side_trim_h + 0.2)
+                                fillet(vertices(), side_trim_corner_r)
+                        extrude(amount=shell_depth + 2.0, mode=Mode.SUBTRACT)
 
             with BuildPart() as shade_ribs_bp:
                 for ry in (-1.0, 1.0):
@@ -1632,6 +1641,8 @@ def build_case(p: MakiCaseParams):
                 "side_support_height_mm": float(lower_side_support_h),
                 "vent_relief_mm": float(vent_relief_margin),
                 "vent_relief_count": int(shade_support_relief_count),
+                "side_skirt_corner_r_mm": float(side_trim_corner_r),
+                "side_skirt_lower_trim_y_mm": float(half_shade_outer_h - side_trim_h - 0.1),
                 "cold_shoe_count": int(3 if p.cold_shoe_enabled else 0),
                 "coverage": "top + partial left/right sides (open bottom)",
             }

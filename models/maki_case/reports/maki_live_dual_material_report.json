@@ -697,6 +697,8 @@
             "side_support_height_mm": 0.0,
             "vent_relief_mm": 0.8,
             "vent_relief_count": 8,
+            "side_skirt_corner_r_mm": 2.0,
+            "side_skirt_lower_trim_y_mm": 18.2898,
             "cold_shoe_count": 3,
             "coverage": "top + partial left/right sides (open bottom)"
           },

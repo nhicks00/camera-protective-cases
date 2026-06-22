@@ -132,6 +132,7 @@ Active hard-shell and TPU workflows:
   - Side `3+3` vents use rounded-slot cuts; tripod-side ASA vents are covered by the merged rectangular cutout.
   - If TPU side vent cutouts are explicitly enabled, the TPU generator uses the same merged tripod-side panel behavior.
   - Vent-bank/tripod side relationship is explicit: merged panel and tripod opening remain on the same expected side (`tripod_expected_side`), with hood on the opposite side.
+  - Sunshade side skirt lower corners are rounded by the side-trim profile (`2.0 mm` corner radius), avoiding direct OCC edge fillets on the open skirt edges.
   - Front camera aperture in integrated front wall is trimmed by `2.0 mm` vs prior extraction.
   - Through-cut depth increased so vents fully penetrate.
   - Vent row clustering now locks to the STEP-derived rear vent bank (8 rows) and ignores front outlier slots.
