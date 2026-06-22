@@ -447,32 +447,24 @@ def build_asa_shell(p: MevoCoreParams):
             half_ow = 0.5 * asa_outer_w
             half_oh = 0.5 * asa_outer_h
 
-            # X+ wall
-            snap_hole_corner_r = min(
-                max(p.external_cutout_corner_r_mm, 0.0),
-                0.5 * min(hole_w, hole_h) - 0.25,
-            )
+            # X+ wall. Keep these release/clearance holes rectangular so
+            # the back-cap latch bumps have full corner clearance.
+            snap_hole_corner_r = 0.0
             with BuildSketch(Plane.YZ.offset(half_ow + 0.2)):
                 with Locations((0.0, hole_z)):
                     Rectangle(hole_w, hole_h)
-                    if snap_hole_corner_r > 0.0:
-                        fillet(vertices(), snap_hole_corner_r)
             extrude(amount=-wall_cut, mode=Mode.SUBTRACT)
 
             # X- wall (through cold shoe fill)
             with BuildSketch(Plane.YZ.offset(-(half_ow + 0.2))):
                 with Locations((0.0, hole_z)):
                     Rectangle(hole_w, hole_h)
-                    if snap_hole_corner_r > 0.0:
-                        fillet(vertices(), snap_hole_corner_r)
             extrude(amount=wall_cut, mode=Mode.SUBTRACT)
 
             # Y- wall
             with BuildSketch(Plane.XZ.offset(-(half_oh + 0.2))):
                 with Locations((0.0, hole_z)):
                     Rectangle(hole_w, hole_h)
-                    if snap_hole_corner_r > 0.0:
-                        fillet(vertices(), snap_hole_corner_r)
             extrude(amount=wall_cut, mode=Mode.SUBTRACT)
 
             latch_walls = ["X+", "X-", "Y-"]
