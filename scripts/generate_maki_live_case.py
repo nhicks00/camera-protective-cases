@@ -166,7 +166,7 @@ class MakiCaseParams:
     # Z shift for vent arrays (0 = place at STEP-derived positions).
     tripanel_vent_z_shift_mm: float = 0.0
     vent_cut_depth_mm: float = 12.0
-    include_side_trio_vents: bool = True
+    include_side_trio_vents: bool = False
     side_trio_per_side: int = 3
     side_trio_z_threshold_mm: float = -60.0
     side_trio_select_rear: bool = True
@@ -180,8 +180,8 @@ class MakiCaseParams:
     merged_tripanel_cutout_margin_mm: float = 1.0
     merged_tripanel_tripod_bridge_mm: float = 2.0
     include_large_other_side_cutouts: bool = True
-    large_other_side_cutout_front_margin_mm: float = 8.0
-    large_other_side_cutout_rear_margin_mm: float = 14.0
+    large_other_side_cutout_front_margin_mm: float = 4.0
+    large_other_side_cutout_rear_margin_mm: float = 8.0
     large_other_side_cutout_corner_margin_mm: float = 2.0
 
     # Shape processing
@@ -261,8 +261,11 @@ def _xy_box_between_points(
     width: float,
     depth: float,
     z_center: float,
-    overlap: float,
+    start_overlap: float,
+    end_overlap: float | None = None,
 ):
+    if end_overlap is None:
+        end_overlap = start_overlap
     sx, sy = start_xy
     ex, ey = end_xy
     dx = ex - sx
@@ -272,11 +275,11 @@ def _xy_box_between_points(
         raise ValueError("Cannot build diagonal rib with coincident endpoints")
     ux = dx / length
     uy = dy / length
-    sx -= ux * overlap
-    sy -= uy * overlap
-    ex += ux * overlap
-    ey += uy * overlap
-    length += 2.0 * overlap
+    sx -= ux * start_overlap
+    sy -= uy * start_overlap
+    ex += ux * end_overlap
+    ey += uy * end_overlap
+    length += start_overlap + end_overlap
     center_x = 0.5 * (sx + ex)
     center_y = 0.5 * (sy + ey)
     angle_deg = math.degrees(math.atan2(ey - sy, ex - sx))
@@ -978,8 +981,12 @@ def _derive_large_other_side_cutouts(
     if max_z <= min_z + 1.0:
         return []
 
-    x_span = max(float(outer_w) - 2.0 * preserved_corner_band, 1.0)
-    y_span = max(float(outer_h) - 2.0 * preserved_corner_band, 1.0)
+    corner_limited_x_half_span = max(0.5 * float(outer_w) - preserved_corner_band, 0.5)
+    corner_limited_y_half_span = max(0.5 * float(outer_h) - preserved_corner_band, 0.5)
+    top_support_half_span = max(support_offsets["top_inner_edge_abs"] - support_clearance, 0.5)
+    side_support_half_span = max(support_offsets["side_inner_edge_abs"] - support_clearance, 0.5)
+    x_span = max(2.0 * max(corner_limited_x_half_span, top_support_half_span), 1.0)
+    y_span = max(2.0 * max(corner_limited_y_half_span, side_support_half_span), 1.0)
     z_span = max_z - min_z
     z_center = 0.5 * (min_z + max_z)
 
@@ -1050,7 +1057,14 @@ def _derive_large_other_side_cutouts(
                 "preserved_corner_radius_mm": float(outer_corner_r),
                 "corner_margin_mm": float(corner_margin),
                 "preserved_corner_band_mm": float(preserved_corner_band),
-                "support_bar_avoidance_enabled": False,
+                "expanded_for_heat_vent_area": True,
+                "corner_limited_half_span_mm": float(
+                    corner_limited_x_half_span if cutout.get("axis") == "y" else corner_limited_y_half_span
+                ),
+                "support_protected_half_span_mm": float(
+                    top_support_half_span if cutout.get("axis") == "y" else side_support_half_span
+                ),
+                "support_bar_avoidance_enabled": True,
                 "support_bar_placement": "curved_corner_bands",
                 "support_group": support_group,
                 "support_rib_center_abs_mm": float(support_center_abs),
@@ -1713,7 +1727,8 @@ def build_case(p: MakiCaseParams):
         )
         rib_y_offset = support_offsets["side_y_center_abs"]
         rib_radial = standoff + 2.0
-        top_rib_overlap = 1.25
+        top_rib_shell_overlap = 1.25
+        top_rib_shade_wall_overlap = min(max(0.35 * shade_w, 0.35), shade_w - 0.25)
         top_corner_angle = float(p.sun_shade_top_corner_support_angle_deg)
         top_diagonal_ribs = []
         top_diagonal_entries = []
@@ -1726,10 +1741,10 @@ def build_case(p: MakiCaseParams):
                 -1.0,
                 top_corner_angle,
             )
-            shade_contact = _rounded_rect_corner_point(
-                half_shade_outer_w,
-                half_shade_outer_h,
-                shade_outer_r,
+            shade_inner_contact = _rounded_rect_corner_point(
+                half_shade_inner_w,
+                0.5 * shade_inner_h,
+                shade_inner_r,
                 sx_sign,
                 -1.0,
                 top_corner_angle,
@@ -1737,18 +1752,22 @@ def build_case(p: MakiCaseParams):
             top_diagonal_ribs.append(
                 _xy_box_between_points(
                     shell_contact,
-                    shade_contact,
+                    shade_inner_contact,
                     post_w,
                     shell_depth,
                     shade_mid_z,
-                    top_rib_overlap,
+                    top_rib_shell_overlap,
+                    top_rib_shade_wall_overlap,
                 )
             )
             top_diagonal_entries.append(
                 {
                     "side": "left" if sx_sign < 0.0 else "right",
                     "shell_contact_xy_mm": [float(shell_contact[0]), float(shell_contact[1])],
-                    "shade_contact_xy_mm": [float(shade_contact[0]), float(shade_contact[1])],
+                    "shade_inner_contact_xy_mm": [
+                        float(shade_inner_contact[0]),
+                        float(shade_inner_contact[1]),
+                    ],
                 }
             )
         side_rib_x_centers = {
@@ -1820,6 +1839,8 @@ def build_case(p: MakiCaseParams):
                 # Cut relief notches into the shade support ribs anywhere they would
                 # otherwise bridge directly across existing vent openings.
                 for vent in vents_used:
+                    if vent.get("cutout_kind") in {"merged_panel", "large_surface_panel"}:
+                        continue
                     slot_t = float(vent.get("slot_t", vent.get("slot_w", 0.0)))
                     slot_z = float(vent.get("slot_z", vent.get("slot_h", 0.0)))
                     if slot_t <= 0.0 or slot_z <= 0.0:
@@ -2001,7 +2022,8 @@ def build_case(p: MakiCaseParams):
                 "top_support_count": 2,
                 "top_support_style": "diagonal_corner_ribs",
                 "top_support_angle_deg": float(top_corner_angle),
-                "top_support_overlap_mm": float(top_rib_overlap),
+                "top_support_shell_overlap_mm": float(top_rib_shell_overlap),
+                "top_support_shade_wall_overlap_mm": float(top_rib_shade_wall_overlap),
                 "top_support_corner_contacts": top_diagonal_entries,
                 "top_support_inner_edge_x_abs_mm": float(support_offsets["top_inner_edge_abs"]),
                 "side_support_count": int(2 * len(side_rib_y_centers)),

@@ -26,7 +26,7 @@
   "fit_metrics": {
     "device_vs_body_asa": {
       "intersection_volume_mm3": 0.0,
-      "min_distance_mm": 2.2985169194599884,
+      "min_distance_mm": 2.2985169194600026,
       "hard_collision": false
     },
     "device_vs_body_tpu": {
@@ -62,8 +62,8 @@
       },
       "asa_vents": {
         "passed": true,
-        "count_actual": 30,
-        "count_expected": 30,
+        "count_actual": 24,
+        "count_expected": 24,
         "unmatched_actual": 0,
         "unmatched_expected": 0,
         "max_center_delta_z_mm": 0.0,
@@ -105,9 +105,9 @@
         }
       },
       "counts": {
-        "expected_total_vents": 30,
+        "expected_total_vents": 24,
         "expected_tripanel": 24,
-        "expected_side_trio": 6
+        "expected_side_trio": 0
       }
     },
     "rear_cap_cutouts_vs_device": {
@@ -131,9 +131,9 @@
     },
     "pin_through_vent_test": {
       "passed": true,
-      "tested": 30,
+      "tested": 24,
       "blocked": 0,
-      "clear": 30,
+      "clear": 24,
       "blocked_vents": [],
       "threshold_mm3": 0.5
     },

@@ -125,14 +125,12 @@ Active hard-shell and TPU workflows:
     - this vent-panel cutout is separate from the existing bottom/tripod rectangle, with a `2.0 mm` shell bridge between them,
     - current vent-panel cutout is centered on the tripod side, aligned to the tripod rectangle width, with `1.0 mm` vent margin,
     - logical vent coordinates are still emitted for validation; the physical vent-panel cutout is emitted under `step_side_features.merged_vent_cutouts_applied_entries`,
-    - the other 3 ASA shell sides each get one rectangular surface-panel cutout sized like Mevo Core: cutout width is based on the flat face span, preserving `outer_corner_radius + 2.0 mm` at each rounded corner,
+    - the other 3 ASA shell sides each get one enlarged rectangular surface-panel cutout for heat venting, expanded toward the preserved corner/support bands instead of being limited to the original flat-face span,
     - sun-shade support ribs are moved into those preserved curved-corner bands with `1.0 mm` clearance from the large surface-panel openings, so the openings can maximize heat vent area without exposing the support ribs,
-    - sun-shade support ribs are intentionally lightened to `2.5 mm`; the top has 2 diagonal 45-degree corner ribs that overlap both the case corner and shade corner, and each side keeps only the opposite-side skirt rib after removing the visible middle side rib,
-    - side vent coordinates remain logical validation probes, but the left/right side openings are covered by the large side-panel cutouts.
+    - sun-shade support ribs are intentionally lightened to `2.5 mm`; the top has 2 diagonal 45-degree corner ribs that overlap the case corner and terminate into the shade inner wall so they do not protrude through the hood, and each side keeps only the opposite-side skirt rib after removing the visible middle side rib,
+    - standalone side-trio vent slots are removed from the active ASA shell; only the merged tripod-side panel and the 3 large side/top surface panels remain for ASA heat venting.
   - The large former 24-vent bank is constrained to bottom-connected panels (not direct side walls).
-  - Side 3+3 vent group is placed on the opposite end from the tripod-side vent bank.
-  - Side 3+3 vent dimensions are matched to the main tripanel vent style size.
-  - Side `3+3` vents are covered by large rectangular side-panel cutouts; tripod-side ASA vents are covered by the separated rectangular cutout.
+  - Side 3+3 vent derivation remains available in the generator for legacy/fallback use, but it is disabled by default and not part of the active ASA sleeve output.
   - If TPU side vent cutouts are explicitly enabled, the TPU generator uses the same merged tripod-side panel behavior.
   - Vent-bank/tripod side relationship is explicit: merged panel and tripod opening remain on the same expected side (`tripod_expected_side`), with hood on the opposite side.
   - Sunshade side skirt lower corners are rounded by the side-trim profile plus direct lower-edge fillets on the actual skirt edges:
@@ -159,7 +157,7 @@ Active hard-shell and TPU workflows:
     - Provides distributed holding force for cap retention alongside snap clips.
     - Matching friction ridge on rear cap ASA plug outer surface.
     - Controlled by `friction_ridge_*` params; disable with `--no-friction-ridge`.
-  - Vent pass-through validated at the former 30 logical vent positions; merged physical ASA cutout count is separately reported.
+  - Vent pass-through validates the active 24 tripanel logical positions; merged physical ASA cutout count is separately reported.
 - ASA caps:
   - Active outputs:
     - `models/maki_case/maki_live_back_cap.step`

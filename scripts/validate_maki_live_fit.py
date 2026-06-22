@@ -370,33 +370,34 @@ def _extract_expected_case_features(device_step: Path, asa_case_report: dict) ->
                 }
             )
 
-    trio = maki_case_gen._derive_side_trio_vents(
-        step_features["vents"],
-        map_y,
-        map_z,
-        sy,
-        sz,
-        p,
-        size_override=(vent_pattern["slot_t"], vent_pattern["slot_z"]),
-    )
-    side_trio_z = (
-        (shell_depth + cavity_front_z) - trio["z_center"] if p.side_trio_flip_end else trio["z_center"]
-    )
-    side_trio_z = min(max(side_trio_z + p.side_trio_vent_z_shift_mm, 1.0), shell_depth - 1.0)
-    for side in ("neg", "pos"):
-        for y_c in trio["y_centers"]:
-            expected_vents.append(
-                {
-                    "family": "side_trio",
-                    "axis": "x",
-                    "side": side,
-                    "x": 0.0,
-                    "y": float(y_c),
-                    "z": float(side_trio_z),
-                    "slot_t": float(trio["slot_t"]),
-                    "slot_z": float(trio["slot_z"]),
-                }
-            )
+    if p.include_side_trio_vents:
+        trio = maki_case_gen._derive_side_trio_vents(
+            step_features["vents"],
+            map_y,
+            map_z,
+            sy,
+            sz,
+            p,
+            size_override=(vent_pattern["slot_t"], vent_pattern["slot_z"]),
+        )
+        side_trio_z = (
+            (shell_depth + cavity_front_z) - trio["z_center"] if p.side_trio_flip_end else trio["z_center"]
+        )
+        side_trio_z = min(max(side_trio_z + p.side_trio_vent_z_shift_mm, 1.0), shell_depth - 1.0)
+        for side in ("neg", "pos"):
+            for y_c in trio["y_centers"]:
+                expected_vents.append(
+                    {
+                        "family": "side_trio",
+                        "axis": "x",
+                        "side": side,
+                        "x": 0.0,
+                        "y": float(y_c),
+                        "z": float(side_trio_z),
+                        "slot_t": float(trio["slot_t"]),
+                        "slot_z": float(trio["slot_z"]),
+                    }
+                )
 
     expected_tripod = None
     t = step_features.get("tripod")

@@ -99,7 +99,7 @@
         "step_side_features": {
           "resolved_tripod_side": "neg",
           "vents_detected": 30,
-          "vents_applied": 30,
+          "vents_applied": 24,
           "vents_applied_entries": [
             {
               "axis": "y",
@@ -484,96 +484,6 @@
               "vent_family": "tripanel",
               "cutout_kind": "merged_panel",
               "merged_cutout_id": "tripod_side_separate_vent_panel"
-            },
-            {
-              "axis": "x",
-              "side": "neg",
-              "x": -33.995000000000005,
-              "y": -12.0,
-              "z": 109.47438185155546,
-              "slot_t": 17.35431182651025,
-              "slot_z": 3.9952787506158813,
-              "slot_w": 17.35431182651025,
-              "slot_h": 3.9952787506158813,
-              "pattern_source": "step_side_trio",
-              "vent_family": "side_trio",
-              "cutout_kind": "large_surface_panel",
-              "large_cutout_id": "large_surface_panel_x_neg"
-            },
-            {
-              "axis": "x",
-              "side": "neg",
-              "x": -33.995000000000005,
-              "y": 0.0,
-              "z": 109.47438185155546,
-              "slot_t": 17.35431182651025,
-              "slot_z": 3.9952787506158813,
-              "slot_w": 17.35431182651025,
-              "slot_h": 3.9952787506158813,
-              "pattern_source": "step_side_trio",
-              "vent_family": "side_trio",
-              "cutout_kind": "large_surface_panel",
-              "large_cutout_id": "large_surface_panel_x_neg"
-            },
-            {
-              "axis": "x",
-              "side": "neg",
-              "x": -33.995000000000005,
-              "y": 12.0,
-              "z": 109.47438185155546,
-              "slot_t": 17.35431182651025,
-              "slot_z": 3.9952787506158813,
-              "slot_w": 17.35431182651025,
-              "slot_h": 3.9952787506158813,
-              "pattern_source": "step_side_trio",
-              "vent_family": "side_trio",
-              "cutout_kind": "large_surface_panel",
-              "large_cutout_id": "large_surface_panel_x_neg"
-            },
-            {
-              "axis": "x",
-              "side": "pos",
-              "x": 33.995000000000005,
-              "y": -12.0,
-              "z": 109.47438185155546,
-              "slot_t": 17.35431182651025,
-              "slot_z": 3.9952787506158813,
-              "slot_w": 17.35431182651025,
-              "slot_h": 3.9952787506158813,
-              "pattern_source": "step_side_trio",
-              "vent_family": "side_trio",
-              "cutout_kind": "large_surface_panel",
-              "large_cutout_id": "large_surface_panel_x_pos"
-            },
-            {
-              "axis": "x",
-              "side": "pos",
-              "x": 33.995000000000005,
-              "y": 0.0,
-              "z": 109.47438185155546,
-              "slot_t": 17.35431182651025,
-              "slot_z": 3.9952787506158813,
-              "slot_w": 17.35431182651025,
-              "slot_h": 3.9952787506158813,
-              "pattern_source": "step_side_trio",
-              "vent_family": "side_trio",
-              "cutout_kind": "large_surface_panel",
-              "large_cutout_id": "large_surface_panel_x_pos"
-            },
-            {
-              "axis": "x",
-              "side": "pos",
-              "x": 33.995000000000005,
-              "y": 12.0,
-              "z": 109.47438185155546,
-              "slot_t": 17.35431182651025,
-              "slot_z": 3.9952787506158813,
-              "slot_w": 17.35431182651025,
-              "slot_h": 3.9952787506158813,
-              "pattern_source": "step_side_trio",
-              "vent_family": "side_trio",
-              "cutout_kind": "large_surface_panel",
-              "large_cutout_id": "large_surface_panel_x_pos"
             }
           ],
           "merged_vent_cutouts_applied": 1,
@@ -620,14 +530,14 @@
               "side": "pos",
               "shape": "rect",
               "x": 0.0,
-              "z": 66.96,
-              "w": 19.4156862841066,
-              "h": 105.91999999999999,
+              "z": 67.96,
+              "w": 50.151643066876744,
+              "h": 115.91999999999999,
               "bounds": {
-                "min_x": -9.7078431420533,
-                "max_x": 9.7078431420533,
-                "min_z": 14.0,
-                "max_z": 119.91999999999999
+                "min_x": -25.075821533438372,
+                "max_x": 25.075821533438372,
+                "min_z": 10.0,
+                "max_z": 125.91999999999999
               },
               "cutout_kind": "large_surface_panel",
               "preserves_tripod_side": true,
@@ -635,7 +545,10 @@
               "preserved_corner_radius_mm": 22.087156857946702,
               "corner_margin_mm": 2.0,
               "preserved_corner_band_mm": 24.087156857946702,
-              "support_bar_avoidance_enabled": false,
+              "expanded_for_heat_vent_area": true,
+              "corner_limited_half_span_mm": 9.7078431420533,
+              "support_protected_half_span_mm": 25.075821533438372,
+              "support_bar_avoidance_enabled": true,
               "support_bar_placement": "curved_corner_bands",
               "support_group": "top_diagonal_corner",
               "support_rib_center_abs_mm": 27.325821533438372,
@@ -646,8 +559,8 @@
               "top_support_shell_contact_y_abs_mm": 27.32582153343837,
               "top_support_angle_deg": 45.0,
               "side_support_rib_center_abs_mm": 13.9578431420533,
-              "front_margin_mm": 8.0,
-              "rear_margin_mm": 14.0,
+              "front_margin_mm": 4.0,
+              "rear_margin_mm": 8.0,
               "y": 33.995000000000005,
               "cut_depth_mm": 12.0
             },
@@ -657,14 +570,14 @@
               "side": "neg",
               "shape": "rect",
               "y": 0.0,
-              "z": 66.96,
-              "w": 19.4156862841066,
-              "h": 105.91999999999999,
+              "z": 67.96,
+              "w": 23.4156862841066,
+              "h": 115.91999999999999,
               "bounds": {
-                "min_y": -9.7078431420533,
-                "max_y": 9.7078431420533,
-                "min_z": 14.0,
-                "max_z": 119.91999999999999
+                "min_y": -11.7078431420533,
+                "max_y": 11.7078431420533,
+                "min_z": 10.0,
+                "max_z": 125.91999999999999
               },
               "cutout_kind": "large_surface_panel",
               "preserves_tripod_side": true,
@@ -672,7 +585,10 @@
               "preserved_corner_radius_mm": 22.087156857946702,
               "corner_margin_mm": 2.0,
               "preserved_corner_band_mm": 24.087156857946702,
-              "support_bar_avoidance_enabled": false,
+              "expanded_for_heat_vent_area": true,
+              "corner_limited_half_span_mm": 9.7078431420533,
+              "support_protected_half_span_mm": 11.7078431420533,
+              "support_bar_avoidance_enabled": true,
               "support_bar_placement": "curved_corner_bands",
               "support_group": "side_opposite_skirt_corner",
               "support_rib_center_abs_mm": 13.9578431420533,
@@ -683,8 +599,8 @@
               "top_support_shell_contact_y_abs_mm": 27.32582153343837,
               "top_support_angle_deg": 45.0,
               "side_support_rib_center_abs_mm": 13.9578431420533,
-              "front_margin_mm": 8.0,
-              "rear_margin_mm": 14.0,
+              "front_margin_mm": 4.0,
+              "rear_margin_mm": 8.0,
               "x": -33.995000000000005,
               "cut_depth_mm": 12.0
             },
@@ -694,14 +610,14 @@
               "side": "pos",
               "shape": "rect",
               "y": 0.0,
-              "z": 66.96,
-              "w": 19.4156862841066,
-              "h": 105.91999999999999,
+              "z": 67.96,
+              "w": 23.4156862841066,
+              "h": 115.91999999999999,
               "bounds": {
-                "min_y": -9.7078431420533,
-                "max_y": 9.7078431420533,
-                "min_z": 14.0,
-                "max_z": 119.91999999999999
+                "min_y": -11.7078431420533,
+                "max_y": 11.7078431420533,
+                "min_z": 10.0,
+                "max_z": 125.91999999999999
               },
               "cutout_kind": "large_surface_panel",
               "preserves_tripod_side": true,
@@ -709,7 +625,10 @@
               "preserved_corner_radius_mm": 22.087156857946702,
               "corner_margin_mm": 2.0,
               "preserved_corner_band_mm": 24.087156857946702,
-              "support_bar_avoidance_enabled": false,
+              "expanded_for_heat_vent_area": true,
+              "corner_limited_half_span_mm": 9.7078431420533,
+              "support_protected_half_span_mm": 11.7078431420533,
+              "support_bar_avoidance_enabled": true,
               "support_bar_placement": "curved_corner_bands",
               "support_group": "side_opposite_skirt_corner",
               "support_rib_center_abs_mm": 13.9578431420533,
@@ -720,8 +639,8 @@
               "top_support_shell_contact_y_abs_mm": 27.32582153343837,
               "top_support_angle_deg": 45.0,
               "side_support_rib_center_abs_mm": 13.9578431420533,
-              "front_margin_mm": 8.0,
-              "rear_margin_mm": 14.0,
+              "front_margin_mm": 4.0,
+              "rear_margin_mm": 8.0,
               "x": 33.995000000000005,
               "cut_depth_mm": 12.0
             }
@@ -831,13 +750,14 @@
             "side_drop_ratio": 0.72,
             "side_support_height_mm": 0.0,
             "vent_relief_mm": 0.8,
-            "vent_relief_count": 2,
+            "vent_relief_count": 0,
             "support_placement": "curved_corner_bands",
             "corner_support_clearance_mm": 1.0,
             "top_support_count": 2,
             "top_support_style": "diagonal_corner_ribs",
             "top_support_angle_deg": 45.0,
-            "top_support_overlap_mm": 1.25,
+            "top_support_shell_overlap_mm": 1.25,
+            "top_support_shade_wall_overlap_mm": 0.7,
             "top_support_corner_contacts": [
               {
                 "side": "left",
@@ -845,9 +765,9 @@
                   -27.325821533438372,
                   -27.32582153343837
                 ],
-                "shade_contact_xy_mm": [
-                  -32.982675782930755,
-                  -32.98267578293075
+                "shade_inner_contact_xy_mm": [
+                  -31.568462220557656,
+                  -31.568462220557652
                 ]
               },
               {
@@ -856,9 +776,9 @@
                   27.325821533438372,
                   -27.32582153343837
                 ],
-                "shade_contact_xy_mm": [
-                  32.982675782930755,
-                  -32.98267578293075
+                "shade_inner_contact_xy_mm": [
+                  31.568462220557656,
+                  -31.568462220557652
                 ]
               }
             ],
