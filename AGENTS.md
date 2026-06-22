@@ -69,7 +69,7 @@ Mevo Core:
 - Retention: 3 snap-latch walls plus Y+ retention bump
 - Thermal cutouts: large rectangular panel notches replacing individual slots:
   - one notch per side face spanning the former 6-row side vent bank,
-  - one top notch spanning the former 4-row top vent bank, enlarged to match the side-notch Z height,
+  - one top notch spanning the former 4-row top vent bank, enlarged and Z-aligned to match the side notches,
   - cutout width expands across the flat face and stops before corner curvature.
 
 Zowietek 4K NDI POV Zoom Camera:
@@ -280,7 +280,7 @@ Current preferred workflow:
   - 3 snap-latch walls plus Y+ retention bump
   - Thermal cutouts are large rectangular panel notches, not individual slit vents:
     - one per side face across the former 6-row side vent bank,
-    - one top-face notch across the former 4-row top vent bank, enlarged to match the side-notch Z height,
+    - one top-face notch across the former 4-row top vent bank, enlarged and Z-aligned to match the side notches,
     - each notch widens across the flat panel and stops before corner curvature.
   - Dimension-driven workflow (no manufacturer STEP reference)
 - Optional flags: `--no-cold-shoe`, `--no-friction-ridge`, `--no-snap-latches`, `--no-hood`, `--no-vents`, `--no-sun-shade`, `--lens-diameter`, `--hood-depth`
