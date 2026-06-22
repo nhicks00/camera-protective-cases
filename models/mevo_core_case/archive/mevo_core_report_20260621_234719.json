@@ -54,8 +54,17 @@
     "back_cap_lip_depth_mm": 5.0,
     "back_cap_lip_undersize_total_mm": 0.28,
     "back_cap_edge_fillet_mm": 0.6,
-    "back_cap_center_opening_inset_mm": 8.0,
-    "back_cap_center_opening_corner_r_mm": 8.0,
+    "port_cutout_w_mm": 63.5,
+    "port_cutout_h_mm": 12.7,
+    "port_cutout_center_x_mm": -0.55,
+    "port_cutout_center_y_mm": -19.6,
+    "port_cutout_corner_r_mm": 2.0,
+    "power_cutout_w_mm": 31.75,
+    "power_cutout_h_mm": 14.29,
+    "power_cutout_center_x_mm": 0.0,
+    "power_cutout_center_y_mm": 33.1,
+    "power_cutout_corner_r_mm": 2.0,
+    "cutout_oversize_mm": 1.0,
     "include_friction_ridge": false,
     "friction_ridge_height_mm": 0.8,
     "friction_ridge_setback_mm": 3.0,
@@ -242,13 +251,17 @@
         "bump_width_mm": 8.0,
         "bump_z_extent_mm": 2.5
       },
-      "center_opening": {
-        "enabled": true,
-        "type": "single_large_rounded_rectangle",
-        "w_mm": 74.0,
-        "h_mm": 74.0,
-        "corner_r_mm": 8.0,
-        "inset_from_device_edge_mm": 8.0
+      "port_cutout": {
+        "w_mm": 65.5,
+        "h_mm": 14.7,
+        "center_x_mm": -0.55,
+        "center_y_mm": -19.6
+      },
+      "power_cutout": {
+        "w_mm": 33.75,
+        "h_mm": 16.29,
+        "center_x_mm": 0.0,
+        "center_y_mm": 33.1
       }
     },
     "named_bodies": [

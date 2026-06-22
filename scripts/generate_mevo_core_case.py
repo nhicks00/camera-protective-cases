@@ -9,7 +9,7 @@ Primary outputs:
 Design notes:
 - Square cross-section (90 x 90 mm) with rounded corners
 - Full circular tube lens hood (2.75" diameter, 2.5" depth)
-- Back cap with port cutout (bottom) and power button cutout (top center)
+- Back cap as bumper ring with one large open center
 - Single bottom tripod mount (1/4"-20 UNC), same rect as Mevo Start
 - Large side/top panel cutouts instead of individual vent slots
 - Cold shoe mount (ISO 518) on top rear
@@ -123,21 +123,9 @@ class MevoCoreParams:
     back_cap_lip_undersize_total_mm: float = 0.28
     back_cap_edge_fillet_mm: float = 0.6
 
-    # Back cap cutouts (positions relative to cap center, i.e. device center)
-    # Port cutout (bottom of back face)
-    port_cutout_w_mm: float = 63.5      # 2.5 inches
-    port_cutout_h_mm: float = 12.7      # 0.5 inches
-    port_cutout_center_x_mm: float = -0.55  # very slightly left of center
-    port_cutout_center_y_mm: float = -19.6  # below center
-    port_cutout_corner_r_mm: float = 2.0
-    # Power button cutout (top center of back face)
-    power_cutout_w_mm: float = 31.75    # 1.25 inches
-    power_cutout_h_mm: float = 14.29    # ~9/16 inch (3/16" to 3/4" from top)
-    power_cutout_center_x_mm: float = 0.0
-    power_cutout_center_y_mm: float = 33.1  # near top
-    power_cutout_corner_r_mm: float = 2.0
-    # Oversize for cutouts (cable boot clearance)
-    cutout_oversize_mm: float = 1.0
+    # Back cap: large open-center bumper ring for rear access
+    back_cap_center_opening_inset_mm: float = 8.0
+    back_cap_center_opening_corner_r_mm: float = 8.0
 
     # Retention: bump pockets — disabled
     include_friction_ridge: bool = False
@@ -998,9 +986,14 @@ def build_back_cap(p: MevoCoreParams):
     asa_outer_h = d["asa_outer_h_mm"]
     lip_tip_w = d["lip_tip_w_mm"]
     lip_tip_h = d["lip_tip_h_mm"]
+    center_opening_w = max(p.device_nominal_w_mm - 2.0 * p.back_cap_center_opening_inset_mm, 10.0)
+    center_opening_h = max(p.device_nominal_h_mm - 2.0 * p.back_cap_center_opening_inset_mm, 10.0)
+    center_opening_r = min(
+        max(p.back_cap_center_opening_corner_r_mm, 0.0),
+        0.5 * min(center_opening_w, center_opening_h) - 0.5,
+    )
 
     cut_depth = p.back_cap_thickness_mm + p.back_cap_lip_depth_mm + 1.0
-    os = p.cutout_oversize_mm  # oversize for cable boot clearance
 
     with BuildPart() as cap_bp:
         # Outer plate
@@ -1015,22 +1008,11 @@ def build_back_cap(p: MevoCoreParams):
             fillet(vertices(), max(p.asa_inner_corner_r_mm - 0.5, 0.5))
         extrude(amount=p.back_cap_lip_depth_mm)
 
-        # Port cutout (bottom of back face)
-        port_w = p.port_cutout_w_mm + 2.0 * os
-        port_h = p.port_cutout_h_mm + 2.0 * os
+        # Large center opening through the back cap plate and plug lip.
         with BuildSketch(Plane.XY.offset(-0.2)):
-            with Locations((p.port_cutout_center_x_mm, p.port_cutout_center_y_mm)):
-                Rectangle(port_w, port_h)
-                fillet(vertices(), p.port_cutout_corner_r_mm)
-        extrude(amount=cut_depth, mode=Mode.SUBTRACT)
-
-        # Power button cutout (top center of back face)
-        pwr_w = p.power_cutout_w_mm + 2.0 * os
-        pwr_h = p.power_cutout_h_mm + 2.0 * os
-        with BuildSketch(Plane.XY.offset(-0.2)):
-            with Locations((p.power_cutout_center_x_mm, p.power_cutout_center_y_mm)):
-                Rectangle(pwr_w, pwr_h)
-                fillet(vertices(), p.power_cutout_corner_r_mm)
+            Rectangle(center_opening_w, center_opening_h)
+            if center_opening_r > 0.0:
+                fillet(vertices(), center_opening_r)
         extrude(amount=cut_depth, mode=Mode.SUBTRACT)
 
     cap = _largest_solid(cap_bp.part)
@@ -1142,17 +1124,13 @@ def build_back_cap(p: MevoCoreParams):
             "thickness": float(p.back_cap_thickness_mm),
             "lip_undersize_total": float(p.back_cap_lip_undersize_total_mm),
             "snap_latches": snap_latch_cap_info if snap_latch_cap_info else {"enabled": False},
-            "port_cutout": {
-                "w_mm": float(port_w),
-                "h_mm": float(port_h),
-                "center_x_mm": float(p.port_cutout_center_x_mm),
-                "center_y_mm": float(p.port_cutout_center_y_mm),
-            },
-            "power_cutout": {
-                "w_mm": float(pwr_w),
-                "h_mm": float(pwr_h),
-                "center_x_mm": float(p.power_cutout_center_x_mm),
-                "center_y_mm": float(p.power_cutout_center_y_mm),
+            "center_opening": {
+                "enabled": True,
+                "type": "single_large_rounded_rectangle",
+                "w_mm": float(center_opening_w),
+                "h_mm": float(center_opening_h),
+                "corner_r_mm": float(center_opening_r),
+                "inset_from_device_edge_mm": float(p.back_cap_center_opening_inset_mm),
             },
         },
         "named_bodies": ["ASA_Back_Cap"],

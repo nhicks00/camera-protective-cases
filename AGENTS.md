@@ -61,10 +61,9 @@ Mevo Core:
 - Lens hood: full circular tube, `101.6 mm` depth (4.0"), `2.5 mm` wall, `2.5 mm` clearance, with side access notches
 - Bottom tripod cutout: `63.5 x 50.8 mm` rectangular, center `34.925 mm` from front
 - Cold shoe mount: ISO 518 on top rear
-- Back cap: ASA plate with two rectangular cutouts:
-  - Port cutout (bottom): `63.5 x 12.7 mm` (2.5" x 0.5"), center at (-0.55, -19.6) mm
-  - Power button cutout (top): `31.75 x 14.29 mm` (1.25" x ~9/16"), centered X, +33.1 mm Y
-  - Cutout oversize: `1.0 mm` per side for cable boot clearance
+- Back cap: ASA bumper ring with one large open-center rounded rectangle:
+  - Center opening: `74.0 x 74.0 mm`, `8.0 mm` inset from device edge per side
+  - Center opening corner radius: `8.0 mm`
 - Back cap plug lip: `5.0 mm` depth, `0.28 mm` total undersize
 - Retention: 3 snap-latch walls plus Y+ retention bump
 - Thermal cutouts: large rectangular panel notches replacing individual slots:
@@ -280,9 +279,7 @@ Current preferred workflow:
     - large side/top thermal notches use `2.0 mm` corner radii,
     - sun-shade support ribs use `1.0 mm` rounded-rectangle cross-section corners.
   - Snap-latch release/clearance holes in the shell stay rectangular (`0.0 mm` corner radius) so the back-cap latch bumps have full corner clearance.
-  - Back cap = ASA plate with two rectangular cutouts:
-    - Bottom port cutout (63.5 × 12.7 mm)
-    - Top power button cutout (31.75 × 14.29 mm, centered)
+  - Back cap = ASA bumper ring with one large open-center rounded-rectangle cutout (`74.0 × 74.0 mm`, `8.0 mm` corner radius)
   - 3 snap-latch walls plus Y+ retention bump
   - Thermal cutouts are large rectangular panel notches, not individual slit vents:
     - one per side face across the former 6-row side vent bank,
