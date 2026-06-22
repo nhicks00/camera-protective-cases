@@ -26,7 +26,6 @@
     "lens_hood_access_height_mm": 50.8,
     "lens_hood_access_radial_depth_mm": 25.4,
     "lens_hood_access_corner_r_mm": 3.0,
-    "lens_hood_access_outboard_clearance_mm": 1.0,
     "tripod_rect_w_mm": 63.5,
     "tripod_rect_l_mm": 50.8,
     "tripod_center_from_front_mm": 34.925,
@@ -148,9 +147,7 @@
           "depth_mm": 44.45,
           "height_mm": 50.8,
           "radial_depth_mm": 25.4,
-          "corner_r_mm": 3.0,
-          "outboard_clearance_mm": 1.0,
-          "cut_starts_outside_flare": true
+          "corner_r_mm": 3.0
         }
       },
       "tripod_cutout": {

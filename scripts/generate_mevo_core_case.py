@@ -85,6 +85,7 @@ class MevoCoreParams:
     lens_hood_access_height_mm: float = 50.8  # 2.0" tall opening on each side
     lens_hood_access_radial_depth_mm: float = 25.4  # 1.0" radial bite through hood wall
     lens_hood_access_corner_r_mm: float = 3.0
+    lens_hood_access_outboard_clearance_mm: float = 1.0
 
     # Bottom tripod cutout (same as MAKI)
     tripod_rect_w_mm: float = 63.5      # 2.5 inches
@@ -608,18 +609,21 @@ def build_asa_shell(p: MevoCoreParams):
                 notch_depth = max(min(p.lens_hood_access_depth_mm, p.lens_hood_depth_mm), 0.0)
                 notch_height = max(min(p.lens_hood_access_height_mm, 2.0 * hood_outer_r + 2.0), 2.0)
                 notch_radial = max(p.lens_hood_access_radial_depth_mm, p.lens_hood_wall_mm + 2.0)
+                notch_outboard = max(p.lens_hood_access_outboard_clearance_mm, 0.0)
+                notch_outer_r = max(flare_r, hood_outer_r) + notch_outboard
+                notch_cut_depth = notch_radial + max(notch_outer_r - hood_outer_r, 0.0) + 0.4
                 notch_corner_r = min(
                     max(p.lens_hood_access_corner_r_mm, 0.0),
                     0.5 * min(notch_height, notch_depth) - 0.25,
                 )
                 for sx in (-1.0, 1.0):
-                    x_face = cx + sx * (hood_outer_r + 0.2)
+                    x_face = cx + sx * notch_outer_r
                     with BuildSketch(Plane.YZ.offset(x_face)):
                         with Locations((cy, -0.5 * notch_depth)):
                             Rectangle(notch_height, notch_depth + 0.4)
                             if notch_corner_r > 0.0:
                                 fillet(vertices(), notch_corner_r)
-                    extrude(amount=-sx * (notch_radial + 0.4), mode=Mode.SUBTRACT)
+                    extrude(amount=-sx * notch_cut_depth, mode=Mode.SUBTRACT)
         hood_solid = hood_bp.part
         try:
             asa_shell = _largest_solid(asa_shell + hood_solid)
@@ -1057,6 +1061,8 @@ def build_asa_shell(p: MevoCoreParams):
                     "height_mm": float(p.lens_hood_access_height_mm),
                     "radial_depth_mm": float(p.lens_hood_access_radial_depth_mm),
                     "corner_r_mm": float(p.lens_hood_access_corner_r_mm),
+                    "outboard_clearance_mm": float(p.lens_hood_access_outboard_clearance_mm),
+                    "cut_starts_outside_flare": True,
                 },
             },
             "tripod_cutout": {
