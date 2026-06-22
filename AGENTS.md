@@ -275,7 +275,7 @@ Current preferred workflow:
   - Full circular tube lens hood (101.6 mm depth / 4.0”, 2.5 mm wall), NOT visor
   - Single bottom tripod mount, rectangular cutout (63.5 × 50.8 mm)
   - Cold shoe mount (ISO 518) on top rear
-  - External sun shade lower side-skirt tips are lifted `4.0 mm`, then rounded with a `2.0 mm` outside-edge fillet and `0.75 mm` inner-edge fillet to remove the sharp bottom corner/point.
+  - External sun shade side skirts stop just past the lower support rib: lower rib center `Y=22.9 mm`, rib outside edge `Y=24.9 mm`, skirt bottom cutoff `Y=28.9 mm` (`4.0 mm` overhang past the rib), with `2.0 mm` outside-edge and `0.75 mm` inner-edge lower fillets.
   - Other external right-angle details are softened unless they are cold-shoe boss/post geometry:
     - large side/top thermal notches use `2.0 mm` corner radii,
     - sun-shade support ribs use `1.0 mm` rounded-rectangle cross-section corners.

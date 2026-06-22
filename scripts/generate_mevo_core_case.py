@@ -184,7 +184,7 @@ class MevoCoreParams:
     sun_shade_wall_mm: float = 2.0        # shade panel thickness
     sun_shade_post_width_mm: float = 4.0   # rib width along each face
     sun_shade_rib_corner_r_mm: float = 1.0
-    sun_shade_lower_tip_lift_mm: float = 4.0
+    sun_shade_lower_support_overhang_mm: float = 4.0
     sun_shade_lower_outer_edge_fillet_mm: float = 2.0
     sun_shade_lower_inner_edge_fillet_mm: float = 1.0
 
@@ -569,8 +569,6 @@ def build_asa_shell(p: MevoCoreParams):
 
         half_shade_outer_w = 0.5 * shade_outer_w
         half_shade_outer_h = 0.5 * shade_outer_h
-        shade_bottom_cut_y = half_asa_h - max(p.sun_shade_lower_tip_lift_mm, 0.0)
-
         shade_z_start = 0.0
         shade_z_len = body_depth
         shade_mid_z = shade_z_start + 0.5 * shade_z_len
@@ -581,6 +579,8 @@ def build_asa_shell(p: MevoCoreParams):
         flat_extent_half = half_asa_w - p.asa_outer_corner_r_mm  # half-width of flat section
         # Rib positions along each face (near the fillet transitions)
         rib_offset = max(flat_extent_half - 2.0, 0.0)  # 2mm inside from fillet start
+        lower_support_y_max = rib_offset + 0.5 * post_w
+        shade_bottom_cut_y = lower_support_y_max + max(p.sun_shade_lower_support_overhang_mm, 0.0)
 
         # Rib radial span: must overlap both shell outer wall and shade inner wall
         # Shell outer at half_asa_w, shade inner at half_asa_w + standoff
@@ -774,7 +774,10 @@ def build_asa_shell(p: MevoCoreParams):
                 ),
                 "rib_count": 6,
                 "coverage": "top + left + right (open bottom)",
-                "lower_tip_lift_mm": float(max(p.sun_shade_lower_tip_lift_mm, 0.0)),
+                "lower_support_center_y_mm": float(rib_offset),
+                "lower_support_outer_y_mm": float(lower_support_y_max),
+                "lower_support_overhang_mm": float(max(p.sun_shade_lower_support_overhang_mm, 0.0)),
+                "bottom_cut_y_mm": float(shade_bottom_cut_y),
                 "lower_outer_edge_fillet_mm": float(lower_outer_edge_fillet_applied),
                 "lower_outer_edge_fillet_edges": lower_outer_edge_count,
                 "lower_inner_edge_fillet_mm": float(lower_inner_edge_fillet_applied),

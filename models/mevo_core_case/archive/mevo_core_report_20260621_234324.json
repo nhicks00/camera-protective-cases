@@ -101,7 +101,7 @@
     "sun_shade_wall_mm": 2.0,
     "sun_shade_post_width_mm": 4.0,
     "sun_shade_rib_corner_r_mm": 1.0,
-    "sun_shade_lower_support_overhang_mm": 4.0,
+    "sun_shade_lower_tip_lift_mm": 4.0,
     "sun_shade_lower_outer_edge_fillet_mm": 2.0,
     "sun_shade_lower_inner_edge_fillet_mm": 1.0
   },
@@ -217,14 +217,11 @@
         "rib_corner_r_mm": 1.0,
         "rib_count": 6,
         "coverage": "top + left + right (open bottom)",
-        "lower_support_center_y_mm": 22.9,
-        "lower_support_outer_y_mm": 24.9,
-        "lower_support_overhang_mm": 4.0,
-        "bottom_cut_y_mm": 28.9,
+        "lower_tip_lift_mm": 4.0,
         "lower_outer_edge_fillet_mm": 2.0,
         "lower_outer_edge_fillet_edges": 2,
         "lower_inner_edge_fillet_mm": 0.75,
-        "lower_inner_edge_fillet_edges": 4,
+        "lower_inner_edge_fillet_edges": 2,
         "cold_shoe_count": 3
       }
     }
