@@ -8,7 +8,6 @@
     "asa_wall_mm": 3.3,
     "asa_outer_corner_r_mm": 24.0,
     "asa_inner_corner_r_mm": 22.0,
-    "front_face_side_fillet_mm": 3.0,
     "sun_hood_depth_mm": 3.0,
     "lens_cutout_d_mm": 76.2,
     "lens_center_x_mm": 0.0,
@@ -124,12 +123,6 @@
       "lens_center_x": 0.0,
       "lens_center_y": 0.0,
       "sun_hood_depth": 3.0,
-      "front_face_to_side_fillet": {
-        "applied_radius_mm": 3.0,
-        "target_radius_mm": 3.0,
-        "edge_count": 8,
-        "scope": "main ASA body front perimeter only"
-      },
       "lens_hood": {
         "enabled": true,
         "type": "full_tube",

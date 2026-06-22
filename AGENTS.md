@@ -271,6 +271,7 @@ Current preferred workflow:
   - Square cross-section (90 × 90 mm, rounded-rectangle with aggressive 24 mm outer fillet)
   - Direct ASA camera fit with `0.6 mm` per-side clearance; no TPU assumptions in shell sizing
   - Front-integrated body with centered lens cutout (76.2 mm / 3.0")
+  - Main ASA body front face-to-side-wall perimeter uses a targeted `3.0 mm` fillet.
   - Full circular tube lens hood (101.6 mm depth / 4.0”, 2.5 mm wall), NOT visor
   - Single bottom tripod mount, rectangular cutout (63.5 × 50.8 mm)
   - Cold shoe mount (ISO 518) on top rear

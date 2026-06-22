@@ -61,6 +61,7 @@ class MevoCoreParams:
     # Corner fillets (rounded-rectangle profile — aggressive rounding)
     asa_outer_corner_r_mm: float = 24.0
     asa_inner_corner_r_mm: float = 22.0
+    front_face_side_fillet_mm: float = 3.0
 
     # Front wall / sun hood
     sun_hood_depth_mm: float = 3.0
@@ -859,6 +860,36 @@ def build_asa_shell(p: MevoCoreParams):
         except Exception as e:
             print(f"  WARNING: sun shade failed to build: {e}")
 
+    front_face_edges = []
+    body_front_abs_min = half_asa_w - 0.5
+    body_front_abs_max = half_asa_w + 0.75
+    for edge in asa_shell.edges():
+        bb = edge.bounding_box()
+        center = bb.center()
+        size = bb.size
+        abs_extent = max(abs(bb.min.X), abs(bb.max.X), abs(bb.min.Y), abs(bb.max.Y))
+        is_body_front_edge = (
+            abs(center.Z) <= 0.2
+            and size.Z <= 0.2
+            and edge.length >= 5.0
+            and body_front_abs_min <= abs_extent <= body_front_abs_max
+        )
+        if is_body_front_edge:
+            front_face_edges.append(edge)
+
+    front_face_fillet_applied = 0.0
+    if front_face_edges and p.front_face_side_fillet_mm > 0.0:
+        for fillet_r in (p.front_face_side_fillet_mm, 2.5, 2.0, 1.5, 1.0, 0.75, 0.5):
+            if fillet_r > p.front_face_side_fillet_mm:
+                continue
+            try:
+                asa_shell = fillet(front_face_edges, fillet_r)
+                front_face_fillet_applied = fillet_r
+                break
+            except Exception:
+                continue
+        asa_shell = _largest_solid(asa_shell)
+
     asa_shell.label = "ASA_Shell"
 
     corner_margin = max(p.vent_notch_corner_margin_mm, 0.0)
@@ -925,6 +956,12 @@ def build_asa_shell(p: MevoCoreParams):
             "lens_center_x": float(p.lens_center_x_mm),
             "lens_center_y": float(p.lens_center_y_mm),
             "sun_hood_depth": float(p.sun_hood_depth_mm),
+            "front_face_to_side_fillet": {
+                "applied_radius_mm": float(front_face_fillet_applied),
+                "target_radius_mm": float(p.front_face_side_fillet_mm),
+                "edge_count": len(front_face_edges),
+                "scope": "main ASA body front perimeter only",
+            },
             "lens_hood": {
                 "enabled": bool(p.include_lens_hood),
                 "type": "full_tube",
