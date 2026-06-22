@@ -58,7 +58,7 @@ Mevo Core:
 - ASA outer corner fillet: `24.0 mm`, inner: `22.0 mm`
 - Front sun hood depth: `3.0 mm`
 - Front lens cutout: `76.2 mm` diameter (3.0"), centered on front face
-- Lens hood: full circular tube, `101.6 mm` depth (4.0"), `2.5 mm` wall, `2.5 mm` clearance, with rounded side access notches (`44.45 mm` deep, `50.8 mm` tall, `3.0 mm` corner radius) cut from outside the flared root to avoid access-window slivers
+- Lens hood: full circular tube, `101.6 mm` depth (4.0"), `2.5 mm` wall, `2.5 mm` clearance, with rounded side access notches (`44.45 mm` deep, `50.8 mm` tall, `3.0 mm` corner radius) cut from outside the flared root to avoid access-window slivers; notch cut edges are additionally rounded `0.75 mm` at the terminal perimeter and `0.3 mm` at the root-side small edges
 - Bottom tripod cutout: `63.5 x 50.8 mm` rectangular, center `34.925 mm` from front
 - Cold shoe mount: ISO 518 on top rear
 - Back cap: ASA bumper ring with one large open-center rounded rectangle:
@@ -279,6 +279,7 @@ Current preferred workflow:
     - hood root has a `1.2 mm` positive-Z overlap collar embedded into the ASA front wall so it fuses seamlessly into the front face instead of relying on a coplanar join.
     - hood base flare is clamped with a `3.0 mm` front-edge inset so the flared root does not hang past the rounded front face perimeter.
     - side lens-access notches use rounded rectangular cuts: `44.45 mm` forward depth, `50.8 mm` height, `25.4 mm` radial bite, `3.0 mm` corner radius; the cutter starts `1.0 mm` outside the widest flared root radius so it clears root artifacts from the access window.
+    - the generated notch cut-wall edges are post-rounded with a `0.75 mm` terminal perimeter fillet and `0.3 mm` root-side small-edge fillet to remove pointed cutout edges.
   - Single bottom tripod mount, rectangular cutout (63.5 × 50.8 mm)
   - Cold shoe mount (ISO 518) on top rear
   - External sun shade support ribs are pushed into the curved-corner bands so they clear the large vent panels:

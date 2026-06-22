@@ -86,6 +86,8 @@ class MevoCoreParams:
     lens_hood_access_height_mm: float = 50.8  # 2.0" tall opening on each side
     lens_hood_access_radial_depth_mm: float = 25.4  # 1.0" radial bite through hood wall
     lens_hood_access_corner_r_mm: float = 3.0
+    lens_hood_access_terminal_edge_fillet_mm: float = 0.75
+    lens_hood_access_root_edge_fillet_mm: float = 0.3
     lens_hood_access_outboard_clearance_mm: float = 1.0
 
     # Bottom tripod cutout (same as MAKI)
@@ -578,6 +580,10 @@ def build_asa_shell(p: MevoCoreParams):
 
     # Build full circular tube lens hood with flared base, then union
     if p.include_lens_hood and p.lens_hood_depth_mm > 0.0:
+        hood_access_terminal_edge_fillet_applied = 0.0
+        hood_access_terminal_edge_count = 0
+        hood_access_root_edge_fillet_applied = 0.0
+        hood_access_root_edge_count = 0
         hood_inner_r = 0.5 * p.lens_cutout_d_mm + p.lens_hood_clearance_mm
         hood_outer_r = hood_inner_r + p.lens_hood_wall_mm
         cx, cy = p.lens_center_x_mm, p.lens_center_y_mm
@@ -632,6 +638,62 @@ def build_asa_shell(p: MevoCoreParams):
                                 fillet(vertices(), notch_corner_r)
                     extrude(amount=-sx * notch_cut_depth, mode=Mode.SUBTRACT)
         hood_solid = hood_bp.part
+
+        if p.lens_hood_side_access_notches:
+            def apply_access_edge_fillet(shape, edge_selector, preferred_r, fallback_radii):
+                selected_edges = []
+                for edge in shape.edges():
+                    if edge_selector(edge):
+                        selected_edges.append(edge)
+
+                applied_r = 0.0
+                if selected_edges and preferred_r > 0.0:
+                    for fillet_r in (preferred_r, *fallback_radii):
+                        if fillet_r > preferred_r:
+                            continue
+                        try:
+                            rounded = _largest_solid(fillet(selected_edges, fillet_r))
+                            return rounded, fillet_r, len(selected_edges)
+                        except Exception:
+                            continue
+                return shape, applied_r, len(selected_edges)
+
+            def terminal_notch_edge(edge):
+                bb = edge.bounding_box()
+                center = bb.center()
+                return (
+                    abs(center.X - cx) > hood_inner_r - 5.0
+                    and (-notch_depth - 0.75) <= center.Z <= (-notch_depth + 2.0)
+                    and abs(center.Y - cy) <= 0.5 * notch_height + 0.75
+                )
+
+            def root_notch_edge(edge):
+                bb = edge.bounding_box()
+                center = bb.center()
+                return (
+                    abs(center.X - cx) > hood_inner_r - 5.0
+                    and -1.0 <= center.Z <= 1.0
+                    and abs(center.Y - cy) <= 0.5 * notch_height + 0.75
+                    and edge.length <= 8.0
+                )
+
+            hood_solid, hood_access_terminal_edge_fillet_applied, hood_access_terminal_edge_count = (
+                apply_access_edge_fillet(
+                    hood_solid,
+                    terminal_notch_edge,
+                    p.lens_hood_access_terminal_edge_fillet_mm,
+                    (0.5, 0.3, 0.2, 0.1),
+                )
+            )
+            hood_solid, hood_access_root_edge_fillet_applied, hood_access_root_edge_count = (
+                apply_access_edge_fillet(
+                    hood_solid,
+                    root_notch_edge,
+                    p.lens_hood_access_root_edge_fillet_mm,
+                    (0.2, 0.1),
+                )
+            )
+
         try:
             asa_shell = _largest_solid(asa_shell + hood_solid)
         except Exception:
@@ -1199,6 +1261,12 @@ def build_asa_shell(p: MevoCoreParams):
                     "height_mm": float(p.lens_hood_access_height_mm),
                     "radial_depth_mm": float(p.lens_hood_access_radial_depth_mm),
                     "corner_r_mm": float(p.lens_hood_access_corner_r_mm),
+                    "terminal_edge_fillet_mm": float(hood_access_terminal_edge_fillet_applied),
+                    "terminal_edge_fillet_target_mm": float(p.lens_hood_access_terminal_edge_fillet_mm),
+                    "terminal_edge_fillet_edges": int(hood_access_terminal_edge_count),
+                    "root_edge_fillet_mm": float(hood_access_root_edge_fillet_applied),
+                    "root_edge_fillet_target_mm": float(p.lens_hood_access_root_edge_fillet_mm),
+                    "root_edge_fillet_edges": int(hood_access_root_edge_count),
                     "outboard_clearance_mm": float(p.lens_hood_access_outboard_clearance_mm),
                     "cut_starts_outside_flare": True,
                 },
