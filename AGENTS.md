@@ -1,4 +1,4 @@
-# Agent Context: Camera Protective Cases (Mevo Start + Mevo Core + BirdDog MAKI Live + Zowietek 4K POV)
+# Agent Context: Camera Protective Cases (Mevo Start + Mevo Core + BirdDog MAKI Live + Zowietek 4K POV + AVKANS Go)
 
 This file is the persistent handoff context for future sessions.
 
@@ -8,6 +8,7 @@ This repo builds parametric, 3D-printable protective case components for:
 - Mevo Core
 - BirdDog MAKI Live
 - Zowietek 4K NDI POV Zoom Camera
+- AVKANS Go
 
 Primary goals:
 - Tight fit
@@ -101,6 +102,7 @@ Slicer baseline (ASA):
   - `models/mevo_case/` + `reports/` + `archive/`
   - `models/mevo_core_case/` + `reports/` + `archive/`
   - `models/maki_case/` + `reports/` + `archive/`
+  - `models/avkans_go_case/` + `reports/` + `archive/`
 - Zowietek model outputs were removed because that camera is no longer used.
 - Top-level in each case folder should show only latest STEP outputs for that case.
 - JSON reports should live in each case's `reports/` subfolder.
@@ -325,6 +327,24 @@ Current preferred workflow:
   - `--lens-diameter`, `--cold-shoe-z-from-rear`, `--bumper-ring-inset`
 - Active review-spec values in `models/zowietek_case/reports/zowietek_pov_dual_material_report.json`
 
+### AVKANS Go
+- ASA-only first-pass shell:
+  - `models/avkans_go_case/avkans_go_asa_shell.step`
+  - Generator: `scripts/generate_avkans_go_case.py`
+  - Source reference copied from user Downloads:
+    - `refs/AVKANS_GO_RAIN_CASE.stl`
+  - Clean B-REP rebuild; do not boolean-edit the STL directly.
+  - Source STL contains two watertight mesh bodies:
+    - bottom body: about `57.8 x 139.5 x 77.5 mm`
+    - slide-on hood/top: about `63.9 x 81.9 x 159.3 mm`
+  - First-pass output combines those into one fused ASA shell using the hood envelope:
+    - outer envelope `63.866 x 81.928 x 159.308 mm`
+    - rear remains open for camera slide-in
+    - original rear/front compartment divider walls are intentionally omitted
+    - front face has a centered `6.35 mm` / `0.25 in` vertical vent slot through the front wall, intersecting the circular lens opening
+    - circular front camera opening is `58.0 mm` diameter
+  - No TPU, no back cap yet.
+
 ## Terminology Mapping (Important for user shorthand)
 User shorthand often means:
 - “Maki sleeve” / “Maki ASA” = `maki_live_asa_shell.step`
@@ -334,6 +354,7 @@ User shorthand often means:
 - “Mevo Core case” = 3 files in `models/mevo_core_case/`
 - “Zowietek case” = 3 files in `models/zowietek_case/`
 - “Zowietek bumper ring” = `zowietek_pov_back_cap.step` (ASA back cap with open center)
+- “AVKANS Go case” = `models/avkans_go_case/avkans_go_asa_shell.step`
 
 ## Key References
 - MAKI references:
@@ -342,6 +363,8 @@ User shorthand often means:
 - Mevo references:
   - `refs/Mevo_Start_lens_cover_corrected.stl`
   - Additional Mevo legacy refs are present in `refs/`.
+- AVKANS references:
+  - `refs/AVKANS_GO_RAIN_CASE.stl`
 
 ## Common Commands
 Activate environment:
@@ -371,6 +394,11 @@ python scripts/generate_mevo_core_case.py
 Zowietek:
 ```bash
 python scripts/generate_zowietek_dual_material_case.py
+```
+
+AVKANS Go:
+```bash
+python scripts/generate_avkans_go_case.py
 ```
 
 Legacy Mevo back plate (only when explicitly requested):
