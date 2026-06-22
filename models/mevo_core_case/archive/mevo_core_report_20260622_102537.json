@@ -19,7 +19,6 @@
     "lens_hood_clearance_mm": 2.5,
     "lens_hood_base_flare_mm": 6.0,
     "lens_hood_base_depth_mm": 8.0,
-    "lens_hood_base_edge_inset_mm": 3.0,
     "lens_hood_root_overlap_mm": 1.2,
     "lens_hood_side_access_notches": true,
     "lens_hood_access_depth_mm": 31.75,
@@ -132,13 +131,6 @@
         "connection": "embedded root overlap collar fused into ASA front wall",
         "root_overlap_mm": 1.2,
         "resolved_root_overlap_mm": 1.2,
-        "base_flare": {
-          "requested_extra_radius_mm": 6.0,
-          "requested_outer_radius_mm": 49.1,
-          "resolved_outer_radius_mm": 45.9,
-          "edge_inset_mm": 3.0,
-          "trim_reason": "prevents hood root from hanging past rounded front face perimeter"
-        },
         "side_access_notches": {
           "enabled": true,
           "count": 2,

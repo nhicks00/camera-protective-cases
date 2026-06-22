@@ -277,6 +277,7 @@ Current preferred workflow:
   - Main ASA body front face-to-side-wall perimeter uses a targeted `3.0 mm` fillet.
   - Full circular tube lens hood (101.6 mm depth / 4.0”, 2.5 mm wall), NOT visor:
     - hood root has a `1.2 mm` positive-Z overlap collar embedded into the ASA front wall so it fuses seamlessly into the front face instead of relying on a coplanar join.
+    - hood base flare is clamped with a `3.0 mm` front-edge inset so the flared root does not hang past the rounded front face perimeter.
   - Single bottom tripod mount, rectangular cutout (63.5 × 50.8 mm)
   - Cold shoe mount (ISO 518) on top rear
   - External sun shade side skirts stop just past the lower support rib: lower rib center `Y=22.9 mm`, rib outside edge `Y=24.9 mm`, skirt bottom cutoff `Y=28.9 mm` (`4.0 mm` overhang past the rib), with `2.0 mm` outside-edge and `0.75 mm` inner-edge lower fillets.

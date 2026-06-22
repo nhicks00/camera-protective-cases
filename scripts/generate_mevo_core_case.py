@@ -78,6 +78,7 @@ class MevoCoreParams:
     lens_hood_clearance_mm: float = 2.5  # hood bore wider than front face hole for ledge/strength
     lens_hood_base_flare_mm: float = 6.0   # extra outer radius at root for strength
     lens_hood_base_depth_mm: float = 8.0   # axial depth of the taper zone
+    lens_hood_base_edge_inset_mm: float = 3.0  # keep flared root inside rounded front edge
     lens_hood_root_overlap_mm: float = 1.2  # positive-Z overlap into front wall for fused root
     lens_hood_side_access_notches: bool = True
     lens_hood_access_depth_mm: float = 31.75  # 1.25" from base along hood axis
@@ -536,7 +537,12 @@ def build_asa_shell(p: MevoCoreParams):
         hood_inner_r = 0.5 * p.lens_cutout_d_mm + p.lens_hood_clearance_mm
         hood_outer_r = hood_inner_r + p.lens_hood_wall_mm
         cx, cy = p.lens_center_x_mm, p.lens_center_y_mm
-        flare_r = hood_outer_r + p.lens_hood_base_flare_mm
+        requested_flare_r = hood_outer_r + p.lens_hood_base_flare_mm
+        max_flare_r = max(
+            hood_outer_r,
+            min(half_asa_w, half_asa_h) - max(p.lens_hood_base_edge_inset_mm, 0.0),
+        )
+        flare_r = min(requested_flare_r, max_flare_r)
         flare_d = min(p.lens_hood_base_depth_mm, p.lens_hood_depth_mm * 0.4)
         root_overlap = min(max(p.lens_hood_root_overlap_mm, 0.0), p.sun_hood_depth_mm + 0.2)
         with BuildPart() as hood_bp:
@@ -963,6 +969,34 @@ def build_asa_shell(p: MevoCoreParams):
                 "resolved_root_overlap_mm": float(
                     min(max(p.lens_hood_root_overlap_mm, 0.0), p.sun_hood_depth_mm + 0.2)
                 ),
+                "base_flare": {
+                    "requested_extra_radius_mm": float(p.lens_hood_base_flare_mm),
+                    "requested_outer_radius_mm": float(
+                        0.5 * p.lens_cutout_d_mm
+                        + p.lens_hood_clearance_mm
+                        + p.lens_hood_wall_mm
+                        + p.lens_hood_base_flare_mm
+                    ),
+                    "resolved_outer_radius_mm": float(
+                        min(
+                            0.5 * p.lens_cutout_d_mm
+                            + p.lens_hood_clearance_mm
+                            + p.lens_hood_wall_mm
+                            + p.lens_hood_base_flare_mm,
+                            max(
+                                0.5 * p.lens_cutout_d_mm
+                                + p.lens_hood_clearance_mm
+                                + p.lens_hood_wall_mm,
+                                min(
+                                    0.5 * d["asa_outer_w_mm"],
+                                    0.5 * d["asa_outer_h_mm"],
+                                ) - max(p.lens_hood_base_edge_inset_mm, 0.0),
+                            ),
+                        )
+                    ),
+                    "edge_inset_mm": float(p.lens_hood_base_edge_inset_mm),
+                    "trim_reason": "prevents hood root from hanging past rounded front face perimeter",
+                },
                 "side_access_notches": {
                     "enabled": bool(p.lens_hood_side_access_notches),
                     "count": 2 if p.lens_hood_side_access_notches else 0,
