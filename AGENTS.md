@@ -125,7 +125,8 @@ Active hard-shell and TPU workflows:
     - this vent-panel cutout is separate from the existing bottom/tripod rectangle, with a `2.0 mm` shell bridge between them,
     - current vent-panel cutout is centered on the tripod side, aligned to the tripod rectangle width, with `1.0 mm` vent margin,
     - logical vent coordinates are still emitted for validation; the physical vent-panel cutout is emitted under `step_side_features.merged_vent_cutouts_applied_entries`,
-    - the other 3 ASA shell sides each get one rectangular surface-panel cutout sized like Mevo Core, then narrowed further to stay inside the sun-shade support bars with `1.0 mm` clearance,
+    - the other 3 ASA shell sides each get one rectangular surface-panel cutout sized like Mevo Core: cutout width is based on the flat face span, preserving `outer_corner_radius + 2.0 mm` at each rounded corner,
+    - sun-shade support ribs are moved into those preserved curved-corner bands with `1.0 mm` clearance from the large surface-panel openings, so the openings can maximize heat vent area without exposing the support ribs,
     - side vent coordinates remain logical validation probes, but the left/right side openings are covered by the large side-panel cutouts.
   - The large former 24-vent bank is constrained to bottom-connected panels (not direct side walls).
   - Side 3+3 vent group is placed on the opposite end from the tripod-side vent bank.

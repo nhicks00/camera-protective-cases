@@ -109,6 +109,7 @@ class MakiCaseParams:
     sun_shade_vent_relief_mm: float = 0.8
     sun_shade_side_skirt_corner_r_mm: float = 2.0
     sun_shade_side_skirt_inner_edge_fillet_mm: float = 0.75
+    sun_shade_corner_support_clearance_mm: float = 1.0
 
     # Snap-latch flexure clips for rear cap retention
     include_snap_clips: bool = False
@@ -181,7 +182,6 @@ class MakiCaseParams:
     large_other_side_cutout_front_margin_mm: float = 8.0
     large_other_side_cutout_rear_margin_mm: float = 14.0
     large_other_side_cutout_corner_margin_mm: float = 2.0
-    large_other_side_cutout_support_bar_clearance_mm: float = 1.0
 
     # Shape processing
     section_z_ratio: float = 0.50
@@ -885,11 +885,10 @@ def _derive_large_other_side_cutouts(
         0.5 * min(float(outer_w), float(outer_h)) - 2.0,
     )
     flat_face_half_span = max(0.5 * min(float(outer_w), float(outer_h)) - float(outer_corner_r), 0.0)
-    support_rib_center_abs = max(flat_face_half_span - 2.0, 0.0)
-    support_clearance = max(float(p.large_other_side_cutout_support_bar_clearance_mm), 0.0)
-    support_clear_half_span = max(
-        support_rib_center_abs - 0.5 * float(p.sun_shade_post_width_mm) - support_clearance,
-        1.0,
+    support_clearance = max(float(p.sun_shade_corner_support_clearance_mm), 0.0)
+    support_rib_center_abs = max(
+        flat_face_half_span + 0.5 * float(p.sun_shade_post_width_mm) + support_clearance,
+        0.0,
     )
     min_z = max(
         cavity_front_z + p.front_wall_mm + float(p.large_other_side_cutout_front_margin_mm),
@@ -899,8 +898,8 @@ def _derive_large_other_side_cutouts(
     if max_z <= min_z + 1.0:
         return []
 
-    x_span = max(min(float(outer_w) - 2.0 * preserved_corner_band, 2.0 * support_clear_half_span), 1.0)
-    y_span = max(min(float(outer_h) - 2.0 * preserved_corner_band, 2.0 * support_clear_half_span), 1.0)
+    x_span = max(float(outer_w) - 2.0 * preserved_corner_band, 1.0)
+    y_span = max(float(outer_h) - 2.0 * preserved_corner_band, 1.0)
     z_span = max_z - min_z
     z_center = 0.5 * (min_z + max_z)
 
@@ -963,11 +962,14 @@ def _derive_large_other_side_cutouts(
                 "preserved_corner_radius_mm": float(outer_corner_r),
                 "corner_margin_mm": float(corner_margin),
                 "preserved_corner_band_mm": float(preserved_corner_band),
-                "support_bar_avoidance_enabled": True,
+                "support_bar_avoidance_enabled": False,
+                "support_bar_placement": "curved_corner_bands",
                 "support_rib_center_abs_mm": float(support_rib_center_abs),
                 "support_bar_width_mm": float(p.sun_shade_post_width_mm),
                 "support_bar_clearance_mm": float(support_clearance),
-                "support_clear_half_span_mm": float(support_clear_half_span),
+                "support_bar_inner_edge_abs_mm": float(
+                    max(support_rib_center_abs - 0.5 * float(p.sun_shade_post_width_mm), 0.0)
+                ),
                 "front_margin_mm": float(p.large_other_side_cutout_front_margin_mm),
                 "rear_margin_mm": float(p.large_other_side_cutout_rear_margin_mm),
             }
@@ -1609,14 +1611,23 @@ def build_case(p: MakiCaseParams):
         half_shade_inner_w = 0.5 * shade_inner_w
         shade_mid_z = 0.5 * shell_depth
 
-        flat_extent_half = max(half_outer_w - outer_corner_r, 0.0)
-        rib_offset = max(flat_extent_half - 2.0, 0.0)
+        flat_extent_half_x = max(half_outer_w - outer_corner_r, 0.0)
+        flat_extent_half_y = max(half_outer_h - outer_corner_r, 0.0)
+        corner_support_clearance = max(float(p.sun_shade_corner_support_clearance_mm), 0.0)
+        rib_x_offset = min(
+            max(flat_extent_half_x + 0.5 * post_w + corner_support_clearance, 0.0),
+            max(half_outer_w - 0.5 * post_w - 0.5, 0.0),
+        )
+        rib_y_offset = min(
+            max(flat_extent_half_y + 0.5 * post_w + corner_support_clearance, 0.0),
+            max(half_outer_h - 0.5 * post_w - 0.5, 0.0),
+        )
         rib_radial = standoff + 2.0
         side_rib_x_centers = {
             "neg": -(half_outer_w + 0.5 * standoff),
             "pos": half_outer_w + 0.5 * standoff,
         }
-        side_rib_y_centers = (-rib_offset, rib_offset)
+        side_rib_y_centers = (-rib_y_offset, rib_y_offset)
         shade_support_relief_count = 0
 
         side_drop = min(
@@ -1667,13 +1678,13 @@ def build_case(p: MakiCaseParams):
 
             with BuildPart() as shade_ribs_bp:
                 for ry in (-1.0, 1.0):
-                    with Locations((half_outer_w + 0.5 * standoff, ry * rib_offset, shade_mid_z)):
+                    with Locations((half_outer_w + 0.5 * standoff, ry * rib_y_offset, shade_mid_z)):
                         Box(rib_radial, post_w, shell_depth)
                 for ry in (-1.0, 1.0):
-                    with Locations((-(half_outer_w + 0.5 * standoff), ry * rib_offset, shade_mid_z)):
+                    with Locations((-(half_outer_w + 0.5 * standoff), ry * rib_y_offset, shade_mid_z)):
                         Box(rib_radial, post_w, shell_depth)
                 for rx in (-1.0, 1.0):
-                    with Locations((rx * rib_offset, -(half_outer_h + 0.5 * standoff), shade_mid_z)):
+                    with Locations((rx * rib_x_offset, -(half_outer_h + 0.5 * standoff), shade_mid_z)):
                         Box(post_w, rib_radial, shell_depth)
 
                 if lower_side_support_h > 0.0:
@@ -1858,6 +1869,12 @@ def build_case(p: MakiCaseParams):
                 "side_support_height_mm": float(lower_side_support_h),
                 "vent_relief_mm": float(vent_relief_margin),
                 "vent_relief_count": int(shade_support_relief_count),
+                "support_placement": "curved_corner_bands",
+                "corner_support_clearance_mm": float(corner_support_clearance),
+                "support_x_center_abs_mm": float(rib_x_offset),
+                "support_y_center_abs_mm": float(rib_y_offset),
+                "support_inner_edge_x_abs_mm": float(max(rib_x_offset - 0.5 * post_w, 0.0)),
+                "support_inner_edge_y_abs_mm": float(max(rib_y_offset - 0.5 * post_w, 0.0)),
                 "side_skirt_corner_r_mm": float(side_trim_corner_r),
                 "side_skirt_lower_trim_y_mm": float(half_shade_outer_h - side_trim_h - 0.1),
                 "side_skirt_outer_edge_fillet_mm": float(side_skirt_outer_edge_fillet_applied),
