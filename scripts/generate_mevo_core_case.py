@@ -177,6 +177,9 @@ class MevoCoreParams:
     sun_shade_post_width_mm: float = 4.0   # rib width along each face
     sun_shade_rib_corner_r_mm: float = 1.0
     sun_shade_support_vent_clearance_mm: float = 1.0
+    sun_shade_front_overhang_mm: float = 0.0
+    sun_shade_rear_overhang_mm: float = 6.35
+    sun_shade_end_edge_fillet_mm: float = 1.0
     sun_shade_lower_support_overhang_mm: float = 2.0
     sun_shade_lower_outer_edge_fillet_mm: float = 2.0
     sun_shade_lower_inner_edge_fillet_mm: float = 1.0
@@ -649,9 +652,14 @@ def build_asa_shell(p: MevoCoreParams):
 
         half_shade_outer_w = 0.5 * shade_outer_w
         half_shade_outer_h = 0.5 * shade_outer_h
-        shade_z_start = 0.0
-        shade_z_len = body_depth
+        shade_front_overhang = max(float(p.sun_shade_front_overhang_mm), 0.0)
+        shade_rear_overhang = max(float(p.sun_shade_rear_overhang_mm), 0.0)
+        shade_z_start = -shade_front_overhang
+        shade_z_end = body_depth + shade_rear_overhang
+        shade_z_len = shade_z_end - shade_z_start
         shade_mid_z = shade_z_start + 0.5 * shade_z_len
+        shade_support_z_start = 0.0
+        shade_support_z_len = body_depth
 
         # Rib positions are shared with the support-aware vent notch sizing
         # above, so ribs stay outside the large side/top panel openings.
@@ -675,7 +683,7 @@ def build_asa_shell(p: MevoCoreParams):
             cs_boss_h = cs_slot_d + cs_rail_t
             cs_opening = cs_slot_w - 2.0 * cs_rail_oh
             cs_front_z = cs_pad_z - cs_boss_l * 0.5
-            cs_slot_len = body_depth + 0.2 - cs_front_z
+            cs_slot_len = shade_z_end + 0.2 - cs_front_z
             cs_slot_mid_z = cs_front_z + cs_slot_len * 0.5
             boss_overlap = min(1.5, shade_w - 0.2)
 
@@ -688,12 +696,12 @@ def build_asa_shell(p: MevoCoreParams):
                         max(p.sun_shade_rib_corner_r_mm, 0.0),
                         0.5 * min(width, height) - 0.1,
                     )
-                    with BuildSketch(Plane.XY.offset(shade_z_start)) as rib_sk:
+                    with BuildSketch(Plane.XY.offset(shade_support_z_start)) as rib_sk:
                         with Locations((center_x, center_y)):
                             Rectangle(width, height)
                             if rib_corner_r > 0.0:
                                 fillet(vertices(), rib_corner_r)
-                    extrude(rib_sk.sketch, amount=shade_z_len)
+                    extrude(rib_sk.sketch, amount=shade_support_z_len)
 
                 # Shade tube (outer - inner)
                 with BuildSketch(Plane.XY.offset(shade_z_start)):
@@ -822,6 +830,36 @@ def build_asa_shell(p: MevoCoreParams):
                     except Exception:
                         continue
 
+            def fillet_end_edges(shape, preferred_r):
+                end_edges = []
+                end_z_values = (shade_z_start, shade_z_end)
+                for edge in shape.edges():
+                    bb = edge.bounding_box()
+                    center = bb.center()
+                    size = bb.size
+                    is_end_edge = (
+                        min(abs(center.Z - z) for z in end_z_values) <= 0.25
+                        and size.Z <= 0.35
+                        and (size.X >= 0.35 or size.Y >= 0.35)
+                    )
+                    if is_end_edge:
+                        end_edges.append(edge)
+
+                if end_edges and preferred_r > 0.0:
+                    for fillet_r in (preferred_r, 0.75, 0.5, 0.3):
+                        if fillet_r > preferred_r:
+                            continue
+                        try:
+                            return fillet(end_edges, fillet_r), fillet_r, len(end_edges)
+                        except Exception:
+                            continue
+                return shape, 0.0, len(end_edges)
+
+            shade_solid, end_edge_fillet_applied, end_edge_count = fillet_end_edges(
+                shade_solid,
+                p.sun_shade_end_edge_fillet_mm,
+            )
+
             asa_shell = _largest_solid(asa_shell + shade_solid)
 
             # Y- cold shoe boss (user's top) — built AFTER shade+shell union
@@ -841,6 +879,12 @@ def build_asa_shell(p: MevoCoreParams):
                 "wall_mm": float(shade_w),
                 "shade_outer_w_mm": float(shade_outer_w),
                 "shade_outer_h_mm": float(shade_outer_h),
+                "front_overhang_mm": float(shade_front_overhang),
+                "rear_overhang_mm": float(shade_rear_overhang),
+                "shade_z_start_mm": float(shade_z_start),
+                "shade_z_end_mm": float(shade_z_end),
+                "support_z_start_mm": float(shade_support_z_start),
+                "support_z_end_mm": float(shade_support_z_start + shade_support_z_len),
                 "post_width_mm": float(post_w),
                 "rib_corner_r_mm": float(
                     min(
@@ -863,6 +907,8 @@ def build_asa_shell(p: MevoCoreParams):
                 "lower_outer_edge_fillet_edges": lower_outer_edge_count,
                 "lower_inner_edge_fillet_mm": float(lower_inner_edge_fillet_applied),
                 "lower_inner_edge_fillet_edges": lower_inner_edge_count,
+                "end_edge_fillet_mm": float(end_edge_fillet_applied),
+                "end_edge_fillet_edges": int(end_edge_count),
             }
             print(f"  Sun shade canopy added: {shade_outer_w:.1f} x {shade_outer_h:.1f} mm outer, {standoff:.1f}mm gap, 6 ribs")
 

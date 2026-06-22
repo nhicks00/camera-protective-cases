@@ -136,6 +136,7 @@ Active hard-shell and TPU workflows:
   - Sunshade side skirt lower corners are rounded by the side-trim profile plus direct lower-edge fillets on the actual skirt edges:
     - outer lower skirt edges use up to `2.0 mm`,
     - inner lower skirt edges use up to `0.75 mm`.
+  - Sun shade cover extends `6.35 mm` (`0.25 in`) past both the front and rear shell ends; support ribs remain within the original shell depth, and outside-facing front/rear shade end edges are rounded with the largest stable fillet (`0.5 mm` in the current generated ASA shell).
   - Front camera aperture in integrated front wall is trimmed by `2.0 mm` vs prior extraction.
   - Through-cut depth increased so vents fully penetrate.
   - Vent row clustering now locks to the STEP-derived rear vent bank (8 rows) and ignores front outlier slots.
@@ -284,6 +285,7 @@ Current preferred workflow:
     - top rib centers sit at `|X|=25.9 mm`, with rib inner edge at `|X|=23.9 mm`,
     - side/top vent panel half-width remains `22.9 mm`, leaving `1.0 mm` clearance to the nearest rib edge.
   - External sun shade side skirts stop just past the lower support rib: lower rib outside edge `Y=27.9 mm`, skirt bottom cutoff `Y=29.9 mm` (`2.0 mm` overhang past the rib), with `2.0 mm` outside-edge and `0.75 mm` inner-edge lower fillets.
+  - External sun shade extends `6.35 mm` behind the rear body face to overhang the back/sides; support ribs stay within the original body depth, and outside-facing shade end edges are rounded with the largest stable fillet (`0.5 mm` in the current generated ASA shell).
   - Other external right-angle details are softened unless they are cold-shoe boss/post geometry:
     - large side/top thermal notches use `2.0 mm` corner radii,
     - sun-shade support ribs use `1.0 mm` rounded-rectangle cross-section corners.

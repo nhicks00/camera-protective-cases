@@ -111,6 +111,9 @@ class MakiCaseParams:
     sun_shade_side_skirt_inner_edge_fillet_mm: float = 0.75
     sun_shade_corner_support_clearance_mm: float = 1.0
     sun_shade_top_corner_support_angle_deg: float = 45.0
+    sun_shade_front_overhang_mm: float = 6.35
+    sun_shade_rear_overhang_mm: float = 6.35
+    sun_shade_end_edge_fillet_mm: float = 1.0
 
     # Snap-latch flexure clips for rear cap retention
     include_snap_clips: bool = False
@@ -1714,7 +1717,13 @@ def build_case(p: MakiCaseParams):
         half_shade_outer_w = 0.5 * shade_outer_w
         half_shade_outer_h = 0.5 * shade_outer_h
         half_shade_inner_w = 0.5 * shade_inner_w
-        shade_mid_z = 0.5 * shell_depth
+        shade_front_overhang = max(float(p.sun_shade_front_overhang_mm), 0.0)
+        shade_rear_overhang = max(float(p.sun_shade_rear_overhang_mm), 0.0)
+        shade_z_start = -shade_front_overhang
+        shade_z_end = shell_depth + shade_rear_overhang
+        shade_z_len = shade_z_end - shade_z_start
+        shade_mid_z = shade_z_start + 0.5 * shade_z_len
+        shade_support_mid_z = 0.5 * shell_depth
 
         corner_support_clearance = max(float(p.sun_shade_corner_support_clearance_mm), 0.0)
         support_offsets = _sun_shade_corner_support_offsets(
@@ -1755,7 +1764,7 @@ def build_case(p: MakiCaseParams):
                     shade_inner_contact,
                     post_w,
                     shell_depth,
-                    shade_mid_z,
+                    shade_support_mid_z,
                     top_rib_shell_overlap,
                     top_rib_shade_wall_overlap,
                 )
@@ -1799,41 +1808,41 @@ def build_case(p: MakiCaseParams):
 
         try:
             with BuildPart() as shade_shell_bp:
-                with BuildSketch(Plane.XY):
+                with BuildSketch(Plane.XY.offset(shade_z_start)):
                     Rectangle(shade_outer_w, shade_outer_h)
                     fillet(vertices(), shade_outer_r)
-                extrude(amount=shell_depth)
-                with BuildSketch(Plane.XY.offset(-0.1)):
+                extrude(amount=shade_z_len)
+                with BuildSketch(Plane.XY.offset(shade_z_start - 0.1)):
                     Rectangle(shade_inner_w, shade_inner_h)
                     fillet(vertices(), shade_inner_r)
-                extrude(amount=shell_depth + 0.2, mode=Mode.SUBTRACT)
+                extrude(amount=shade_z_len + 0.2, mode=Mode.SUBTRACT)
 
                 # Keep the roof on the -Y side and open the underside (+Y).
                 bottom_cut_h = half_shade_outer_h - half_outer_h + 1.0
                 with Locations((0.0, half_outer_h + 0.5 * bottom_cut_h, shade_mid_z)):
-                    Box(shade_outer_w + 2.0, bottom_cut_h + 0.2, shell_depth + 2.0, mode=Mode.SUBTRACT)
+                    Box(shade_outer_w + 2.0, bottom_cut_h + 0.2, shade_z_len + 2.0, mode=Mode.SUBTRACT)
 
                 # Trim the lower sections of the side walls on the +Y side so the
                 # shade behaves like a top visor wrap, not a full enclosure.
                 if side_trim_h > 0.5:
                     for sx_sign in (-1.0, 1.0):
-                        with BuildSketch(Plane.XY.offset(-1.0)):
+                        with BuildSketch(Plane.XY.offset(shade_z_start - 1.0)):
                             with Locations((sx_sign * side_trim_x_center, half_shade_outer_h - 0.5 * side_trim_h)):
                                 Rectangle(side_trim_x_depth, side_trim_h + 0.2)
                                 fillet(vertices(), side_trim_corner_r)
-                        extrude(amount=shell_depth + 2.0, mode=Mode.SUBTRACT)
+                        extrude(amount=shade_z_len + 2.0, mode=Mode.SUBTRACT)
 
             with BuildPart() as shade_ribs_bp:
                 for rib_y in side_rib_y_centers:
-                    with Locations((half_outer_w + 0.5 * standoff, rib_y, shade_mid_z)):
+                    with Locations((half_outer_w + 0.5 * standoff, rib_y, shade_support_mid_z)):
                         Box(rib_radial, post_w, shell_depth)
                 for rib_y in side_rib_y_centers:
-                    with Locations((-(half_outer_w + 0.5 * standoff), rib_y, shade_mid_z)):
+                    with Locations((-(half_outer_w + 0.5 * standoff), rib_y, shade_support_mid_z)):
                         Box(rib_radial, post_w, shell_depth)
 
                 if lower_side_support_h > 0.0:
                     for sx_sign in (-1.0, 1.0):
-                        with Locations((sx_sign * lower_side_support_x, lower_side_support_y, shade_mid_z)):
+                        with Locations((sx_sign * lower_side_support_x, lower_side_support_y, shade_support_mid_z)):
                             Box(lower_side_support_x_span, lower_side_support_h, shell_depth)
 
                 # Cut relief notches into the shade support ribs anywhere they would
@@ -1874,7 +1883,7 @@ def build_case(p: MakiCaseParams):
                     is_lower_skirt_edge = (
                         abs(center.Y - lower_edge_cut_y) <= 0.5
                         and min_abs_x <= abs(center.X) <= max_abs_x
-                        and size.Z >= 0.75 * shell_depth
+                        and size.Z >= 0.75 * shade_z_len
                         and size.X <= 0.45
                         and size.Y <= 0.6
                     )
@@ -1908,6 +1917,36 @@ def build_case(p: MakiCaseParams):
                 shade_solid = _largest_solid(shade_solid + rib_solid)
             for rib_solid in top_diagonal_ribs:
                 shade_solid = _largest_solid(shade_solid + rib_solid)
+
+            def fillet_shade_end_edges(shape, preferred_r: float):
+                end_edges = []
+                end_z_values = (shade_z_start, shade_z_end)
+                for edge in shape.edges():
+                    bb = edge.bounding_box()
+                    center = bb.center()
+                    size = bb.size
+                    is_end_edge = (
+                        min(abs(center.Z - z) for z in end_z_values) <= 0.25
+                        and size.Z <= 0.35
+                        and (size.X >= 0.35 or size.Y >= 0.35)
+                    )
+                    if is_end_edge:
+                        end_edges.append(edge)
+
+                if end_edges and preferred_r > 0.0:
+                    for fillet_r in (preferred_r, 0.75, 0.5, 0.3):
+                        if fillet_r > preferred_r:
+                            continue
+                        try:
+                            return fillet(end_edges, fillet_r), fillet_r, len(end_edges)
+                        except Exception:
+                            continue
+                return shape, 0.0, len(end_edges)
+
+            shade_solid, shade_end_edge_fillet_applied, shade_end_edge_count = fillet_shade_end_edges(
+                shade_solid,
+                p.sun_shade_end_edge_fillet_mm,
+            )
             sleeve = _largest_solid(sleeve + shade_solid)
 
             if p.cold_shoe_enabled:
@@ -1944,7 +1983,7 @@ def build_case(p: MakiCaseParams):
                 sleeve = _largest_solid(sleeve + right_boss_bp.part)
 
                 cs_front_z = cs_z_center - 0.5 * cs_boss_l
-                cs_slot_len = shell_depth + 0.2 - cs_front_z
+                cs_slot_len = shade_z_end + 0.2 - cs_front_z
                 cs_slot_mid_z = cs_front_z + 0.5 * cs_slot_len
                 boss_top_y = half_shade_outer_h + cs_boss_h
 
@@ -2012,6 +2051,12 @@ def build_case(p: MakiCaseParams):
                 "wall_mm": float(shade_w),
                 "shade_outer_w_mm": float(shade_outer_w),
                 "shade_outer_h_mm": float(shade_outer_h),
+                "front_overhang_mm": float(shade_front_overhang),
+                "rear_overhang_mm": float(shade_rear_overhang),
+                "shade_z_start_mm": float(shade_z_start),
+                "shade_z_end_mm": float(shade_z_end),
+                "support_z_start_mm": 0.0,
+                "support_z_end_mm": float(shell_depth),
                 "post_width_mm": float(post_w),
                 "side_drop_ratio": float(p.sun_shade_side_drop_ratio),
                 "side_support_height_mm": float(lower_side_support_h),
@@ -2036,6 +2081,8 @@ def build_case(p: MakiCaseParams):
                 "side_skirt_outer_edge_count": int(side_skirt_outer_edge_count),
                 "side_skirt_inner_edge_fillet_mm": float(side_skirt_inner_edge_fillet_applied),
                 "side_skirt_inner_edge_count": int(side_skirt_inner_edge_count),
+                "end_edge_fillet_mm": float(shade_end_edge_fillet_applied),
+                "end_edge_fillet_edges": int(shade_end_edge_count),
                 "cold_shoe_count": int(3 if p.cold_shoe_enabled else 0),
                 "coverage": "top + partial left/right sides (open bottom)",
             }

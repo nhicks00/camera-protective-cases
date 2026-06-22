@@ -239,8 +239,6 @@
         "rear_overhang_mm": 6.35,
         "shade_z_start_mm": -0.0,
         "shade_z_end_mm": 86.89999999999999,
-        "support_z_start_mm": 0.0,
-        "support_z_end_mm": 80.55,
         "post_width_mm": 4.0,
         "rib_corner_r_mm": 1.0,
         "rib_count": 6,
@@ -259,7 +257,7 @@
         "lower_inner_edge_fillet_mm": 0.75,
         "lower_inner_edge_fillet_edges": 4,
         "end_edge_fillet_mm": 0.5,
-        "end_edge_fillet_edges": 66,
+        "end_edge_fillet_edges": 96,
         "cold_shoe_count": 3
       }
     }
@@ -310,8 +308,8 @@
     "camera_fits": true
   },
   "collision_check": {
-    "cap_vs_body_mm3": 0.0,
-    "collision_pass": true,
+    "cap_vs_body_mm3": 60.911143681559835,
+    "collision_pass": false,
     "cap_seated_z_mm": 80.64999999999999
   },
   "obsolete_outputs_removed": []
