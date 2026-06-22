@@ -137,7 +137,7 @@ Active hard-shell and TPU workflows:
     - outer lower skirt edges use up to `2.0 mm`,
     - inner lower skirt edges use up to `0.75 mm`.
   - Sun shade cover extends `6.35 mm` (`0.25 in`) past both the front and rear shell ends; support ribs remain within the original shell depth, each end has a sloped `3.0 mm` out × `3.0 mm` down drip lip, and outside-facing front/rear shade end edges are rounded with the largest stable fillet (`0.5 mm` in the current generated ASA shell).
-  - Front camera aperture in the integrated ASA front wall and TPU front face pad uses a single circular `48.7 mm` cutout by default.
+  - Front camera aperture in the integrated ASA front wall and TPU front face pad uses a single circular `50.8 mm` cutout by default.
   - Through-cut depth increased so vents fully penetrate.
   - Vent row clustering now locks to the STEP-derived rear vent bank (8 rows) and ignores front outlier slots.
   - Tripod armor boss has been removed (params zeroed out).
