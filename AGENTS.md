@@ -286,7 +286,7 @@ Current preferred workflow:
     - top rib centers sit at `|X|=25.9 mm`, with rib inner edge at `|X|=23.9 mm`,
     - side/top vent panel half-width remains `22.9 mm`, leaving `1.0 mm` clearance to the nearest rib edge.
   - External sun shade side skirts stop just past the lower support rib: lower rib outside edge `Y=27.9 mm`, skirt bottom cutoff `Y=29.9 mm` (`2.0 mm` overhang past the rib), with `2.0 mm` outside-edge and `0.75 mm` inner-edge lower fillets.
-  - External sun shade extends `6.35 mm` behind the rear body face to overhang the back/sides; support ribs stay within the original body depth, the rear end has a lofted `3.0 mm` outward shade-perimeter extension that shrinks `3.0 mm` inward toward the case, and outside-facing shade end edges are rounded with the largest stable fillet (`0.75 mm` in the current generated ASA shell).
+  - External sun shade extends `6.35 mm` behind the rear body face to overhang the back/sides; support ribs stay within the original body depth, the rear end has a cut-back lofted `1.5 mm` outward shade-perimeter extension that shrinks `1.5 mm` inward toward the case with only a `0.15 mm` fuse overlap at the shade end.
   - Other external right-angle details are softened unless they are cold-shoe boss/post geometry:
     - large side/top thermal notches use `2.0 mm` corner radii,
     - sun-shade support ribs use `1.0 mm` rounded-rectangle cross-section corners.

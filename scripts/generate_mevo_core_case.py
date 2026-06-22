@@ -181,9 +181,9 @@ class MevoCoreParams:
     sun_shade_front_overhang_mm: float = 0.0
     sun_shade_rear_overhang_mm: float = 6.35
     sun_shade_end_edge_fillet_mm: float = 1.0
-    sun_shade_drip_lip_out_mm: float = 3.0
-    sun_shade_drip_lip_drop_mm: float = 3.0
-    sun_shade_drip_lip_overlap_mm: float = 0.5
+    sun_shade_drip_lip_out_mm: float = 1.5
+    sun_shade_drip_lip_drop_mm: float = 1.5
+    sun_shade_drip_lip_overlap_mm: float = 0.15
     sun_shade_lower_support_overhang_mm: float = 2.0
     sun_shade_lower_outer_edge_fillet_mm: float = 2.0
     sun_shade_lower_inner_edge_fillet_mm: float = 1.0
@@ -930,7 +930,7 @@ def build_asa_shell(p: MevoCoreParams):
                     edge_count += len(end_edges)
                     if not end_edges or preferred_r <= 0.0:
                         continue
-                    for fillet_r in (preferred_r, 0.75, 0.5, 0.3):
+                    for fillet_r in (preferred_r, 0.75, 0.5, 0.3, 0.2, 0.1):
                         if fillet_r > preferred_r:
                             continue
                         try:
@@ -972,7 +972,7 @@ def build_asa_shell(p: MevoCoreParams):
                 "support_z_start_mm": float(shade_support_z_start),
                 "support_z_end_mm": float(shade_support_z_start + shade_support_z_len),
                 "drip_lip_count": int(drip_lip_count),
-                "drip_lip_style": "lofted_inward_shade_extension",
+                "drip_lip_style": "cut_back_lofted_inward_shade_extension_low_overlap",
                 "drip_lip_out_mm": float(drip_lip_out),
                 "drip_lip_drop_mm": float(drip_lip_drop),
                 "drip_lip_inward_mm": float(drip_lip_drop),

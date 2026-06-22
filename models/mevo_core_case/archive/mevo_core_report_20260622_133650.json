@@ -100,9 +100,9 @@
     "sun_shade_front_overhang_mm": 0.0,
     "sun_shade_rear_overhang_mm": 6.35,
     "sun_shade_end_edge_fillet_mm": 1.0,
-    "sun_shade_drip_lip_out_mm": 1.5,
-    "sun_shade_drip_lip_drop_mm": 1.5,
-    "sun_shade_drip_lip_overlap_mm": 0.15,
+    "sun_shade_drip_lip_out_mm": 3.0,
+    "sun_shade_drip_lip_drop_mm": 3.0,
+    "sun_shade_drip_lip_overlap_mm": 0.5,
     "sun_shade_lower_support_overhang_mm": 2.0,
     "sun_shade_lower_outer_edge_fillet_mm": 2.0,
     "sun_shade_lower_inner_edge_fillet_mm": 1.0
@@ -245,11 +245,11 @@
         "support_z_start_mm": 0.0,
         "support_z_end_mm": 80.55,
         "drip_lip_count": 1,
-        "drip_lip_style": "cut_back_lofted_inward_shade_extension_low_overlap",
-        "drip_lip_out_mm": 1.5,
-        "drip_lip_drop_mm": 1.5,
-        "drip_lip_inward_mm": 1.5,
-        "drip_lip_overlap_mm": 0.15,
+        "drip_lip_style": "lofted_inward_shade_extension",
+        "drip_lip_out_mm": 3.0,
+        "drip_lip_drop_mm": 3.0,
+        "drip_lip_inward_mm": 3.0,
+        "drip_lip_overlap_mm": 0.5,
         "post_width_mm": 4.0,
         "rib_corner_r_mm": 1.0,
         "rib_count": 6,
@@ -268,7 +268,7 @@
         "lower_inner_edge_fillet_mm": 0.75,
         "lower_inner_edge_fillet_edges": 4,
         "end_edge_fillet_mm": 0.75,
-        "end_edge_fillet_edges": 104,
+        "end_edge_fillet_edges": 80,
         "cold_shoe_count": 3
       }
     }
