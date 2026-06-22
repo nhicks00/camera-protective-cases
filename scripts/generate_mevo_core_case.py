@@ -181,6 +181,7 @@ class MevoCoreParams:
     sun_shade_standoff_mm: float = 6.0    # air gap between shell and shade
     sun_shade_wall_mm: float = 2.0        # shade panel thickness
     sun_shade_post_width_mm: float = 4.0   # rib width along each face
+    sun_shade_lower_edge_fillet_mm: float = 2.0
 
 
 def _largest_solid(shape):
@@ -634,6 +635,50 @@ def build_asa_shell(p: MevoCoreParams):
                     extrude(amount=cs_boss_h + boss_overlap)
 
             shade_solid = _largest_solid(shade_bp.part)
+
+            lower_edge_cut_y = half_asa_h - 0.1
+            lower_edge_corner_y = half_shade_outer_h - shade_outer_r
+            lower_edge_dy = lower_edge_cut_y - lower_edge_corner_y
+            lower_outer_x = half_shade_outer_w - shade_outer_r
+            lower_inner_x = 0.0
+            if abs(lower_edge_dy) < shade_outer_r:
+                lower_outer_x += (shade_outer_r**2 - lower_edge_dy**2) ** 0.5
+            if abs(lower_edge_dy) < shade_inner_r:
+                lower_inner_x = half_shade_outer_w - shade_outer_r + (
+                    shade_inner_r**2 - lower_edge_dy**2
+                ) ** 0.5
+            lower_outer_edge_min_x = 0.5 * (lower_outer_x + lower_inner_x)
+
+            lower_edges = []
+            for edge in shade_solid.edges():
+                bb = edge.bounding_box()
+                center = bb.center()
+                size = bb.size
+                is_lower_side_edge = (
+                    abs(center.Y - lower_edge_cut_y) <= 0.25
+                    and size.Z >= 0.8 * shade_z_len
+                    and size.X <= 0.25
+                    and size.Y <= 0.25
+                    and abs(center.X) >= lower_outer_edge_min_x
+                )
+                if is_lower_side_edge:
+                    lower_edges.append(edge)
+
+            lower_edge_fillet_applied = 0.0
+            if lower_edges and p.sun_shade_lower_edge_fillet_mm > 0.0:
+                for fillet_r in (
+                    p.sun_shade_lower_edge_fillet_mm,
+                    1.5,
+                    1.0,
+                    0.5,
+                ):
+                    try:
+                        shade_solid = fillet(lower_edges, fillet_r)
+                        lower_edge_fillet_applied = fillet_r
+                        break
+                    except Exception:
+                        continue
+
             asa_shell = _largest_solid(asa_shell + shade_solid)
 
             # Y- cold shoe boss (user's top) — built AFTER shade+shell union
@@ -656,6 +701,8 @@ def build_asa_shell(p: MevoCoreParams):
                 "post_width_mm": float(post_w),
                 "rib_count": 6,
                 "coverage": "top + left + right (open bottom)",
+                "lower_edge_fillet_mm": float(lower_edge_fillet_applied),
+                "lower_edge_fillet_edges": len(lower_edges),
             }
             print(f"  Sun shade canopy added: {shade_outer_w:.1f} x {shade_outer_h:.1f} mm outer, {standoff:.1f}mm gap, 6 ribs")
 

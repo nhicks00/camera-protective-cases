@@ -97,8 +97,7 @@
     "include_sun_shade": true,
     "sun_shade_standoff_mm": 6.0,
     "sun_shade_wall_mm": 2.0,
-    "sun_shade_post_width_mm": 4.0,
-    "sun_shade_lower_edge_fillet_mm": 2.0
+    "sun_shade_post_width_mm": 4.0
   },
   "asa_shell_report": {
     "derived_mm": {
@@ -202,8 +201,6 @@
         "post_width_mm": 4.0,
         "rib_count": 6,
         "coverage": "top + left + right (open bottom)",
-        "lower_edge_fillet_mm": 2.0,
-        "lower_edge_fillet_edges": 2,
         "cold_shoe_count": 3
       }
     }
