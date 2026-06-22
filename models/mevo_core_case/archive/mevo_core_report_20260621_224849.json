@@ -154,9 +154,7 @@
           "type": "single_rectangular_panel_cutout",
           "source_rows": 4,
           "width_x_mm": 45.8,
-          "height_z_mm": 54.00000000000001,
-          "raw_source_height_z_mm": 35.129999999999995,
-          "matched_side_notch_height": true,
+          "height_z_mm": 35.129999999999995,
           "center_x_mm": 0.0,
           "center_z_mm": 31.564999999999998,
           "corner_margin_mm": 2.0

@@ -368,10 +368,12 @@ def build_asa_shell(p: MevoCoreParams):
             side_cut_depth = max(p.side_vent_cut_depth_mm, p.asa_wall_mm + 1.0)
             corner_margin = max(p.vent_notch_corner_margin_mm, 0.0)
             side_notch_y = max(asa_outer_h - 2.0 * (p.asa_outer_corner_r_mm + corner_margin), 4.0)
+            side_notch_match_z = 0.0
             if side_slot_z_centers:
                 side_notch_z_min = min(side_slot_z_centers) - 0.5 * p.side_vent_pitch_z_mm
                 side_notch_z_max = max(side_slot_z_centers) + 0.5 * p.side_vent_pitch_z_mm
                 side_notch_z = max(side_notch_z_max - side_notch_z_min, 4.0)
+                side_notch_match_z = side_notch_z
                 side_notch_center_z = 0.5 * (side_notch_z_min + side_notch_z_max)
                 for side in ("neg", "pos"):
                     x_face = -half_asa_w - 0.2 if side == "neg" else half_asa_w + 0.2
@@ -386,7 +388,7 @@ def build_asa_shell(p: MevoCoreParams):
             if top_vent_z_centers:
                 top_notch_z_min = min(top_vent_z_centers) - 0.5 * p.top_vent_pitch_z_mm
                 top_notch_z_max = max(top_vent_z_centers) + 0.5 * p.top_vent_pitch_z_mm
-                top_notch_z = max(top_notch_z_max - top_notch_z_min, 4.0)
+                top_notch_z = max(top_notch_z_max - top_notch_z_min, side_notch_match_z, 4.0)
                 top_notch_center_z = 0.5 * (top_notch_z_min + top_notch_z_max)
                 with BuildSketch(Plane.XZ.offset(half_asa_h + 0.2)):
                     with Locations((0.0, top_notch_center_z)):
@@ -727,15 +729,17 @@ def build_asa_shell(p: MevoCoreParams):
     side_notch_y = max(asa_outer_h - 2.0 * (p.asa_outer_corner_r_mm + corner_margin), 4.0)
     top_notch_x = max(asa_outer_w - 2.0 * (p.asa_outer_corner_r_mm + corner_margin), 4.0)
     side_notch_info = {"enabled": False}
+    side_notch_report_z = 0.0
     if p.include_thermal_vents and side_slot_z_centers:
         side_z_min = min(side_slot_z_centers) - 0.5 * p.side_vent_pitch_z_mm
         side_z_max = max(side_slot_z_centers) + 0.5 * p.side_vent_pitch_z_mm
+        side_notch_report_z = max(side_z_max - side_z_min, 4.0)
         side_notch_info = {
             "enabled": True,
             "type": "single_rectangular_panel_cutout_per_side",
             "source_rows_per_side": len(side_slot_z_centers),
             "width_y_mm": float(side_notch_y),
-            "height_z_mm": float(max(side_z_max - side_z_min, 4.0)),
+            "height_z_mm": float(side_notch_report_z),
             "center_y_mm": float(p.side_vent_center_y_mm),
             "center_z_mm": float(0.5 * (side_z_min + side_z_max)),
             "corner_margin_mm": float(corner_margin),
@@ -744,12 +748,16 @@ def build_asa_shell(p: MevoCoreParams):
     if p.include_thermal_vents and top_vent_z_centers:
         top_z_min = min(top_vent_z_centers) - 0.5 * p.top_vent_pitch_z_mm
         top_z_max = max(top_vent_z_centers) + 0.5 * p.top_vent_pitch_z_mm
+        raw_top_notch_z = max(top_z_max - top_z_min, 4.0)
+        top_notch_z = max(raw_top_notch_z, side_notch_report_z, 4.0)
         top_notch_info = {
             "enabled": True,
             "type": "single_rectangular_panel_cutout",
             "source_rows": len(top_vent_z_centers),
             "width_x_mm": float(top_notch_x),
-            "height_z_mm": float(max(top_z_max - top_z_min, 4.0)),
+            "height_z_mm": float(top_notch_z),
+            "raw_source_height_z_mm": float(raw_top_notch_z),
+            "matched_side_notch_height": bool(top_notch_z > raw_top_notch_z),
             "center_x_mm": 0.0,
             "center_z_mm": float(0.5 * (top_z_min + top_z_max)),
             "corner_margin_mm": float(corner_margin),
