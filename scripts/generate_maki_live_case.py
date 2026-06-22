@@ -1727,7 +1727,10 @@ def build_case(p: MakiCaseParams):
         shade_z_end = shell_depth + shade_rear_overhang
         shade_z_len = shade_z_end - shade_z_start
         shade_mid_z = shade_z_start + 0.5 * shade_z_len
-        shade_support_mid_z = 0.5 * shell_depth
+        shade_support_z_start = shade_z_start
+        shade_support_z_end = shade_z_end
+        shade_support_z_len = shade_z_len
+        shade_support_mid_z = shade_mid_z
         drip_lip_out = max(float(p.sun_shade_drip_lip_out_mm), 0.0)
         drip_lip_drop = max(float(p.sun_shade_drip_lip_drop_mm), 0.0)
         drip_lip_t = max(float(p.sun_shade_drip_lip_thickness_mm), 0.2)
@@ -1775,7 +1778,7 @@ def build_case(p: MakiCaseParams):
                     shell_contact,
                     shade_inner_contact,
                     post_w,
-                    shell_depth,
+                    shade_support_z_len,
                     shade_support_mid_z,
                     top_rib_shell_overlap,
                     top_rib_shade_wall_overlap,
@@ -1849,15 +1852,15 @@ def build_case(p: MakiCaseParams):
             with BuildPart() as shade_ribs_bp:
                 for rib_y in side_rib_y_centers:
                     with Locations((half_outer_w + 0.5 * standoff, rib_y, shade_support_mid_z)):
-                        Box(rib_radial, post_w, shell_depth)
+                        Box(rib_radial, post_w, shade_support_z_len)
                 for rib_y in side_rib_y_centers:
                     with Locations((-(half_outer_w + 0.5 * standoff), rib_y, shade_support_mid_z)):
-                        Box(rib_radial, post_w, shell_depth)
+                        Box(rib_radial, post_w, shade_support_z_len)
 
                 if lower_side_support_h > 0.0:
                     for sx_sign in (-1.0, 1.0):
                         with Locations((sx_sign * lower_side_support_x, lower_side_support_y, shade_support_mid_z)):
-                            Box(lower_side_support_x_span, lower_side_support_h, shell_depth)
+                            Box(lower_side_support_x_span, lower_side_support_h, shade_support_z_len)
 
                 # Cut relief notches into the shade support ribs anywhere they would
                 # otherwise bridge directly across existing vent openings.
@@ -1996,6 +1999,13 @@ def build_case(p: MakiCaseParams):
                 p.sun_shade_end_edge_fillet_mm,
             )
             sleeve = _largest_solid(sleeve + shade_solid)
+            connector_direct_fuse_count = 0
+            for connector_solid in list(shade_ribs_bp.part.solids()) + top_diagonal_ribs:
+                try:
+                    sleeve = _largest_solid(sleeve + connector_solid)
+                    connector_direct_fuse_count += 1
+                except Exception:
+                    continue
 
             if p.cold_shoe_enabled:
                 cs_z_center = shell_depth - p.cold_shoe_z_from_rear_mm
@@ -2103,8 +2113,10 @@ def build_case(p: MakiCaseParams):
                 "rear_overhang_mm": float(shade_rear_overhang),
                 "shade_z_start_mm": float(shade_z_start),
                 "shade_z_end_mm": float(shade_z_end),
-                "support_z_start_mm": 0.0,
-                "support_z_end_mm": float(shell_depth),
+                "support_z_start_mm": float(shade_support_z_start),
+                "support_z_end_mm": float(shade_support_z_end),
+                "support_depth_mm": float(shade_support_z_len),
+                "connector_direct_fuse_count": int(connector_direct_fuse_count),
                 "drip_lip_count": int(drip_lip_count),
                 "drip_lip_out_mm": float(drip_lip_out),
                 "drip_lip_drop_mm": float(drip_lip_drop),
@@ -2115,7 +2127,7 @@ def build_case(p: MakiCaseParams):
                 "side_support_height_mm": float(lower_side_support_h),
                 "vent_relief_mm": float(vent_relief_margin),
                 "vent_relief_count": int(shade_support_relief_count),
-                "support_placement": "curved_corner_bands",
+                "support_placement": "curved_corner_bands_full_shade_depth",
                 "corner_support_clearance_mm": float(corner_support_clearance),
                 "top_support_count": 2,
                 "top_support_style": "diagonal_corner_ribs",

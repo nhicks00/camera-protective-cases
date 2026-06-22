@@ -128,6 +128,7 @@ Active hard-shell and TPU workflows:
     - the other 3 ASA shell sides each get one enlarged rectangular surface-panel cutout for heat venting, expanded toward the preserved corner/support bands instead of being limited to the original flat-face span,
     - sun-shade support ribs are moved into those preserved curved-corner bands with `1.0 mm` clearance from the large surface-panel openings, so the openings can maximize heat vent area without exposing the support ribs,
     - sun-shade support ribs are intentionally lightened to `2.5 mm`; the top has 2 diagonal 45-degree corner ribs that overlap the case corner and terminate into the shade inner wall so they do not protrude through the hood, and the side shade-to-case connectors are restored as 4 ribs total (`Y=±13.96 mm`, left and right sides),
+    - Maki shade connector bars run the full shade-cover depth, including the front/rear overhang zones, and are directly fused into the final ASA sleeve body after shade union so they cannot disappear as loose shade sub-geometry,
     - standalone side-trio vent slots are removed from the active ASA shell; only the merged tripod-side panel and the 3 large side/top surface panels remain for ASA heat venting.
   - The large former 24-vent bank is constrained to bottom-connected panels (not direct side walls).
   - Side 3+3 vent derivation remains available in the generator for legacy/fallback use, but it is disabled by default and not part of the active ASA sleeve output.
@@ -136,7 +137,7 @@ Active hard-shell and TPU workflows:
   - Sunshade side skirt lower corners are rounded by the side-trim profile plus direct lower-edge fillets on the actual skirt edges:
     - outer lower skirt edges use up to `2.0 mm`,
     - inner lower skirt edges use up to `0.75 mm`.
-  - Sun shade cover extends `6.35 mm` (`0.25 in`) past both the front and rear shell ends; support ribs remain within the original shell depth, each end has a sloped `3.0 mm` out × `3.0 mm` down drip lip, and outside-facing front/rear shade end edges are rounded with the largest stable fillet (`0.5 mm` in the current generated ASA shell).
+  - Sun shade cover extends `6.35 mm` (`0.25 in`) past both the front and rear shell ends; support ribs run the full shade depth, each end has a sloped `3.0 mm` out × `3.0 mm` down drip lip, and outside-facing front/rear shade end edges are rounded with the largest stable fillet (`0.5 mm` in the current generated ASA shell).
   - Front camera aperture in the integrated ASA front wall and TPU front face pad uses a single circular `50.8 mm` cutout by default.
   - Through-cut depth increased so vents fully penetrate.
   - Vent row clustering now locks to the STEP-derived rear vent bank (8 rows) and ignores front outlier slots.
