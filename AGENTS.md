@@ -134,10 +134,8 @@ Active hard-shell and TPU workflows:
   - Side 3+3 vent derivation remains available in the generator for legacy/fallback use, but it is disabled by default and not part of the active ASA sleeve output.
   - If TPU side vent cutouts are explicitly enabled, the TPU generator uses the same merged tripod-side panel behavior.
   - Vent-bank/tripod side relationship is explicit: merged panel and tripod opening remain on the same expected side (`tripod_expected_side`), with hood on the opposite side.
-  - Sunshade side skirt lower corners are rounded by the side-trim profile plus direct lower-edge fillets on the actual skirt edges:
-    - outer lower skirt edges use up to `2.0 mm`,
-    - inner lower skirt edges use up to `0.75 mm`.
-  - Sun shade cover extends `6.35 mm` (`0.25 in`) past both the front and rear shell ends; support ribs are inset `2.0 mm` from each body end and not into either overhang, and each shade end has a low-angle cut-back lofted `1.5 mm` outward shade-perimeter extension that shrinks `0.75 mm` inward toward the case while using the same rounded side-skirt lower trim as the shade cover and only a `0.15 mm` fuse overlap at the shade end.
+  - Sunshade side skirt lower corners are rounded by the side-trim profile. After the continuous shade-end loft, those lower skirt edges are segmented rather than one long edge; do not rely on the old direct long-edge fillet counter for this area.
+  - Sun shade cover extends `6.35 mm` (`0.25 in`) past both the front and rear shell ends; support ribs are inset `2.0 mm` from each body end and not into either overhang, and each shade end is part of the same continuous lofted shade shell, extending `1.5 mm` outward while shrinking `0.75 mm` inward toward the case. Do not add the angled drip section as a separately fused overlap piece.
   - Front camera aperture in the integrated ASA front wall and TPU front face pad uses a single circular `50.8 mm` cutout by default.
   - Through-cut depth increased so vents fully penetrate.
   - Vent row clustering now locks to the STEP-derived rear vent bank (8 rows) and ignores front outlier slots.
