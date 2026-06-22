@@ -100,6 +100,7 @@ class MevoCoreParams:
     top_vent_pitch_z_mm: float = 9.0
     top_vent_cut_depth_mm: float = 6.0
     vent_notch_corner_margin_mm: float = 2.0
+    external_cutout_corner_r_mm: float = 2.0
 
     # Cold shoe mount (ISO 518)
     include_cold_shoe: bool = True
@@ -181,6 +182,7 @@ class MevoCoreParams:
     sun_shade_standoff_mm: float = 6.0    # air gap between shell and shade
     sun_shade_wall_mm: float = 2.0        # shade panel thickness
     sun_shade_post_width_mm: float = 4.0   # rib width along each face
+    sun_shade_rib_corner_r_mm: float = 1.0
     sun_shade_lower_tip_lift_mm: float = 4.0
     sun_shade_lower_outer_edge_fillet_mm: float = 2.0
     sun_shade_lower_inner_edge_fillet_mm: float = 1.0
@@ -371,12 +373,17 @@ def build_asa_shell(p: MevoCoreParams):
             side_cut_depth = max(p.side_vent_cut_depth_mm, p.asa_wall_mm + 1.0)
             corner_margin = max(p.vent_notch_corner_margin_mm, 0.0)
             side_notch_y = max(asa_outer_h - 2.0 * (p.asa_outer_corner_r_mm + corner_margin), 4.0)
+            cutout_corner_r = max(p.external_cutout_corner_r_mm, 0.0)
             side_notch_match_z = 0.0
             side_notch_match_center_z = None
             if side_slot_z_centers:
                 side_notch_z_min = min(side_slot_z_centers) - 0.5 * p.side_vent_pitch_z_mm
                 side_notch_z_max = max(side_slot_z_centers) + 0.5 * p.side_vent_pitch_z_mm
                 side_notch_z = max(side_notch_z_max - side_notch_z_min, 4.0)
+                side_notch_corner_r = min(
+                    cutout_corner_r,
+                    0.5 * min(side_notch_y, side_notch_z) - 0.25,
+                )
                 side_notch_match_z = side_notch_z
                 side_notch_center_z = 0.5 * (side_notch_z_min + side_notch_z_max)
                 side_notch_match_center_z = side_notch_center_z
@@ -385,6 +392,8 @@ def build_asa_shell(p: MevoCoreParams):
                     with BuildSketch(Plane.YZ.offset(x_face)):
                         with Locations((p.side_vent_center_y_mm, side_notch_center_z)):
                             Rectangle(side_notch_y, side_notch_z)
+                            if side_notch_corner_r > 0.0:
+                                fillet(vertices(), side_notch_corner_r)
                     extrude(amount=side_cut_depth if side == "neg" else -side_cut_depth,
                             mode=Mode.SUBTRACT)
 
@@ -399,9 +408,15 @@ def build_asa_shell(p: MevoCoreParams):
                     if side_notch_match_center_z is not None
                     else 0.5 * (top_notch_z_min + top_notch_z_max)
                 )
+                top_notch_corner_r = min(
+                    cutout_corner_r,
+                    0.5 * min(top_notch_x, top_notch_z) - 0.25,
+                )
                 with BuildSketch(Plane.XZ.offset(half_asa_h + 0.2)):
                     with Locations((0.0, top_notch_center_z)):
                         Rectangle(top_notch_x, top_notch_z)
+                        if top_notch_corner_r > 0.0:
+                            fillet(vertices(), top_notch_corner_r)
                 extrude(amount=-top_cut_depth, mode=Mode.SUBTRACT)
 
         # Bottom tripod cutout (rounded corners for fluid transitions)
@@ -432,21 +447,31 @@ def build_asa_shell(p: MevoCoreParams):
             half_oh = 0.5 * asa_outer_h
 
             # X+ wall
+            snap_hole_corner_r = min(
+                max(p.external_cutout_corner_r_mm, 0.0),
+                0.5 * min(hole_w, hole_h) - 0.25,
+            )
             with BuildSketch(Plane.YZ.offset(half_ow + 0.2)):
                 with Locations((0.0, hole_z)):
                     Rectangle(hole_w, hole_h)
+                    if snap_hole_corner_r > 0.0:
+                        fillet(vertices(), snap_hole_corner_r)
             extrude(amount=-wall_cut, mode=Mode.SUBTRACT)
 
             # X- wall (through cold shoe fill)
             with BuildSketch(Plane.YZ.offset(-(half_ow + 0.2))):
                 with Locations((0.0, hole_z)):
                     Rectangle(hole_w, hole_h)
+                    if snap_hole_corner_r > 0.0:
+                        fillet(vertices(), snap_hole_corner_r)
             extrude(amount=wall_cut, mode=Mode.SUBTRACT)
 
             # Y- wall
             with BuildSketch(Plane.XZ.offset(-(half_oh + 0.2))):
                 with Locations((0.0, hole_z)):
                     Rectangle(hole_w, hole_h)
+                    if snap_hole_corner_r > 0.0:
+                        fillet(vertices(), snap_hole_corner_r)
             extrude(amount=wall_cut, mode=Mode.SUBTRACT)
 
             latch_walls = ["X+", "X-", "Y-"]
@@ -457,6 +482,7 @@ def build_asa_shell(p: MevoCoreParams):
                 "hole_z_mm": float(hole_z),
                 "hole_width_mm": float(hole_w),
                 "hole_height_mm": float(hole_h),
+                "hole_corner_r_mm": float(snap_hole_corner_r),
             }
 
         # Retention bump pocket on non-latch wall (Y+ only)
@@ -588,6 +614,18 @@ def build_asa_shell(p: MevoCoreParams):
             half_shade_oh = 0.5 * shade_outer_h
 
             with BuildPart() as shade_bp:
+                def add_rounded_rib(center_x, center_y, width, height):
+                    rib_corner_r = min(
+                        max(p.sun_shade_rib_corner_r_mm, 0.0),
+                        0.5 * min(width, height) - 0.1,
+                    )
+                    with BuildSketch(Plane.XY.offset(shade_z_start)) as rib_sk:
+                        with Locations((center_x, center_y)):
+                            Rectangle(width, height)
+                            if rib_corner_r > 0.0:
+                                fillet(vertices(), rib_corner_r)
+                    extrude(rib_sk.sketch, amount=shade_z_len)
+
                 # Shade tube (outer - inner)
                 with BuildSketch(Plane.XY.offset(shade_z_start)):
                     Rectangle(shade_outer_w, shade_outer_h)
@@ -607,15 +645,12 @@ def build_asa_shell(p: MevoCoreParams):
 
                 # Connecting ribs (2 per face, near fillet transitions)
                 for ry in (-1.0, 1.0):
-                    with Locations((half_asa_w + 0.5 * standoff, ry * rib_offset, shade_mid_z)):
-                        Box(rib_radial, post_w, shade_z_len)
+                    add_rounded_rib(half_asa_w + 0.5 * standoff, ry * rib_offset, rib_radial, post_w)
                 for ry in (-1.0, 1.0):
-                    with Locations((-(half_asa_w + 0.5 * standoff), ry * rib_offset, shade_mid_z)):
-                        Box(rib_radial, post_w, shade_z_len)
+                    add_rounded_rib(-(half_asa_w + 0.5 * standoff), ry * rib_offset, rib_radial, post_w)
                 # Y- face ribs (user's top)
                 for rx in (-1.0, 1.0):
-                    with Locations((rx * rib_offset, -(half_asa_h + 0.5 * standoff), shade_mid_z)):
-                        Box(post_w, rib_radial, shade_z_len)
+                    add_rounded_rib(rx * rib_offset, -(half_asa_h + 0.5 * standoff), post_w, rib_radial)
 
                 # Cold shoe solid bosses on shade outer surfaces (no T-slot
                 # cuts yet — cuts would break the overlap and _largest_solid
@@ -738,6 +773,12 @@ def build_asa_shell(p: MevoCoreParams):
                 "shade_outer_w_mm": float(shade_outer_w),
                 "shade_outer_h_mm": float(shade_outer_h),
                 "post_width_mm": float(post_w),
+                "rib_corner_r_mm": float(
+                    min(
+                        max(p.sun_shade_rib_corner_r_mm, 0.0),
+                        0.5 * min(post_w, rib_radial) - 0.1,
+                    )
+                ),
                 "rib_count": 6,
                 "coverage": "top + left + right (open bottom)",
                 "lower_tip_lift_mm": float(max(p.sun_shade_lower_tip_lift_mm, 0.0)),
@@ -839,6 +880,12 @@ def build_asa_shell(p: MevoCoreParams):
             "height_z_mm": float(side_notch_report_z),
             "center_y_mm": float(p.side_vent_center_y_mm),
             "center_z_mm": float(side_notch_report_center_z),
+            "corner_r_mm": float(
+                min(
+                    max(p.external_cutout_corner_r_mm, 0.0),
+                    0.5 * min(side_notch_y, side_notch_report_z) - 0.25,
+                )
+            ),
             "corner_margin_mm": float(corner_margin),
         }
     top_notch_info = {"enabled": False}
@@ -862,6 +909,12 @@ def build_asa_shell(p: MevoCoreParams):
                 else 0.5 * (top_z_min + top_z_max)
             ),
             "matched_side_notch_alignment": side_notch_report_center_z is not None,
+            "corner_r_mm": float(
+                min(
+                    max(p.external_cutout_corner_r_mm, 0.0),
+                    0.5 * min(top_notch_x, top_notch_z) - 0.25,
+                )
+            ),
             "corner_margin_mm": float(corner_margin),
         }
 

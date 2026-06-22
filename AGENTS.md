@@ -275,6 +275,10 @@ Current preferred workflow:
   - Single bottom tripod mount, rectangular cutout (63.5 × 50.8 mm)
   - Cold shoe mount (ISO 518) on top rear
   - External sun shade lower side-skirt tips are lifted `4.0 mm`, then rounded with a `2.0 mm` outside-edge fillet and `0.75 mm` inner-edge fillet to remove the sharp bottom corner/point.
+  - Other external right-angle details are softened unless they are cold-shoe boss/post geometry:
+    - large side/top thermal notches use `2.0 mm` corner radii,
+    - snap-latch release holes use `1.75 mm` corner radii,
+    - sun-shade support ribs use `1.0 mm` rounded-rectangle cross-section corners.
   - Back cap = ASA plate with two rectangular cutouts:
     - Bottom port cutout (63.5 × 12.7 mm)
     - Top power button cutout (31.75 × 14.29 mm, centered)

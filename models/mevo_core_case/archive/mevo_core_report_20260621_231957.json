@@ -36,7 +36,6 @@
     "top_vent_pitch_z_mm": 9.0,
     "top_vent_cut_depth_mm": 6.0,
     "vent_notch_corner_margin_mm": 2.0,
-    "external_cutout_corner_r_mm": 2.0,
     "include_cold_shoe": true,
     "cold_shoe_pad_width_mm": 28.0,
     "cold_shoe_pad_length_mm": 30.0,
@@ -99,7 +98,6 @@
     "sun_shade_standoff_mm": 6.0,
     "sun_shade_wall_mm": 2.0,
     "sun_shade_post_width_mm": 4.0,
-    "sun_shade_rib_corner_r_mm": 1.0,
     "sun_shade_lower_tip_lift_mm": 4.0,
     "sun_shade_lower_outer_edge_fillet_mm": 2.0,
     "sun_shade_lower_inner_edge_fillet_mm": 1.0
@@ -152,7 +150,6 @@
           "height_z_mm": 54.00000000000001,
           "center_y_mm": 0.0,
           "center_z_mm": 44.775000000000006,
-          "corner_r_mm": 2.0,
           "corner_margin_mm": 2.0
         },
         "top_notch": {
@@ -166,7 +163,6 @@
           "center_x_mm": 0.0,
           "center_z_mm": 44.775000000000006,
           "matched_side_notch_alignment": true,
-          "corner_r_mm": 2.0,
           "corner_margin_mm": 2.0
         }
       },
@@ -197,8 +193,7 @@
         ],
         "hole_z_mm": 76.8,
         "hole_width_mm": 10.0,
-        "hole_height_mm": 4.0,
-        "hole_corner_r_mm": 1.75
+        "hole_height_mm": 4.0
       },
       "sun_shade": {
         "enabled": true,
@@ -207,7 +202,6 @@
         "shade_outer_w_mm": 113.8,
         "shade_outer_h_mm": 113.8,
         "post_width_mm": 4.0,
-        "rib_corner_r_mm": 1.0,
         "rib_count": 6,
         "coverage": "top + left + right (open bottom)",
         "lower_tip_lift_mm": 4.0,
