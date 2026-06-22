@@ -8,48 +8,39 @@
     "source_hood_depth_mm": 159.308,
     "asa_wall_mm": 3.2,
     "rear_slide_clearance_mm": 0.6,
-    "front_wall_depth_mm": 3.2,
-    "hood_arch_spring_y_mm": 143.0,
-    "lower_body_shoulder_y_mm": 118.0,
+    "front_wall_mm": 3.2,
+    "hood_arch_spring_y_mm": 14.0,
+    "lower_body_shoulder_y_mm": -22.0,
     "arch_segments": 18,
-    "source_bottom_inner_w_mm": 41.0,
-    "source_bottom_inner_depth_mm": 71.1,
-    "source_hood_inner_w_mm": 55.0,
-    "lens_cutout_d_mm": 33.0,
+    "lens_cutout_d_mm": 58.0,
     "lens_center_x_mm": 0.0,
-    "lens_center_y_mm": 50.54,
-    "front_source_slot_w_mm": 22.62,
-    "front_upper_source_slot_h_mm": 17.6,
-    "front_upper_source_slot_center_y_mm": 119.5,
-    "front_lower_source_slot_h_mm": 7.89,
-    "front_lower_source_slot_center_y_mm": 18.25,
-    "front_source_slot_corner_r_mm": 1.2,
+    "lens_center_y_mm": 0.0,
     "front_vent_width_mm": 6.35,
     "front_vent_top_bottom_margin_mm": 4.0,
     "front_vent_corner_r_mm": 1.5,
     "rear_opening_lead_in_mm": 0.6,
     "include_side_relief_cutouts": true,
-    "side_relief_slot_depth_mm": 5.0,
-    "side_relief_slot_h_mm": 22.0,
-    "side_relief_center_z_mm": 41.0,
-    "side_relief_y_centers_mm": [
-      38.0,
-      78.0,
+    "side_relief_slot_h_mm": 5.0,
+    "side_relief_slot_len_mm": 26.0,
+    "side_relief_center_y_mm": 18.0,
+    "side_relief_z_centers_mm": [
+      42.0,
+      80.0,
       118.0
     ],
     "side_relief_corner_r_mm": 1.2,
     "include_top_relief_cutouts": true,
     "top_relief_slot_w_mm": 24.0,
-    "top_relief_slot_depth_mm": 24.0,
+    "top_relief_slot_len_mm": 24.0,
     "top_relief_z_centers_mm": [
-      22.0,
-      41.0,
-      60.0
+      42.0,
+      80.0,
+      118.0
     ],
     "top_relief_corner_r_mm": 1.5,
     "include_side_rails": true,
     "side_rail_width_mm": 1.6,
-    "side_rail_depth_mm": 8.0,
+    "side_rail_height_mm": 8.0,
     "side_rail_z_margin_mm": 12.0
   },
   "source_reference": {
@@ -68,52 +59,34 @@
   },
   "asa_shell_mm": {
     "outer_w": 63.866,
-    "outer_depth": 81.928,
-    "outer_height": 159.308,
-    "outer_profile": "assembled vertical arched hood with narrower lower body side skirts",
+    "outer_h": 81.928,
+    "outer_depth": 159.308,
+    "outer_profile": "arched hood with narrower lower body side skirts",
     "lower_body_w": 57.764,
-    "lower_body_depth": 77.506,
-    "lower_body_height": 139.498,
-    "inner_lower_w": 41.0,
-    "inner_hood_w": 55.0,
-    "inner_depth": 71.1,
-    "inner_y_min": 2.9000000000000004,
-    "inner_y_max": 156.408,
-    "front_wall_depth": 10.828000000000003,
-    "requested_min_front_wall_depth": 3.2,
-    "rear_opening_w": 55.0,
-    "rear_opening_h": 153.50799999999998,
+    "inner_lower_w": 51.964,
+    "inner_hood_w": 58.066,
+    "inner_h": 76.128,
+    "front_wall": 3.2,
+    "rear_opening_w": 58.066,
+    "rear_opening_h": 76.128,
     "wall": 3.2,
     "effective_cavity_offset": 2.9000000000000004,
-    "coordinate_system": "X width, Y vertical height, Z front/back depth",
     "single_fused_shell": true,
     "rear_sliding_insertion": true,
     "internal_partition_walls_removed": true
   },
   "features_mm": {
     "front_lens_opening": {
-      "diameter": 33.0,
+      "diameter": 58.0,
       "center_x": 0.0,
-      "center_y": 50.54,
-      "face": "front Z- face",
-      "source": "bottom STL front-face circular loop"
-    },
-    "front_source_slots": {
-      "width": 22.62,
-      "upper_height": 17.6,
-      "upper_center_y": 119.5,
-      "lower_height": 7.89,
-      "lower_center_y": 18.25,
-      "corner_r": 1.2,
-      "source": "bottom STL front-face slot loops"
+      "center_y": 0.0
     },
     "front_vertical_vent": {
       "width": 6.35,
-      "height": 131.498,
+      "height": 73.928,
       "width_source": "0.25 inch",
       "centered": true,
       "intersects_lens_opening": true,
-      "face": "front Z- lower body face",
       "corner_r": 1.5
     },
     "source_inspired_contours": {
@@ -130,11 +103,11 @@
   "archived_previous_outputs": [
     [
       "models/avkans_go_case/avkans_go_asa_shell.step",
-      "models/avkans_go_case/archive/avkans_go_asa_shell_20260622_161059.step"
+      "models/avkans_go_case/archive/avkans_go_asa_shell_20260622_160131.step"
     ],
     [
       "models/avkans_go_case/reports/avkans_go_report.json",
-      "models/avkans_go_case/archive/avkans_go_report_20260622_161059.json"
+      "models/avkans_go_case/archive/avkans_go_report_20260622_160131.json"
     ]
   ]
 }
