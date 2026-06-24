@@ -1,0 +1,90 @@
+{
+  "source_file": "/Users/nathanhicks/Downloads/Avkans%20Go4k%20shade%20cover-Cults3d.stl",
+  "output_stl": "models/avkans_go_case/avkans_go4k_cults_shade_with_lens_hood.stl",
+  "params": {
+    "front_z_mm": 0.0,
+    "hood_depth_mm": 25.4,
+    "wall_mm": 3.0,
+    "root_overlap_mm": 1.2,
+    "edge_round_mm": 1.2,
+    "arc_segments": 96,
+    "corner_segments": 8,
+    "ransac_seed": 4,
+    "ransac_iterations": 5000,
+    "circle_inlier_tolerance_mm": 0.6
+  },
+  "source_mesh": {
+    "vertices": 2358,
+    "faces": 4888,
+    "bounds_min_mm": [
+      -28.886520385742188,
+      -58.631595611572266,
+      -4.3632001876831055
+    ],
+    "bounds_max_mm": [
+      28.488039016723633,
+      56.02984619140625,
+      111.0999984741211
+    ],
+    "extents_mm": [
+      57.37455940246582,
+      114.66144180297852,
+      115.4631986618042
+    ],
+    "is_watertight": false,
+    "component_count": 270
+  },
+  "lens_opening_fit": {
+    "center_x_mm": -0.20335249083385568,
+    "center_y_mm": 22.821919436433856,
+    "radius_mm": 25.31483219198052,
+    "diameter_mm": 50.62966438396104,
+    "front_z_mm": 0.0,
+    "front_plane_vertex_count": 194,
+    "fit_candidate_count": 128,
+    "inlier_count": 122
+  },
+  "hood": {
+    "inner_radius_mm": 25.31483219198052,
+    "outer_radius_mm": 28.31483219198052,
+    "centerline_radius_mm": 26.81483219198052,
+    "wall_mm": 3.0,
+    "depth_mm": 25.4,
+    "root_overlap_mm": 1.2,
+    "front_z_mm": 0.0,
+    "z_min_mm": -25.4,
+    "z_max_mm": 1.2,
+    "arc": "upper half circle",
+    "edge_round_mm": 1.2,
+    "arc_segments": 96,
+    "corner_segments": 8,
+    "is_watertight": true,
+    "component_count": 1,
+    "hood_only_stl": "models/avkans_go_case/avkans_go4k_added_lens_hood_only.stl"
+  },
+  "combined_mesh": {
+    "vertices": 5561,
+    "faces": 11290,
+    "bounds_min_mm": [
+      -28.886520385742188,
+      -58.631595611572266,
+      -25.399999618530273
+    ],
+    "bounds_max_mm": [
+      28.488039016723633,
+      56.02984619140625,
+      111.0999984741211
+    ],
+    "extents_mm": [
+      57.37455940246582,
+      114.66144180297852,
+      136.49999809265137
+    ],
+    "is_watertight": false,
+    "component_count": 271
+  },
+  "boolean_union": {
+    "attempted": false,
+    "reason": "source STL is an open/non-volume mesh; hood uses root overlap and is emitted in one STL for slicer fusion"
+  }
+}
