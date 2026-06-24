@@ -62,6 +62,36 @@ def _circle_from_3(p1: np.ndarray, p2: np.ndarray, p3: np.ndarray) -> tuple[floa
     return cx, cy, r
 
 
+def _source_front_lip(circle: tuple[float, float, float], vertices: np.ndarray, params: HoodParams) -> dict:
+    """Measure the STL's existing upper front lip for a flush hood root."""
+    cx, cy, inner_r = circle
+    radial = np.hypot(vertices[:, 0] - cx, vertices[:, 1] - cy)
+    source_front_z_min = float(vertices[:, 2].min())
+    lip_mask = (
+        (vertices[:, 1] >= cy)
+        & (vertices[:, 2] >= source_front_z_min - 0.05)
+        & (vertices[:, 2] <= params.front_z_mm + 0.10)
+        & (radial >= inner_r + 0.35)
+        & (radial <= inner_r + params.wall_mm + 1.0)
+    )
+    lip_vertices = vertices[lip_mask]
+    lip_radial = radial[lip_mask]
+    if len(lip_vertices) < 8:
+        return {
+            "upper_lip_vertex_count": int(len(lip_vertices)),
+            "upper_lip_outer_radius_mm": float(inner_r + params.wall_mm),
+            "upper_lip_z_min_mm": float(params.front_z_mm),
+            "upper_lip_radius_match_applied": False,
+        }
+
+    return {
+        "upper_lip_vertex_count": int(len(lip_vertices)),
+        "upper_lip_outer_radius_mm": float(np.percentile(lip_radial, 98.0)),
+        "upper_lip_z_min_mm": float(lip_vertices[:, 2].min()),
+        "upper_lip_radius_match_applied": True,
+    }
+
+
 def fit_front_lens_circle(mesh: trimesh.Trimesh, params: HoodParams) -> dict:
     """Fit the large circular lens opening on the front Z plane."""
     vertices = np.asarray(mesh.vertices)
@@ -112,6 +142,7 @@ def fit_front_lens_circle(mesh: trimesh.Trimesh, params: HoodParams) -> dict:
         refined = np.linalg.lstsq(a, b, rcond=None)[0]
         cx, cy, c = [float(v) for v in refined]
         r = math.sqrt(c + cx * cx + cy * cy)
+    lip = _source_front_lip((cx, cy, r), vertices, params)
 
     return {
         "center_x_mm": float(cx),
@@ -122,6 +153,7 @@ def fit_front_lens_circle(mesh: trimesh.Trimesh, params: HoodParams) -> dict:
         "front_plane_vertex_count": int(len(front_pts)),
         "fit_candidate_count": int(len(candidates)),
         "inlier_count": int(len(inliers)),
+        **lip,
     }
 
 
@@ -255,12 +287,15 @@ def build_rounded_half_hood(circle: dict, params: HoodParams, hood_stl: Path) ->
     cx = circle["center_x_mm"]
     cy = circle["center_y_mm"]
     inner_r = circle["radius_mm"]
-    outer_r = inner_r + params.wall_mm
-    center_r = inner_r + 0.5 * params.wall_mm
+    measured_lip_outer_r = circle.get("upper_lip_outer_radius_mm", inner_r + params.wall_mm)
+    outer_r = max(inner_r + params.wall_mm, measured_lip_outer_r)
+    effective_wall = outer_r - inner_r
+    center_r = inner_r + 0.5 * effective_wall
     start_z = params.front_z_mm - params.hood_depth_mm
-    root_z = params.front_z_mm + params.root_overlap_mm
+    measured_lip_z = circle.get("upper_lip_z_min_mm", params.front_z_mm)
+    root_z = min(params.front_z_mm + params.root_overlap_mm, measured_lip_z + params.root_overlap_mm)
     cross_section = _rounded_rect_cross_section(
-        params.wall_mm,
+        effective_wall,
         start_z,
         root_z,
         params.edge_round_mm,
@@ -309,12 +344,16 @@ def build_rounded_half_hood(circle: dict, params: HoodParams, hood_stl: Path) ->
         "inner_radius_mm": float(inner_r),
         "outer_radius_mm": float(outer_r),
         "centerline_radius_mm": float(center_r),
-        "wall_mm": float(params.wall_mm),
+        "requested_wall_mm": float(params.wall_mm),
+        "effective_wall_mm": float(effective_wall),
         "depth_mm": float(params.hood_depth_mm),
         "root_overlap_mm": float(params.root_overlap_mm),
         "front_z_mm": float(params.front_z_mm),
+        "root_z_mm": float(root_z),
         "z_min_mm": float(start_z),
         "z_max_mm": float(root_z),
+        "source_upper_lip_outer_radius_mm": float(measured_lip_outer_r),
+        "source_upper_lip_z_min_mm": float(measured_lip_z),
         "arc": "upper half circle",
         "edge_round_mm": float(params.edge_round_mm),
         "arc_segments": int(arc_segments),
