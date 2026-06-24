@@ -21,7 +21,7 @@ import matplotlib
 import numpy as np
 import trimesh
 from matplotlib.collections import PolyCollection
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Point, box
 from shapely.ops import polygonize, triangulate, unary_union
 
 matplotlib.use("Agg")
@@ -39,6 +39,8 @@ class HoodParams:
     wall_mm: float = 3.0
     root_overlap_mm: float = 1.2
     edge_round_mm: float = 1.2
+    terminal_cap_overlap_mm: float = 0.30
+    terminal_cap_segments: int = 12
     arc_segments: int = 96
     corner_segments: int = 8
     ransac_seed: int = 4
@@ -282,6 +284,54 @@ def _rounded_rect_cross_section(width: float, z_min: float, z_max: float, radius
     return np.asarray(points, dtype=float)
 
 
+def _polygons_from_geometry(geometry) -> list:
+    if geometry.is_empty:
+        return []
+    if geometry.geom_type == "Polygon":
+        return [geometry]
+    if geometry.geom_type == "MultiPolygon":
+        return list(geometry.geoms)
+    return []
+
+
+def _terminal_round_cap_fill(
+    cx: float,
+    cy: float,
+    center_r: float,
+    cap_radius: float,
+    z_min: float,
+    z_max: float,
+    overlap: float,
+    segments: int,
+) -> trimesh.Trimesh:
+    """Build lower round-cap fills for the two open ends of the half hood."""
+    overlap = max(float(overlap), 0.0)
+    cap_radius = max(float(cap_radius), 0.0)
+    if cap_radius <= 0.0:
+        raise ValueError("terminal cap radius must be positive")
+
+    clip = box(
+        cx - center_r - cap_radius - 5.0,
+        cy - cap_radius - 5.0,
+        cx + center_r + cap_radius + 5.0,
+        cy + overlap,
+    )
+    fill_meshes: list[trimesh.Trimesh] = []
+    for side in (-1.0, 1.0):
+        cap_center = (cx + side * center_r, cy)
+        cap_region = Point(cap_center).buffer(cap_radius, resolution=max(int(segments), 4)).intersection(clip)
+        for polygon in _polygons_from_geometry(cap_region):
+            if polygon.area <= 1e-6:
+                continue
+            cap_mesh = trimesh.creation.extrude_polygon(polygon, height=z_max - z_min)
+            cap_mesh.apply_translation((0.0, 0.0, z_min))
+            fill_meshes.append(cap_mesh)
+
+    if not fill_meshes:
+        raise RuntimeError("terminal cap rounding generated no fill geometry")
+    return clean_mesh(trimesh.util.concatenate(fill_meshes))
+
+
 def build_rounded_half_hood(circle: dict, params: HoodParams, hood_stl: Path) -> dict:
     """Build a watertight rounded semi-circular hood mesh and export it to STL."""
     cx = circle["center_x_mm"]
@@ -336,6 +386,42 @@ def build_rounded_half_hood(circle: dict, params: HoodParams, hood_stl: Path) ->
 
     hood_mesh = trimesh.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces), process=True)
     hood_mesh.fix_normals()
+    terminal_round_report = {
+        "enabled": False,
+        "style": "none",
+    }
+
+    cap_radius = 0.5 * effective_wall
+    cap_fill = _terminal_round_cap_fill(
+        cx,
+        cy,
+        center_r,
+        cap_radius,
+        start_z,
+        root_z,
+        params.terminal_cap_overlap_mm,
+        params.terminal_cap_segments,
+    )
+    before_terminal_faces = len(hood_mesh.faces)
+    rounded_hood = trimesh.boolean.union([hood_mesh, cap_fill], engine="manifold")
+    if rounded_hood is None:
+        raise RuntimeError("terminal cap rounding boolean returned no mesh")
+    rounded_hood = clean_mesh(rounded_hood)
+    if not rounded_hood.is_watertight or len(rounded_hood.split(only_watertight=False)) != 1:
+        quality = edge_quality(rounded_hood)
+        raise RuntimeError(f"terminal cap rounding produced invalid hood mesh: {quality}")
+    hood_mesh = rounded_hood
+    terminal_round_report = {
+        "enabled": True,
+        "style": "round lower terminal cap fill",
+        "radius_mm": float(cap_radius),
+        "overlap_mm": float(params.terminal_cap_overlap_mm),
+        "segments": int(params.terminal_cap_segments),
+        "fill_faces": int(len(cap_fill.faces)),
+        "faces_before": int(before_terminal_faces),
+        "faces_after": int(len(hood_mesh.faces)),
+        "is_watertight": bool(hood_mesh.is_watertight),
+    }
 
     hood_stl.parent.mkdir(parents=True, exist_ok=True)
     hood_mesh.export(hood_stl)
@@ -356,6 +442,7 @@ def build_rounded_half_hood(circle: dict, params: HoodParams, hood_stl: Path) ->
         "source_upper_lip_z_min_mm": float(measured_lip_z),
         "arc": "upper half circle",
         "edge_round_mm": float(params.edge_round_mm),
+        "terminal_cap_rounding": terminal_round_report,
         "arc_segments": int(arc_segments),
         "corner_segments": int(params.corner_segments),
         "is_watertight": bool(hood_mesh.is_watertight),
