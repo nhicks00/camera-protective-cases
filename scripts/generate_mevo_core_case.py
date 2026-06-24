@@ -55,7 +55,8 @@ class MevoCoreParams:
     device_nominal_l_mm: float = 69.85  # 2.75 inches
 
     # Direct ASA fit. No TPU liner/frame is generated for Mevo Core.
-    asa_clearance_mm: float = 0.6       # per side/end for direct ASA print fit
+    asa_clearance_mm: float = 2.1       # per X/Y side; +3.0 mm total rear opening W/H vs prior 0.6
+    asa_depth_clearance_mm: float = 0.6 # per front/rear end; keep insertion depth stack unchanged
     extra_length_mm: float = 1.5        # extra axial room for easy insertion
     asa_wall_mm: float = 3.3
 
@@ -225,7 +226,7 @@ def _derived(p: MevoCoreParams) -> dict:
 
     cavity_start_z = p.sun_hood_depth_mm
     # Body depth must accommodate: front wall + camera space + cap plug intrusion
-    camera_space_depth = p.device_nominal_l_mm + 2.0 * p.asa_clearance_mm + p.extra_length_mm
+    camera_space_depth = p.device_nominal_l_mm + 2.0 * p.asa_depth_clearance_mm + p.extra_length_mm
     asa_cavity_depth = camera_space_depth + p.back_cap_lip_depth_mm
     body_depth = p.sun_hood_depth_mm + asa_cavity_depth
 
@@ -234,6 +235,8 @@ def _derived(p: MevoCoreParams) -> dict:
 
     return {
         "asa_clearance_each_side_mm": p.asa_clearance_mm,
+        "asa_depth_clearance_each_end_mm": p.asa_depth_clearance_mm,
+        "rear_opening_total_width_height_increase_mm": 3.0,
         "camera_space_depth_mm": camera_space_depth,
         "asa_inner_w_mm": asa_inner_w,
         "asa_inner_h_mm": asa_inner_h,
@@ -1614,7 +1617,7 @@ def main():
         "collision_check": collision_report,
         "obsolete_outputs_removed": removed_obsolete,
     }
-    report_json.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    report_json.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
     if archived:
         print(f"Archived {len(archived)} previous file(s) to {args.out / 'archive'}")
