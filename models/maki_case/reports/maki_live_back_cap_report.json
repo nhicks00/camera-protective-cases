@@ -30,6 +30,10 @@
     "rear_min_cutout_dim_mm": 4.0,
     "rear_min_cutout_area_mm2": 8.0,
     "hdmi_extra_clearance_mm": 2.0,
+    "rear_single_center_cutout_enabled": true,
+    "rear_center_opening_inset_mm": 4.0,
+    "rear_center_opening_corner_r_mm": 8.0,
+    "rear_center_opening_min_ring_mm": 6.0,
     "section_z_ratio": 0.5,
     "offset_resolution": 64
   },
@@ -95,7 +99,17 @@
         "end_plane_tol_mm": 3.0
       },
       "front_count": 17,
-      "rear_count": 4,
+      "rear_count": 1,
+      "rear_mode": "single_large_center_opening",
+      "rear_center_opening": {
+        "x": 0.0,
+        "y": 0.0,
+        "shape": "rounded_rect",
+        "w": 48.99,
+        "h": 48.99,
+        "corner_r": 8.0
+      },
+      "rear_source_individual_count": 4,
       "front": [
         {
           "x": -7.672840141026427e-11,
@@ -204,6 +218,16 @@
         }
       ],
       "rear": [
+        {
+          "x": 0.0,
+          "y": 0.0,
+          "shape": "rounded_rect",
+          "w": 48.99,
+          "h": 48.99,
+          "corner_r": 8.0
+        }
+      ],
+      "rear_source_individual": [
         {
           "x": 0.0,
           "y": 5.0,

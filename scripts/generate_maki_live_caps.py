@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate front and rear caps for MAKI Live sleeve with STEP-derived cutouts."""
+"""Generate front and rear caps for MAKI Live sleeve."""
 
 from __future__ import annotations
 
@@ -76,6 +76,10 @@ class MakiCapParams:
     rear_min_cutout_dim_mm: float = 4.0
     rear_min_cutout_area_mm2: float = 8.0
     hdmi_extra_clearance_mm: float = 2.0
+    rear_single_center_cutout_enabled: bool = True
+    rear_center_opening_inset_mm: float = 4.0
+    rear_center_opening_corner_r_mm: float = 8.0
+    rear_center_opening_min_ring_mm: float = 6.0
 
     # Processing
     section_z_ratio: float = 0.50
@@ -413,6 +417,12 @@ def _build_cap(
                 with Locations((c["x"], c["y"])):
                     if c["shape"] == "circle":
                         Circle(c["d"] * 0.5)
+                    elif c["shape"] == "rounded_rect":
+                        Rectangle(c["w"], c["h"])
+                        fillet(
+                            vertices(),
+                            _safe_fillet_radius(c["w"], c["h"], c.get("corner_r", 0.0)),
+                        )
                     elif c["shape"] == "slot":
                         # Rear I/O connectors are generally rectilinear; use hard-edged openings.
                         Rectangle(c["w"], c["h"])
@@ -515,7 +525,36 @@ def build_caps(p: MakiCapParams):
     plug_h = max(inner_h - 2.0 * p.plug_clearance_mm, 2.0)
     plug_corner_r = max(inner_corner_r - p.plug_clearance_mm, 0.6)
 
-    front_cutouts, rear_cutouts, end_plane_meta = _extract_end_cutouts(solids, p, sx, sy, zmin, zmax)
+    front_cutouts, rear_source_cutouts, end_plane_meta = _extract_end_cutouts(solids, p, sx, sy, zmin, zmax)
+    rear_cutout_mode = "step_derived_individual"
+    rear_cutouts = rear_source_cutouts
+    center_opening = None
+    if p.rear_single_center_cutout_enabled:
+        min_ring = max(float(p.rear_center_opening_min_ring_mm), 1.5)
+        center_opening_w = min(
+            max(p.nominal_width_mm - 2.0 * p.rear_center_opening_inset_mm, 10.0),
+            max(plug_w - 2.0 * min_ring, 10.0),
+            max(plate_w - 2.0 * min_ring, 10.0),
+        )
+        center_opening_h = min(
+            max(p.nominal_height_mm - 2.0 * p.rear_center_opening_inset_mm, 10.0),
+            max(plug_h - 2.0 * min_ring, 10.0),
+            max(plate_h - 2.0 * min_ring, 10.0),
+        )
+        center_opening_r = min(
+            max(float(p.rear_center_opening_corner_r_mm), 0.0),
+            0.5 * min(center_opening_w, center_opening_h) - 0.5,
+        )
+        center_opening = {
+            "x": 0.0,
+            "y": 0.0,
+            "shape": "rounded_rect",
+            "w": float(center_opening_w),
+            "h": float(center_opening_h),
+            "corner_r": float(center_opening_r),
+        }
+        rear_cutouts = [center_opening]
+        rear_cutout_mode = "single_large_center_opening"
 
     front_cap = _build_front_cap_inverted(
         plate_w, plate_h, plate_corner_r, plug_w, plug_h, plug_corner_r, p, front_cutouts
@@ -568,8 +607,12 @@ def build_caps(p: MakiCapParams):
             "end_planes": end_plane_meta,
             "front_count": len(front_cutouts),
             "rear_count": len(rear_cutouts),
+            "rear_mode": rear_cutout_mode,
+            "rear_center_opening": center_opening,
+            "rear_source_individual_count": len(rear_source_cutouts),
             "front": front_cutouts,
             "rear": rear_cutouts,
+            "rear_source_individual": rear_source_cutouts,
         },
     }
     return front_cap, rear_cap, report
