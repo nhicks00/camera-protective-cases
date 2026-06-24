@@ -343,7 +343,13 @@ def build_rounded_half_hood(circle: dict, params: HoodParams, hood_stl: Path) ->
     center_r = inner_r + 0.5 * effective_wall
     start_z = params.front_z_mm - params.hood_depth_mm
     measured_lip_z = circle.get("upper_lip_z_min_mm", params.front_z_mm)
-    root_z = params.front_z_mm + params.root_overlap_mm
+    if circle.get("upper_lip_radius_match_applied") and measured_lip_z < params.front_z_mm:
+        root_anchor = "source upper front lip"
+        root_anchor_z = measured_lip_z
+    else:
+        root_anchor = "front face"
+        root_anchor_z = params.front_z_mm
+    root_z = root_anchor_z + params.root_overlap_mm
     cross_section = _rounded_rect_cross_section(
         effective_wall,
         start_z,
@@ -433,7 +439,10 @@ def build_rounded_half_hood(circle: dict, params: HoodParams, hood_stl: Path) ->
         "requested_wall_mm": float(params.wall_mm),
         "effective_wall_mm": float(effective_wall),
         "depth_mm": float(params.hood_depth_mm),
+        "sweep_length_mm": float(root_z - start_z),
         "root_overlap_mm": float(params.root_overlap_mm),
+        "root_anchor": root_anchor,
+        "root_anchor_z_mm": float(root_anchor_z),
         "front_z_mm": float(params.front_z_mm),
         "root_z_mm": float(root_z),
         "z_min_mm": float(start_z),
