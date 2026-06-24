@@ -34,6 +34,66 @@
     "is_watertight": false,
     "component_count": 270
   },
+  "source_repair": {
+    "source_component_count": 270,
+    "kept_largest_component_faces": 4590,
+    "dropped_loose_component_count": 269,
+    "front_boundary_segments_used": 142,
+    "front_patch_polygon_count": 4,
+    "front_patch_faces_added": 134,
+    "before": {
+      "vertices": 2358,
+      "faces": 4590,
+      "bounds_min_mm": [
+        -28.886520385742188,
+        -58.631595611572266,
+        -4.3632001876831055
+      ],
+      "bounds_max_mm": [
+        28.488039016723633,
+        56.02984619140625,
+        111.0999984741211
+      ],
+      "extents_mm": [
+        57.37455940246582,
+        114.66144180297852,
+        115.4631986618042
+      ],
+      "is_watertight": false,
+      "component_count": 1,
+      "edge_quality": {
+        "boundary_edges": 142,
+        "nonmanifold_edges": 0,
+        "unique_edges": 6956
+      }
+    },
+    "after": {
+      "vertices": 2358,
+      "faces": 4724,
+      "bounds_min_mm": [
+        -28.886520385742188,
+        -58.631595611572266,
+        -4.3632001876831055
+      ],
+      "bounds_max_mm": [
+        28.488039016723633,
+        56.02984619140625,
+        111.0999984741211
+      ],
+      "extents_mm": [
+        57.37455940246582,
+        114.66144180297852,
+        115.4631986618042
+      ],
+      "is_watertight": true,
+      "component_count": 1,
+      "edge_quality": {
+        "boundary_edges": 0,
+        "nonmanifold_edges": 0,
+        "unique_edges": 7086
+      }
+    }
+  },
   "lens_opening_fit": {
     "center_x_mm": -0.20335249083385568,
     "center_y_mm": 22.821919436433856,
@@ -63,8 +123,8 @@
     "hood_only_stl": "models/avkans_go_case/avkans_go4k_added_lens_hood_only.stl"
   },
   "combined_mesh": {
-    "vertices": 5561,
-    "faces": 11290,
+    "vertices": 4585,
+    "faces": 9178,
     "bounds_min_mm": [
       -28.886520385742188,
       -58.631595611572266,
@@ -80,11 +140,23 @@
       114.66144180297852,
       136.49999809265137
     ],
-    "is_watertight": false,
-    "component_count": 271
+    "is_watertight": true,
+    "component_count": 1
+  },
+  "combined_edge_quality": {
+    "boundary_edges": 0,
+    "nonmanifold_edges": 0,
+    "unique_edges": 13767
   },
   "boolean_union": {
-    "attempted": false,
-    "reason": "source STL is an open/non-volume mesh; hood uses root overlap and is emitted in one STL for slicer fusion"
+    "attempted": true,
+    "engine": "manifold",
+    "fallback_used": false,
+    "succeeded": true,
+    "edge_quality": {
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "unique_edges": 13767
+    }
   }
 }

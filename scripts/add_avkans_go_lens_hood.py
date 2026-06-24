@@ -3,8 +3,8 @@
 
 This script intentionally keeps the purchased STL as mesh input and emits a
 mesh STL derivative. The added hood is generated as a watertight rounded sweep
-mesh, then appended to the source STL with a small root overlap into the front
-face for slicer fusion.
+mesh. The purchased STL is repaired into one watertight main shell before the
+hood is fused with a manifold Boolean union for the final printable STL.
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ import argparse
 import json
 import math
 import random
+from collections import Counter
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -20,6 +21,8 @@ import matplotlib
 import numpy as np
 import trimesh
 from matplotlib.collections import PolyCollection
+from shapely.geometry import LineString
+from shapely.ops import polygonize, triangulate, unary_union
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
@@ -119,6 +122,95 @@ def fit_front_lens_circle(mesh: trimesh.Trimesh, params: HoodParams) -> dict:
         "front_plane_vertex_count": int(len(front_pts)),
         "fit_candidate_count": int(len(candidates)),
         "inlier_count": int(len(inliers)),
+    }
+
+
+def edge_quality(mesh: trimesh.Trimesh) -> dict:
+    counts: Counter[tuple[int, int]] = Counter()
+    for face in mesh.faces:
+        for a, b in ((face[0], face[1]), (face[1], face[2]), (face[2], face[0])):
+            edge = tuple(sorted((int(a), int(b))))
+            counts[edge] += 1
+    return {
+        "boundary_edges": int(sum(1 for count in counts.values() if count == 1)),
+        "nonmanifold_edges": int(sum(1 for count in counts.values() if count > 2)),
+        "unique_edges": int(len(counts)),
+    }
+
+
+def clean_mesh(mesh: trimesh.Trimesh) -> trimesh.Trimesh:
+    mesh = mesh.copy()
+    mesh.merge_vertices(digits_vertex=6)
+    if hasattr(mesh, "unique_faces"):
+        mesh.update_faces(mesh.unique_faces())
+    if hasattr(mesh, "nondegenerate_faces"):
+        mesh.update_faces(mesh.nondegenerate_faces())
+    mesh.remove_unreferenced_vertices()
+    mesh.fix_normals()
+    return mesh
+
+
+def boundary_edges(mesh: trimesh.Trimesh) -> list[tuple[int, int]]:
+    counts: Counter[tuple[int, int]] = Counter()
+    for face in mesh.faces:
+        for a, b in ((face[0], face[1]), (face[1], face[2]), (face[2], face[0])):
+            edge = tuple(sorted((int(a), int(b))))
+            counts[edge] += 1
+    return [edge for edge, count in counts.items() if count == 1]
+
+
+def repair_source_shell(source: trimesh.Trimesh, params: HoodParams) -> tuple[trimesh.Trimesh, dict]:
+    """Drop loose STL fragments and repair the main front-plane shell loops."""
+    source_components = source.split(only_watertight=False)
+    main = max(source_components, key=lambda component: len(component.faces))
+    before = mesh_stats(main)
+    before["edge_quality"] = edge_quality(main)
+
+    lines = []
+    for a, b in boundary_edges(main):
+        pa = main.vertices[a]
+        pb = main.vertices[b]
+        if abs(pa[2] - params.front_z_mm) > 1e-5 or abs(pb[2] - params.front_z_mm) > 1e-5:
+            continue
+        lines.append(LineString([(float(pa[0]), float(pa[1])), (float(pb[0]), float(pb[1]))]))
+
+    patch_vertices: list[tuple[float, float, float]] = []
+    patch_faces: list[tuple[int, int, int]] = []
+    patch_polygons = []
+    if lines:
+        polygons = list(polygonize(lines))
+        merged = unary_union(polygons)
+        patch_polygons = [merged] if merged.geom_type == "Polygon" else list(merged.geoms)
+        for polygon in patch_polygons:
+            for triangle in triangulate(polygon):
+                if not polygon.covers(triangle.representative_point()):
+                    continue
+                indices = []
+                for x, y in list(triangle.exterior.coords)[:-1]:
+                    indices.append(len(patch_vertices))
+                    patch_vertices.append((float(x), float(y), float(params.front_z_mm)))
+                patch_faces.append(tuple(indices))
+
+    if patch_faces:
+        patch = trimesh.Trimesh(vertices=np.asarray(patch_vertices), faces=np.asarray(patch_faces), process=False)
+        repaired = trimesh.util.concatenate([main, patch])
+    else:
+        patch = trimesh.Trimesh(vertices=np.empty((0, 3)), faces=np.empty((0, 3), dtype=int), process=False)
+        repaired = main.copy()
+
+    repaired = clean_mesh(repaired)
+    after = mesh_stats(repaired)
+    after["edge_quality"] = edge_quality(repaired)
+
+    return repaired, {
+        "source_component_count": int(len(source_components)),
+        "kept_largest_component_faces": int(len(main.faces)),
+        "dropped_loose_component_count": int(max(len(source_components) - 1, 0)),
+        "front_boundary_segments_used": int(len(lines)),
+        "front_patch_polygon_count": int(len(patch_polygons)),
+        "front_patch_faces_added": int(len(patch.faces)),
+        "before": before,
+        "after": after,
     }
 
 
@@ -281,6 +373,37 @@ def mesh_stats(mesh: trimesh.Trimesh) -> dict:
     }
 
 
+def fuse_repaired_shell_and_hood(shell: trimesh.Trimesh, hood: trimesh.Trimesh) -> tuple[trimesh.Trimesh, dict]:
+    """Boolean-union two watertight meshes with manifold, falling back loudly."""
+    report = {
+        "attempted": True,
+        "engine": "manifold",
+        "fallback_used": False,
+    }
+    try:
+        fused = trimesh.boolean.union([shell, hood], engine="manifold")
+        if fused is None:
+            raise RuntimeError("manifold returned None")
+        fused = clean_mesh(fused)
+        report["succeeded"] = bool(fused.is_watertight and len(fused.split(only_watertight=False)) == 1)
+        report["edge_quality"] = edge_quality(fused)
+        if not report["succeeded"]:
+            raise RuntimeError("Boolean result was not one watertight component")
+        return fused, report
+    except Exception as exc:
+        fallback = trimesh.util.concatenate([shell, hood])
+        fallback = clean_mesh(fallback)
+        report.update(
+            {
+                "succeeded": False,
+                "fallback_used": True,
+                "failure": f"{type(exc).__name__}: {exc}",
+                "edge_quality": edge_quality(fallback),
+            }
+        )
+        return fallback, report
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Add rounded half-circle lens hood to AVKANS Go4k STL")
     parser.add_argument("--source", type=Path, default=DEFAULT_SOURCE)
@@ -301,30 +424,29 @@ def main() -> None:
         edge_round_mm=args.edge_round,
     )
 
-    base = trimesh.load(args.source, force="mesh")
-    circle = fit_front_lens_circle(base, params)
+    source_mesh = trimesh.load(args.source, force="mesh")
+    circle = fit_front_lens_circle(source_mesh, params)
+    repaired_base, repair_report = repair_source_shell(source_mesh, params)
     hood_report = build_rounded_half_hood(circle, params, args.hood_only)
     hood_mesh = trimesh.load(args.hood_only, force="mesh")
 
-    combined = trimesh.util.concatenate([base, hood_mesh])
-    combined.merge_vertices()
+    combined, union_report = fuse_repaired_shell_and_hood(repaired_base, hood_mesh)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     combined.export(args.out)
 
-    make_preview(base, hood_mesh, combined, args.preview)
+    make_preview(repaired_base, hood_mesh, combined, args.preview)
 
     report = {
         "source_file": str(args.source),
         "output_stl": str(args.out),
         "params": asdict(params),
-        "source_mesh": mesh_stats(base),
+        "source_mesh": mesh_stats(source_mesh),
+        "source_repair": repair_report,
         "lens_opening_fit": circle,
         "hood": hood_report,
         "combined_mesh": mesh_stats(combined),
-        "boolean_union": {
-            "attempted": False,
-            "reason": "source STL is an open/non-volume mesh; hood uses root overlap and is emitted in one STL for slicer fusion",
-        },
+        "combined_edge_quality": edge_quality(combined),
+        "boolean_union": union_report,
     }
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
