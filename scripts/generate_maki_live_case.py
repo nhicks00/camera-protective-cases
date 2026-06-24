@@ -112,8 +112,8 @@ class MakiCaseParams:
     sun_shade_side_skirt_inner_edge_fillet_mm: float = 0.75
     sun_shade_corner_support_clearance_mm: float = 1.0
     sun_shade_top_corner_support_angle_deg: float = 45.0
-    sun_shade_front_overhang_mm: float = 6.35
-    sun_shade_rear_overhang_mm: float = 6.35
+    sun_shade_front_overhang_mm: float = 9.525
+    sun_shade_rear_overhang_mm: float = 9.525
     sun_shade_end_edge_fillet_mm: float = 1.0
     sun_shade_drip_lip_out_mm: float = 1.5
     sun_shade_drip_lip_drop_mm: float = 0.75

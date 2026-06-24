@@ -746,10 +746,10 @@
             "wall_mm": 2.0,
             "shade_outer_w_mm": 83.59,
             "shade_outer_h_mm": 83.59,
-            "front_overhang_mm": 6.35,
-            "rear_overhang_mm": 6.35,
-            "shade_z_start_mm": -6.35,
-            "shade_z_end_mm": 140.26999999999998,
+            "front_overhang_mm": 9.525,
+            "rear_overhang_mm": 9.525,
+            "shade_z_start_mm": -9.525,
+            "shade_z_end_mm": 143.445,
             "support_z_start_mm": 2.0,
             "support_z_end_mm": 131.92,
             "support_depth_mm": 129.92,
@@ -762,8 +762,8 @@
             "drip_lip_overlap_mm": 0.0,
             "drip_lip_legacy_overlap_param_mm": 0.15,
             "drip_lip_terminal_z_values_mm": [
-              -7.85,
-              141.76999999999998
+              -11.025,
+              144.945
             ],
             "post_width_mm": 2.5,
             "side_drop_ratio": 0.72,
