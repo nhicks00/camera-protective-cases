@@ -3,7 +3,7 @@
   "output_stl": "models/avkans_go_case/avkans_go4k_cults_shade_with_lens_hood.stl",
   "params": {
     "front_z_mm": 0.0,
-    "hood_depth_mm": 25.4,
+    "hood_depth_mm": 17.78,
     "wall_mm": 3.0,
     "root_overlap_mm": 1.2,
     "edge_round_mm": 1.2,
@@ -109,10 +109,10 @@
     "outer_radius_mm": 28.31483219198052,
     "centerline_radius_mm": 26.81483219198052,
     "wall_mm": 3.0,
-    "depth_mm": 25.4,
+    "depth_mm": 17.78,
     "root_overlap_mm": 1.2,
     "front_z_mm": 0.0,
-    "z_min_mm": -25.4,
+    "z_min_mm": -17.78,
     "z_max_mm": 1.2,
     "arc": "upper half circle",
     "edge_round_mm": 1.2,
@@ -128,7 +128,7 @@
     "bounds_min_mm": [
       -28.886520385742188,
       -58.631595611572266,
-      -25.399999618530273
+      -17.780000686645508
     ],
     "bounds_max_mm": [
       28.488039016723633,
@@ -138,7 +138,7 @@
     "extents_mm": [
       57.37455940246582,
       114.66144180297852,
-      136.49999809265137
+      128.8799991607666
     ],
     "is_watertight": true,
     "component_count": 1

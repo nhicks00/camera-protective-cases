@@ -35,7 +35,7 @@ DEFAULT_OUT = Path("models/avkans_go_case/avkans_go4k_cults_shade_with_lens_hood
 @dataclass
 class HoodParams:
     front_z_mm: float = 0.0
-    hood_depth_mm: float = 25.4
+    hood_depth_mm: float = 17.78
     wall_mm: float = 3.0
     root_overlap_mm: float = 1.2
     edge_round_mm: float = 1.2
@@ -411,7 +411,7 @@ def main() -> None:
     parser.add_argument("--hood-only", type=Path, default=Path("models/avkans_go_case/avkans_go4k_added_lens_hood_only.stl"))
     parser.add_argument("--report", type=Path, default=Path("models/avkans_go_case/reports/avkans_go4k_cults_hood_report.json"))
     parser.add_argument("--preview", type=Path, default=Path("models/avkans_go_case/reports/avkans_go4k_cults_hood_preview.png"))
-    parser.add_argument("--hood-depth", type=float, default=25.4)
+    parser.add_argument("--hood-depth", type=float, default=17.78)
     parser.add_argument("--wall", type=float, default=3.0)
     parser.add_argument("--root-overlap", type=float, default=1.2)
     parser.add_argument("--edge-round", type=float, default=1.2)
