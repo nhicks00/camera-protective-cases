@@ -293,7 +293,7 @@ def build_rounded_half_hood(circle: dict, params: HoodParams, hood_stl: Path) ->
     center_r = inner_r + 0.5 * effective_wall
     start_z = params.front_z_mm - params.hood_depth_mm
     measured_lip_z = circle.get("upper_lip_z_min_mm", params.front_z_mm)
-    root_z = min(params.front_z_mm + params.root_overlap_mm, measured_lip_z + params.root_overlap_mm)
+    root_z = params.front_z_mm + params.root_overlap_mm
     cross_section = _rounded_rect_cross_section(
         effective_wall,
         start_z,
