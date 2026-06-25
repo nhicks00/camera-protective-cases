@@ -7,11 +7,6 @@
     "wall_mm": 3.0,
     "root_overlap_mm": 1.2,
     "edge_round_mm": 1.2,
-    "terminal_cap_overlap_mm": 0.3,
-    "terminal_cap_root_clearance_mm": 3.0,
-    "terminal_cap_blend_mm": 6.0,
-    "terminal_cap_sections": 12,
-    "terminal_cap_segments": 12,
     "arc_segments": 96,
     "corner_segments": 8,
     "ransac_seed": 4,
@@ -133,17 +128,8 @@
     "arc": "upper half circle",
     "edge_round_mm": 1.2,
     "terminal_cap_rounding": {
-      "enabled": true,
-      "style": "tapered round lower terminal cap fill",
-      "radius_mm": 1.6877708019401787,
-      "overlap_mm": 0.3,
-      "root_clearance_mm": 3.0,
-      "blend_mm": 6.0,
-      "sections": 12,
-      "segments": 12,
-      "fill_faces": 2352,
-      "faces_before": 6402,
-      "faces_after": 8646,
+      "enabled": false,
+      "style": "removed",
       "is_watertight": true
     },
     "arc_segments": 96,
@@ -153,8 +139,8 @@
     "hood_only_stl": "models/avkans_go_case/avkans_go4k_added_lens_hood_only.stl"
   },
   "combined_mesh": {
-    "vertices": 5648,
-    "faces": 11304,
+    "vertices": 4526,
+    "faces": 9060,
     "bounds_min_mm": [
       -28.893726348876953,
       -58.631595611572266,
@@ -176,7 +162,7 @@
   "combined_edge_quality": {
     "boundary_edges": 0,
     "nonmanifold_edges": 0,
-    "unique_edges": 16956
+    "unique_edges": 13590
   },
   "boolean_union": {
     "attempted": true,
@@ -186,7 +172,7 @@
     "edge_quality": {
       "boundary_edges": 0,
       "nonmanifold_edges": 0,
-      "unique_edges": 16956
+      "unique_edges": 13590
     }
   }
 }
