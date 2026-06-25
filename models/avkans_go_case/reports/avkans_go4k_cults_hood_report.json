@@ -5,7 +5,7 @@
     "front_z_mm": 0.0,
     "hood_depth_mm": 17.78,
     "wall_mm": 3.0,
-    "root_overlap_mm": -0.3,
+    "root_overlap_mm": 0.1,
     "edge_round_mm": 1.2,
     "arc_segments": 96,
     "corner_segments": 8,
@@ -115,17 +115,15 @@
     "requested_wall_mm": 3.0,
     "effective_wall_mm": 3.3755416038803574,
     "depth_mm": 17.78,
-    "sweep_length_mm": 13.116799812316895,
-    "root_overlap_mm": -0.3,
+    "sweep_length_mm": 13.516799812316895,
+    "root_overlap_mm": 0.1,
     "root_anchor": "source upper front lip",
     "root_anchor_z_mm": -4.3632001876831055,
-    "root_profile": "source lip curved rear edge",
-    "root_inner_z_mm": 0.0,
-    "root_outer_z_mm": -4.663200187683105,
+    "root_profile": "direct source-lip extension",
+    "root_z_mm": -4.263200187683106,
     "front_z_mm": 0.0,
-    "root_z_mm": -4.663200187683105,
     "z_min_mm": -17.78,
-    "z_max_mm": 0.0,
+    "z_max_mm": -4.263200187683106,
     "source_upper_lip_outer_radius_mm": 28.69037379586088,
     "source_upper_lip_z_min_mm": -4.3632001876831055,
     "arc": "upper half circle",
@@ -142,8 +140,8 @@
     "hood_only_stl": "models/avkans_go_case/avkans_go4k_added_lens_hood_only.stl"
   },
   "combined_mesh": {
-    "vertices": 8243,
-    "faces": 16494,
+    "vertices": 4314,
+    "faces": 8636,
     "bounds_min_mm": [
       -28.893726348876953,
       -58.631595611572266,
@@ -165,7 +163,7 @@
   "combined_edge_quality": {
     "boundary_edges": 0,
     "nonmanifold_edges": 0,
-    "unique_edges": 24741
+    "unique_edges": 12954
   },
   "boolean_union": {
     "attempted": true,
@@ -175,62 +173,7 @@
     "edge_quality": {
       "boundary_edges": 0,
       "nonmanifold_edges": 0,
-      "unique_edges": 13941
+      "unique_edges": 12954
     }
-  },
-  "root_lip_cleanup": {
-    "attempted": true,
-    "engine": "manifold",
-    "trim_depth_mm": 0.03,
-    "curve_epsilon_mm": 0.02,
-    "trim_radial_margin_mm": 0.45,
-    "weld_radial_padding_mm": 0.0,
-    "trimmed": {
-      "mesh": {
-        "vertices": 12249,
-        "faces": 24502,
-        "bounds_min_mm": [
-          -28.893726348876953,
-          -58.631595611572266,
-          -17.780000686645508
-        ],
-        "bounds_max_mm": [
-          28.488039016723633,
-          56.02984619140625,
-          111.0999984741211
-        ],
-        "extents_mm": [
-          57.381765365600586,
-          114.66144180297852,
-          128.8799991607666
-        ],
-        "is_watertight": true,
-        "component_count": 2
-      },
-      "edge_quality": {
-        "boundary_edges": 0,
-        "nonmanifold_edges": 0,
-        "unique_edges": 36753
-      },
-      "component_face_counts": [
-        13622,
-        10880
-      ]
-    },
-    "succeeded": true,
-    "weld": {
-      "radial_min_offset_mm": -1.6877708019401787,
-      "radial_max_offset_mm": 1.6877708019401787,
-      "z_min_mm": -4.753200187683105,
-      "z_max_mm": -4.243200187683105,
-      "theta_min_rad": 0.0,
-      "theta_max_rad": 3.141592653589793
-    },
-    "final_edge_quality": {
-      "boundary_edges": 0,
-      "nonmanifold_edges": 0,
-      "unique_edges": 24741
-    },
-    "final_component_count": 1
   }
 }

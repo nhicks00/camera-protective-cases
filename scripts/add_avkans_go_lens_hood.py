@@ -37,7 +37,7 @@ class HoodParams:
     front_z_mm: float = 0.0
     hood_depth_mm: float = 17.78
     wall_mm: float = 3.0
-    root_overlap_mm: float = -0.30
+    root_overlap_mm: float = 0.10
     edge_round_mm: float = 1.2
     arc_segments: int = 96
     corner_segments: int = 8
@@ -246,30 +246,24 @@ def repair_source_shell(source: trimesh.Trimesh, params: HoodParams) -> tuple[tr
     }
 
 
-def _smoothstep(value: float) -> float:
-    value = min(max(float(value), 0.0), 1.0)
-    return value * value * (3.0 - 2.0 * value)
-
-
-def _source_lip_cross_section(
+def _lip_extension_cross_section(
     width: float,
     z_min: float,
-    root_inner_z: float,
-    root_outer_z: float,
+    root_z: float,
     radius: float,
     segments: int,
 ) -> np.ndarray:
-    """Return a hood loop whose rear edge follows the source lip curve."""
+    """Return a hood loop that directly extends the existing source lip."""
     half_w = 0.5 * width
-    half_h = 0.5 * (max(root_inner_z, root_outer_z) - z_min)
+    half_h = 0.5 * (root_z - z_min)
     radius = min(max(radius, 0.0), half_w * 0.95, half_h * 0.90)
     segments = max(int(segments), 3)
 
     if radius <= 0.0:
         return np.array(
             [
-                [half_w, root_outer_z],
-                [-half_w, root_inner_z],
+                [half_w, root_z],
+                [-half_w, root_z],
                 [-half_w, z_min],
                 [half_w, z_min],
             ],
@@ -277,13 +271,8 @@ def _source_lip_cross_section(
         )
 
     points: list[tuple[float, float]] = []
-    root_segments = max(int(segments) * 2, 8)
-    for i in range(root_segments + 1):
-        t = i / root_segments
-        u = half_w - width * t
-        z = root_outer_z + (root_inner_z - root_outer_z) * _smoothstep(t)
-        points.append((u, z))
-
+    points.append((half_w, root_z))
+    points.append((-half_w, root_z))
     points.append((-half_w, z_min + radius))
 
     for i in range(1, segments + 1):
@@ -369,13 +358,11 @@ def build_rounded_half_hood(circle: dict, params: HoodParams, hood_stl: Path) ->
     else:
         root_anchor = "front face"
         root_anchor_z = params.front_z_mm
-    root_outer_z = root_anchor_z + params.root_overlap_mm
-    root_inner_z = params.front_z_mm
-    cross_section = _source_lip_cross_section(
+    root_z = root_anchor_z + params.root_overlap_mm
+    cross_section = _lip_extension_cross_section(
         effective_wall,
         start_z,
-        root_inner_z,
-        root_outer_z,
+        root_z,
         params.edge_round_mm,
         params.corner_segments,
     )
@@ -397,17 +384,15 @@ def build_rounded_half_hood(circle: dict, params: HoodParams, hood_stl: Path) ->
         "requested_wall_mm": float(params.wall_mm),
         "effective_wall_mm": float(effective_wall),
         "depth_mm": float(params.hood_depth_mm),
-        "sweep_length_mm": float(root_outer_z - start_z),
+        "sweep_length_mm": float(root_z - start_z),
         "root_overlap_mm": float(params.root_overlap_mm),
         "root_anchor": root_anchor,
         "root_anchor_z_mm": float(root_anchor_z),
-        "root_profile": "source lip curved rear edge",
-        "root_inner_z_mm": float(root_inner_z),
-        "root_outer_z_mm": float(root_outer_z),
+        "root_profile": "direct source-lip extension",
+        "root_z_mm": float(root_z),
         "front_z_mm": float(params.front_z_mm),
-        "root_z_mm": float(root_outer_z),
         "z_min_mm": float(start_z),
-        "z_max_mm": float(max(root_inner_z, root_outer_z)),
+        "z_max_mm": float(root_z),
         "source_upper_lip_outer_radius_mm": float(measured_lip_outer_r),
         "source_upper_lip_z_min_mm": float(measured_lip_z),
         "arc": "upper half circle",
@@ -419,140 +404,6 @@ def build_rounded_half_hood(circle: dict, params: HoodParams, hood_stl: Path) ->
         "component_count": int(len(hood_mesh.split(only_watertight=False))),
         "hood_only_stl": str(hood_stl),
     }
-
-
-def _root_curve_z(radial_offset: float, half_width: float, root_outer_z: float, root_inner_z: float) -> float:
-    clamped = min(max(float(radial_offset), -half_width), half_width)
-    t = (half_width - clamped) / (2.0 * half_width)
-    return root_outer_z + (root_inner_z - root_outer_z) * _smoothstep(t)
-
-
-def build_root_lip_cleanup_cutter(
-    circle: dict,
-    hood_report: dict,
-    trim_depth_mm: float,
-    curve_epsilon_mm: float,
-    radial_margin_mm: float,
-) -> trimesh.Trimesh:
-    """Cut away the old source-STL upper lip so the hood curve becomes visible."""
-    center_radius = hood_report["centerline_radius_mm"]
-    half_width = 0.5 * hood_report["effective_wall_mm"]
-    root_outer_z = hood_report["root_outer_z_mm"]
-    root_inner_z = hood_report["front_z_mm"]
-    z_lower = min(circle["upper_lip_z_min_mm"], root_outer_z) - trim_depth_mm
-    offsets = np.linspace(-half_width - radial_margin_mm, half_width + radial_margin_mm, 36)
-
-    cross_section: list[tuple[float, float]] = [(float(offset), float(z_lower)) for offset in offsets]
-    for offset in offsets[::-1]:
-        curve_z = _root_curve_z(offset, half_width, root_outer_z, root_inner_z) - curve_epsilon_mm
-        cross_section.append((float(offset), float(max(curve_z, z_lower + 0.01))))
-
-    return _swept_arc_mesh(
-        circle["center_x_mm"],
-        circle["center_y_mm"],
-        center_radius,
-        np.asarray(cross_section, dtype=float),
-        arc_segments=128,
-        theta_min=-0.04,
-        theta_max=math.pi + 0.04,
-    )
-
-
-def build_root_internal_weld(
-    circle: dict,
-    hood_report: dict,
-    trim_depth_mm: float,
-    radial_padding_mm: float,
-) -> tuple[trimesh.Trimesh, dict]:
-    """Add a root weld after lip cleanup without growing the exterior profile."""
-    half_width = 0.5 * hood_report["effective_wall_mm"]
-    root_outer_z = hood_report["root_outer_z_mm"]
-    source_lip_z = circle["upper_lip_z_min_mm"]
-    z_lower = min(source_lip_z, root_outer_z) - trim_depth_mm
-    weld_z_min = z_lower - 0.06
-    weld_z_max = source_lip_z + 0.12
-    radial_min = -half_width - radial_padding_mm
-    radial_max = half_width + radial_padding_mm
-    cross_section = np.asarray(
-        [
-            [radial_min, weld_z_min],
-            [radial_max, weld_z_min],
-            [radial_max, weld_z_max],
-            [radial_min, weld_z_max],
-        ],
-        dtype=float,
-    )
-    weld = _swept_arc_mesh(
-        circle["center_x_mm"],
-        circle["center_y_mm"],
-        hood_report["centerline_radius_mm"],
-        cross_section,
-        arc_segments=96,
-        theta_min=0.0,
-        theta_max=math.pi,
-    )
-    return weld, {
-        "radial_min_offset_mm": float(radial_min),
-        "radial_max_offset_mm": float(radial_max),
-        "z_min_mm": float(weld_z_min),
-        "z_max_mm": float(weld_z_max),
-        "theta_min_rad": 0.0,
-        "theta_max_rad": float(math.pi),
-    }
-
-
-def replace_visible_source_lip(combined: trimesh.Trimesh, circle: dict, hood_report: dict) -> tuple[trimesh.Trimesh, dict]:
-    """Replace the source STL's old upper lip with the hood's curved root profile."""
-    trim_depth_mm = 0.03
-    curve_epsilon_mm = 0.02
-    trim_radial_margin_mm = 0.45
-    weld_radial_padding_mm = 0.0
-    report = {
-        "attempted": True,
-        "engine": "manifold",
-        "trim_depth_mm": trim_depth_mm,
-        "curve_epsilon_mm": curve_epsilon_mm,
-        "trim_radial_margin_mm": trim_radial_margin_mm,
-        "weld_radial_padding_mm": weld_radial_padding_mm,
-    }
-
-    cutter = build_root_lip_cleanup_cutter(
-        circle,
-        hood_report,
-        trim_depth_mm=trim_depth_mm,
-        curve_epsilon_mm=curve_epsilon_mm,
-        radial_margin_mm=trim_radial_margin_mm,
-    )
-    trimmed = trimesh.boolean.difference([combined, cutter], engine="manifold")
-    if trimmed is None:
-        raise RuntimeError("Root lip cleanup Boolean difference returned None")
-    trimmed = clean_mesh(trimmed)
-    trimmed_components = trimmed.split(only_watertight=False)
-    report["trimmed"] = {
-        "mesh": mesh_stats(trimmed),
-        "edge_quality": edge_quality(trimmed),
-        "component_face_counts": [int(len(component.faces)) for component in trimmed_components],
-    }
-
-    weld, weld_report = build_root_internal_weld(circle, hood_report, trim_depth_mm, weld_radial_padding_mm)
-    cleaned = trimesh.boolean.union([trimmed, weld], engine="manifold")
-    if cleaned is None:
-        raise RuntimeError("Root lip cleanup weld Boolean union returned None")
-    cleaned = clean_mesh(cleaned)
-    quality = edge_quality(cleaned)
-    component_count = len(cleaned.split(only_watertight=False))
-    succeeded = bool(cleaned.is_watertight and component_count == 1 and quality["boundary_edges"] == 0 and quality["nonmanifold_edges"] == 0)
-    report.update(
-        {
-            "succeeded": succeeded,
-            "weld": weld_report,
-            "final_edge_quality": quality,
-            "final_component_count": int(component_count),
-        }
-    )
-    if not succeeded:
-        raise RuntimeError(f"Root lip cleanup did not produce one clean watertight component: {report}")
-    return cleaned, report
 
 
 def make_preview(base: trimesh.Trimesh, hood: trimesh.Trimesh, combined: trimesh.Trimesh, out_png: Path) -> None:
@@ -643,7 +494,7 @@ def main() -> None:
     parser.add_argument("--preview", type=Path, default=Path("models/avkans_go_case/reports/avkans_go4k_cults_hood_preview.png"))
     parser.add_argument("--hood-depth", type=float, default=17.78)
     parser.add_argument("--wall", type=float, default=3.0)
-    parser.add_argument("--root-overlap", type=float, default=-0.30)
+    parser.add_argument("--root-overlap", type=float, default=0.10)
     parser.add_argument("--edge-round", type=float, default=1.2)
     args = parser.parse_args()
 
@@ -661,9 +512,6 @@ def main() -> None:
     hood_mesh = trimesh.load(args.hood_only, force="mesh")
 
     combined, union_report = fuse_repaired_shell_and_hood(repaired_base, hood_mesh)
-    root_cleanup_report = {"attempted": False, "succeeded": False}
-    if union_report.get("succeeded") and not union_report.get("fallback_used"):
-        combined, root_cleanup_report = replace_visible_source_lip(combined, circle, hood_report)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     combined.export(args.out)
 
@@ -680,7 +528,6 @@ def main() -> None:
         "combined_mesh": mesh_stats(combined),
         "combined_edge_quality": edge_quality(combined),
         "boolean_union": union_report,
-        "root_lip_cleanup": root_cleanup_report,
     }
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
