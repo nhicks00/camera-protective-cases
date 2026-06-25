@@ -142,20 +142,20 @@
     "hood_only_stl": "models/avkans_go_case/avkans_go4k_added_lens_hood_only.stl"
   },
   "combined_mesh": {
-    "vertices": 8012,
-    "faces": 16032,
+    "vertices": 8243,
+    "faces": 16494,
     "bounds_min_mm": [
-      -29.093564987182617,
+      -28.893726348876953,
       -58.631595611572266,
       -17.780000686645508
     ],
     "bounds_max_mm": [
-      28.686859130859375,
+      28.488039016723633,
       56.02984619140625,
       111.0999984741211
     ],
     "extents_mm": [
-      57.78042411804199,
+      57.381765365600586,
       114.66144180297852,
       128.8799991607666
     ],
@@ -165,7 +165,7 @@
   "combined_edge_quality": {
     "boundary_edges": 0,
     "nonmanifold_edges": 0,
-    "unique_edges": 24048
+    "unique_edges": 24741
   },
   "boolean_union": {
     "attempted": true,
@@ -184,7 +184,7 @@
     "trim_depth_mm": 0.03,
     "curve_epsilon_mm": 0.02,
     "trim_radial_margin_mm": 0.45,
-    "weld_radial_padding_mm": 0.2,
+    "weld_radial_padding_mm": 0.0,
     "trimmed": {
       "mesh": {
         "vertices": 12249,
@@ -219,17 +219,17 @@
     },
     "succeeded": true,
     "weld": {
-      "radial_min_offset_mm": -1.8877708019401787,
-      "radial_max_offset_mm": 1.8877708019401787,
+      "radial_min_offset_mm": -1.6877708019401787,
+      "radial_max_offset_mm": 1.6877708019401787,
       "z_min_mm": -4.753200187683105,
       "z_max_mm": -4.243200187683105,
-      "theta_min_rad": -0.03,
-      "theta_max_rad": 3.171592653589793
+      "theta_min_rad": 0.0,
+      "theta_max_rad": 3.141592653589793
     },
     "final_edge_quality": {
       "boundary_edges": 0,
       "nonmanifold_edges": 0,
-      "unique_edges": 24048
+      "unique_edges": 24741
     },
     "final_component_count": 1
   }

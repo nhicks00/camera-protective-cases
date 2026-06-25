@@ -464,7 +464,7 @@ def build_root_internal_weld(
     trim_depth_mm: float,
     radial_padding_mm: float,
 ) -> tuple[trimesh.Trimesh, dict]:
-    """Add a hidden root weld after lip cleanup so the hood remains one solid."""
+    """Add a root weld after lip cleanup without growing the exterior profile."""
     half_width = 0.5 * hood_report["effective_wall_mm"]
     root_outer_z = hood_report["root_outer_z_mm"]
     source_lip_z = circle["upper_lip_z_min_mm"]
@@ -488,16 +488,16 @@ def build_root_internal_weld(
         hood_report["centerline_radius_mm"],
         cross_section,
         arc_segments=96,
-        theta_min=-0.03,
-        theta_max=math.pi + 0.03,
+        theta_min=0.0,
+        theta_max=math.pi,
     )
     return weld, {
         "radial_min_offset_mm": float(radial_min),
         "radial_max_offset_mm": float(radial_max),
         "z_min_mm": float(weld_z_min),
         "z_max_mm": float(weld_z_max),
-        "theta_min_rad": -0.03,
-        "theta_max_rad": float(math.pi + 0.03),
+        "theta_min_rad": 0.0,
+        "theta_max_rad": float(math.pi),
     }
 
 
@@ -506,7 +506,7 @@ def replace_visible_source_lip(combined: trimesh.Trimesh, circle: dict, hood_rep
     trim_depth_mm = 0.03
     curve_epsilon_mm = 0.02
     trim_radial_margin_mm = 0.45
-    weld_radial_padding_mm = 0.20
+    weld_radial_padding_mm = 0.0
     report = {
         "attempted": True,
         "engine": "manifold",
