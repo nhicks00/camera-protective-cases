@@ -119,10 +119,13 @@
     "root_overlap_mm": 0.05,
     "root_anchor": "source upper front lip",
     "root_anchor_z_mm": -4.3632001876831055,
+    "root_profile": "source lip curved rear edge",
+    "root_inner_z_mm": 0.0,
+    "root_outer_z_mm": -4.313200187683106,
     "front_z_mm": 0.0,
     "root_z_mm": -4.313200187683106,
     "z_min_mm": -17.78,
-    "z_max_mm": -4.313200187683106,
+    "z_max_mm": 0.0,
     "source_upper_lip_outer_radius_mm": 28.69037379586088,
     "source_upper_lip_z_min_mm": -4.3632001876831055,
     "arc": "upper half circle",
@@ -139,8 +142,8 @@
     "hood_only_stl": "models/avkans_go_case/avkans_go4k_added_lens_hood_only.stl"
   },
   "combined_mesh": {
-    "vertices": 4314,
-    "faces": 8636,
+    "vertices": 4479,
+    "faces": 8966,
     "bounds_min_mm": [
       -28.893726348876953,
       -58.631595611572266,
@@ -162,7 +165,7 @@
   "combined_edge_quality": {
     "boundary_edges": 0,
     "nonmanifold_edges": 0,
-    "unique_edges": 12954
+    "unique_edges": 13449
   },
   "boolean_union": {
     "attempted": true,
@@ -172,7 +175,7 @@
     "edge_quality": {
       "boundary_edges": 0,
       "nonmanifold_edges": 0,
-      "unique_edges": 12954
+      "unique_edges": 13449
     }
   }
 }

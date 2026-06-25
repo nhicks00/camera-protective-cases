@@ -246,18 +246,30 @@ def repair_source_shell(source: trimesh.Trimesh, params: HoodParams) -> tuple[tr
     }
 
 
-def _rounded_rect_cross_section(width: float, z_min: float, z_max: float, radius: float, segments: int) -> np.ndarray:
-    """Return a hood loop with a flat root and rounded exposed front edge."""
+def _smoothstep(value: float) -> float:
+    value = min(max(float(value), 0.0), 1.0)
+    return value * value * (3.0 - 2.0 * value)
+
+
+def _source_lip_cross_section(
+    width: float,
+    z_min: float,
+    root_inner_z: float,
+    root_outer_z: float,
+    radius: float,
+    segments: int,
+) -> np.ndarray:
+    """Return a hood loop whose rear edge follows the source lip curve."""
     half_w = 0.5 * width
-    half_h = 0.5 * (z_max - z_min)
+    half_h = 0.5 * (max(root_inner_z, root_outer_z) - z_min)
     radius = min(max(radius, 0.0), half_w * 0.95, half_h * 0.90)
     segments = max(int(segments), 3)
 
     if radius <= 0.0:
         return np.array(
             [
-                [half_w, z_max],
-                [-half_w, z_max],
+                [half_w, root_outer_z],
+                [-half_w, root_inner_z],
                 [-half_w, z_min],
                 [half_w, z_min],
             ],
@@ -265,8 +277,13 @@ def _rounded_rect_cross_section(width: float, z_min: float, z_max: float, radius
         )
 
     points: list[tuple[float, float]] = []
-    points.append((half_w, z_max))
-    points.append((-half_w, z_max))
+    root_segments = max(int(segments) * 2, 8)
+    for i in range(root_segments + 1):
+        t = i / root_segments
+        u = half_w - width * t
+        z = root_outer_z + (root_inner_z - root_outer_z) * _smoothstep(t)
+        points.append((u, z))
+
     points.append((-half_w, z_min + radius))
 
     for i in range(1, segments + 1):
@@ -298,17 +315,19 @@ def build_rounded_half_hood(circle: dict, params: HoodParams, hood_stl: Path) ->
     else:
         root_anchor = "front face"
         root_anchor_z = params.front_z_mm
-    root_z = root_anchor_z + params.root_overlap_mm
-    cross_section = _rounded_rect_cross_section(
+    root_outer_z = root_anchor_z + params.root_overlap_mm
+    root_inner_z = params.front_z_mm
+    cross_section = _source_lip_cross_section(
         effective_wall,
         start_z,
-        root_z,
+        root_inner_z,
+        root_outer_z,
         params.edge_round_mm,
         params.corner_segments,
     )
     arc_segments = max(int(params.arc_segments), 16)
     cross_count = len(cross_section)
-    z_center = 0.5 * (start_z + root_z)
+    z_center = float(cross_section[:, 1].mean())
 
     vertices: list[tuple[float, float, float]] = []
     faces: list[tuple[int, int, int]] = []
@@ -357,14 +376,17 @@ def build_rounded_half_hood(circle: dict, params: HoodParams, hood_stl: Path) ->
         "requested_wall_mm": float(params.wall_mm),
         "effective_wall_mm": float(effective_wall),
         "depth_mm": float(params.hood_depth_mm),
-        "sweep_length_mm": float(root_z - start_z),
+        "sweep_length_mm": float(root_outer_z - start_z),
         "root_overlap_mm": float(params.root_overlap_mm),
         "root_anchor": root_anchor,
         "root_anchor_z_mm": float(root_anchor_z),
+        "root_profile": "source lip curved rear edge",
+        "root_inner_z_mm": float(root_inner_z),
+        "root_outer_z_mm": float(root_outer_z),
         "front_z_mm": float(params.front_z_mm),
-        "root_z_mm": float(root_z),
+        "root_z_mm": float(root_outer_z),
         "z_min_mm": float(start_z),
-        "z_max_mm": float(root_z),
+        "z_max_mm": float(max(root_inner_z, root_outer_z)),
         "source_upper_lip_outer_radius_mm": float(measured_lip_outer_r),
         "source_upper_lip_z_min_mm": float(measured_lip_z),
         "arc": "upper half circle",
