@@ -21,7 +21,7 @@ import matplotlib
 import numpy as np
 import trimesh
 from matplotlib.collections import PolyCollection
-from shapely.geometry import LineString, Point, box
+from shapely.geometry import LineString
 from shapely.ops import polygonize, triangulate, unary_union
 
 matplotlib.use("Agg")
@@ -40,6 +40,9 @@ class HoodParams:
     root_overlap_mm: float = 1.2
     edge_round_mm: float = 1.2
     terminal_cap_overlap_mm: float = 0.30
+    terminal_cap_root_clearance_mm: float = 3.0
+    terminal_cap_blend_mm: float = 6.0
+    terminal_cap_sections: int = 12
     terminal_cap_segments: int = 12
     arc_segments: int = 96
     corner_segments: int = 8
@@ -284,14 +287,34 @@ def _rounded_rect_cross_section(width: float, z_min: float, z_max: float, radius
     return np.asarray(points, dtype=float)
 
 
-def _polygons_from_geometry(geometry) -> list:
-    if geometry.is_empty:
-        return []
-    if geometry.geom_type == "Polygon":
-        return [geometry]
-    if geometry.geom_type == "MultiPolygon":
-        return list(geometry.geoms)
-    return []
+def _smoothstep(value: float) -> float:
+    value = min(max(float(value), 0.0), 1.0)
+    return value * value * (3.0 - 2.0 * value)
+
+
+def _terminal_cap_section_points(
+    x_center: float,
+    y_center: float,
+    radius: float,
+    overlap: float,
+    scale: float,
+    segments: int,
+) -> list[tuple[float, float]]:
+    """Return a clipped circular cap section with a stable vertex count."""
+    scale = min(max(float(scale), 0.0), 1.0)
+    radius = max(float(radius) * scale, 1e-4)
+    overlap = min(max(float(overlap) * scale, 0.0), radius * 0.75)
+    alpha = math.asin(overlap / radius) if overlap > 0.0 else 0.0
+    arc_steps = max(int(segments) * 4, 16)
+    start_angle = math.pi - alpha
+    end_angle = 2.0 * math.pi + alpha
+    return [
+        (
+            x_center + radius * math.cos(start_angle + (end_angle - start_angle) * i / arc_steps),
+            y_center + radius * math.sin(start_angle + (end_angle - start_angle) * i / arc_steps),
+        )
+        for i in range(arc_steps + 1)
+    ]
 
 
 def _terminal_round_cap_fill(
@@ -303,29 +326,66 @@ def _terminal_round_cap_fill(
     z_max: float,
     overlap: float,
     segments: int,
+    root_clearance: float,
+    blend_length: float,
+    sections: int,
 ) -> trimesh.Trimesh:
-    """Build lower round-cap fills for the two open ends of the half hood."""
+    """Build tapered lower round-cap fills for the two open hood ends."""
     overlap = max(float(overlap), 0.0)
     cap_radius = max(float(cap_radius), 0.0)
     if cap_radius <= 0.0:
         raise ValueError("terminal cap radius must be positive")
 
-    clip = box(
-        cx - center_r - cap_radius - 5.0,
-        cy - cap_radius - 5.0,
-        cx + center_r + cap_radius + 5.0,
-        cy + overlap,
-    )
+    rear_z = max(z_min, z_max - max(float(root_clearance), 0.0))
+    if rear_z - z_min < 0.5:
+        rear_z = z_max
+    blend_length = max(float(blend_length), 0.1)
+    sections = max(int(sections), 4)
+    z_values = np.linspace(rear_z, z_min, sections)
+
     fill_meshes: list[trimesh.Trimesh] = []
     for side in (-1.0, 1.0):
-        cap_center = (cx + side * center_r, cy)
-        cap_region = Point(cap_center).buffer(cap_radius, resolution=max(int(segments), 4)).intersection(clip)
-        for polygon in _polygons_from_geometry(cap_region):
-            if polygon.area <= 1e-6:
-                continue
-            cap_mesh = trimesh.creation.extrude_polygon(polygon, height=z_max - z_min)
-            cap_mesh.apply_translation((0.0, 0.0, z_min))
-            fill_meshes.append(cap_mesh)
+        x_center = cx + side * center_r
+        rings: list[list[tuple[float, float]]] = []
+        for z in z_values:
+            distance_from_rear = rear_z - float(z)
+            scale = 0.03 + 0.97 * _smoothstep(distance_from_rear / blend_length)
+            rings.append(_terminal_cap_section_points(x_center, cy, cap_radius, overlap, scale, segments))
+
+        vertices: list[tuple[float, float, float]] = []
+        faces: list[tuple[int, int, int]] = []
+        ring_count = len(rings)
+        point_count = len(rings[0])
+        for ring, z in zip(rings, z_values):
+            for x, y in ring:
+                vertices.append((x, y, float(z)))
+
+        for ring_i in range(ring_count - 1):
+            for point_i in range(point_count):
+                a = ring_i * point_count + point_i
+                b = ring_i * point_count + (point_i + 1) % point_count
+                c = (ring_i + 1) * point_count + (point_i + 1) % point_count
+                d = (ring_i + 1) * point_count + point_i
+                faces.append((a, c, b))
+                faces.append((a, d, c))
+
+        for ring_i, flip in ((0, True), (ring_count - 1, False)):
+            ring = rings[ring_i]
+            z = float(z_values[ring_i])
+            center_index = len(vertices)
+            vertices.append(
+                (
+                    float(sum(point[0] for point in ring) / point_count),
+                    float(sum(point[1] for point in ring) / point_count),
+                    z,
+                )
+            )
+            for point_i in range(point_count):
+                a = ring_i * point_count + point_i
+                b = ring_i * point_count + (point_i + 1) % point_count
+                faces.append((center_index, b, a) if flip else (center_index, a, b))
+
+        fill_meshes.append(trimesh.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces), process=True))
 
     if not fill_meshes:
         raise RuntimeError("terminal cap rounding generated no fill geometry")
@@ -407,6 +467,9 @@ def build_rounded_half_hood(circle: dict, params: HoodParams, hood_stl: Path) ->
         root_z,
         params.terminal_cap_overlap_mm,
         params.terminal_cap_segments,
+        params.terminal_cap_root_clearance_mm,
+        params.terminal_cap_blend_mm,
+        params.terminal_cap_sections,
     )
     before_terminal_faces = len(hood_mesh.faces)
     rounded_hood = trimesh.boolean.union([hood_mesh, cap_fill], engine="manifold")
@@ -419,9 +482,12 @@ def build_rounded_half_hood(circle: dict, params: HoodParams, hood_stl: Path) ->
     hood_mesh = rounded_hood
     terminal_round_report = {
         "enabled": True,
-        "style": "round lower terminal cap fill",
+        "style": "tapered round lower terminal cap fill",
         "radius_mm": float(cap_radius),
         "overlap_mm": float(params.terminal_cap_overlap_mm),
+        "root_clearance_mm": float(params.terminal_cap_root_clearance_mm),
+        "blend_mm": float(params.terminal_cap_blend_mm),
+        "sections": int(params.terminal_cap_sections),
         "segments": int(params.terminal_cap_segments),
         "fill_faces": int(len(cap_fill.faces)),
         "faces_before": int(before_terminal_faces),
