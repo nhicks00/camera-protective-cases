@@ -37,7 +37,7 @@ class HoodParams:
     front_z_mm: float = 0.0
     hood_depth_mm: float = 17.78
     wall_mm: float = 3.0
-    root_overlap_mm: float = 1.2
+    root_overlap_mm: float = 0.05
     edge_round_mm: float = 1.2
     arc_segments: int = 96
     corner_segments: int = 8
@@ -247,11 +247,10 @@ def repair_source_shell(source: trimesh.Trimesh, params: HoodParams) -> tuple[tr
 
 
 def _rounded_rect_cross_section(width: float, z_min: float, z_max: float, radius: float, segments: int) -> np.ndarray:
-    """Return a rounded-rectangle loop in radial-offset/Z coordinates."""
+    """Return a hood loop with a flat root and rounded exposed front edge."""
     half_w = 0.5 * width
     half_h = 0.5 * (z_max - z_min)
-    z_center = 0.5 * (z_min + z_max)
-    radius = min(max(radius, 0.0), half_w * 0.95, half_h * 0.45)
+    radius = min(max(radius, 0.0), half_w * 0.95, half_h * 0.90)
     segments = max(int(segments), 3)
 
     if radius <= 0.0:
@@ -266,19 +265,19 @@ def _rounded_rect_cross_section(width: float, z_min: float, z_max: float, radius
         )
 
     points: list[tuple[float, float]] = []
-    corners = [
-        (half_w - radius, z_center + half_h - radius, 0.0, 0.5 * math.pi),
-        (-half_w + radius, z_center + half_h - radius, 0.5 * math.pi, math.pi),
-        (-half_w + radius, z_center - half_h + radius, math.pi, 1.5 * math.pi),
-        (half_w - radius, z_center - half_h + radius, 1.5 * math.pi, 2.0 * math.pi),
-    ]
-    for center_u, center_z, start_angle, end_angle in corners:
-        for i in range(segments + 1):
-            if points and i == 0:
-                continue
-            t = i / segments
-            angle = start_angle + (end_angle - start_angle) * t
-            points.append((center_u + radius * math.cos(angle), center_z + radius * math.sin(angle)))
+    points.append((half_w, z_max))
+    points.append((-half_w, z_max))
+    points.append((-half_w, z_min + radius))
+
+    for i in range(1, segments + 1):
+        angle = math.pi + 0.5 * math.pi * i / segments
+        points.append((-half_w + radius + radius * math.cos(angle), z_min + radius + radius * math.sin(angle)))
+
+    points.append((half_w - radius, z_min))
+    for i in range(1, segments + 1):
+        angle = 1.5 * math.pi + 0.5 * math.pi * i / segments
+        points.append((half_w - radius + radius * math.cos(angle), z_min + radius + radius * math.sin(angle)))
+
     return np.asarray(points, dtype=float)
 
 
@@ -467,7 +466,7 @@ def main() -> None:
     parser.add_argument("--preview", type=Path, default=Path("models/avkans_go_case/reports/avkans_go4k_cults_hood_preview.png"))
     parser.add_argument("--hood-depth", type=float, default=17.78)
     parser.add_argument("--wall", type=float, default=3.0)
-    parser.add_argument("--root-overlap", type=float, default=1.2)
+    parser.add_argument("--root-overlap", type=float, default=0.05)
     parser.add_argument("--edge-round", type=float, default=1.2)
     args = parser.parse_args()
 
