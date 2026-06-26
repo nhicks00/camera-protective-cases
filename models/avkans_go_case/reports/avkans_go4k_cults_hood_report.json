@@ -9,6 +9,10 @@
     "edge_round_mm": 1.2,
     "arc_segments": 96,
     "corner_segments": 8,
+    "led_slot_extend_each_end_mm": 5.0,
+    "led_slot_detection_x_window_mm": 6.0,
+    "led_slot_detection_y_margin_below_lens_mm": 5.0,
+    "led_slot_z_cut_margin_mm": 0.5,
     "ransac_seed": 4,
     "ransac_iterations": 5000,
     "circle_inlier_tolerance_mm": 0.6
@@ -140,8 +144,8 @@
     "hood_only_stl": "models/avkans_go_case/avkans_go4k_added_lens_hood_only.stl"
   },
   "combined_mesh": {
-    "vertices": 4314,
-    "faces": 8636,
+    "vertices": 4326,
+    "faces": 8660,
     "bounds_min_mm": [
       -28.893726348876953,
       -58.631595611572266,
@@ -163,7 +167,7 @@
   "combined_edge_quality": {
     "boundary_edges": 0,
     "nonmanifold_edges": 0,
-    "unique_edges": 12954
+    "unique_edges": 12990
   },
   "boolean_union": {
     "attempted": true,
@@ -174,6 +178,53 @@
       "boundary_edges": 0,
       "nonmanifold_edges": 0,
       "unique_edges": 12954
+    }
+  },
+  "front_led_slot_extension": {
+    "enabled": true,
+    "matched_vertex_count": 56,
+    "center_x_mm": -0.20995306968688965,
+    "center_y_mm": -22.548973083496094,
+    "width_mm": 2.5250000953674316,
+    "height_mm": 13.130001068115234,
+    "x_min_mm": -1.4724531173706055,
+    "x_max_mm": 1.0525469779968262,
+    "y_min_mm": -29.11397361755371,
+    "y_max_mm": -15.983972549438477,
+    "extended_center_y_mm": -22.548973083496094,
+    "extended_height_mm": 23.130001068115234,
+    "extended_y_min_mm": -34.11397361755371,
+    "extended_y_max_mm": -10.983972549438477,
+    "extend_each_end_mm": 5.0,
+    "z_min_mm": -4.8632001876831055,
+    "z_max_mm": 0.5,
+    "succeeded": true,
+    "cutter": {
+      "vertices": 68,
+      "faces": 132,
+      "bounds_min_mm": [
+        -1.4724531173706055,
+        -34.11397361755371,
+        -4.8632001876831055
+      ],
+      "bounds_max_mm": [
+        1.0525469779968262,
+        -10.983972549438477,
+        0.5
+      ],
+      "extents_mm": [
+        2.5250000953674316,
+        23.130001068115234,
+        5.3632001876831055
+      ],
+      "is_watertight": true,
+      "component_count": 1
+    },
+    "final_component_count": 1,
+    "final_edge_quality": {
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "unique_edges": 12990
     }
   }
 }

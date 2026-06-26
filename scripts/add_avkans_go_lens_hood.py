@@ -41,6 +41,10 @@ class HoodParams:
     edge_round_mm: float = 1.2
     arc_segments: int = 96
     corner_segments: int = 8
+    led_slot_extend_each_end_mm: float = 5.0
+    led_slot_detection_x_window_mm: float = 6.0
+    led_slot_detection_y_margin_below_lens_mm: float = 5.0
+    led_slot_z_cut_margin_mm: float = 0.5
     ransac_seed: int = 4
     ransac_iterations: int = 5000
     circle_inlier_tolerance_mm: float = 0.60
@@ -406,6 +410,126 @@ def build_rounded_half_hood(circle: dict, params: HoodParams, hood_stl: Path) ->
     }
 
 
+def detect_front_led_slot(source: trimesh.Trimesh, circle: dict, params: HoodParams) -> dict:
+    """Detect the centered lower front-face oval slot from source STL vertices."""
+    vertices = np.asarray(source.vertices)
+    bounds = source.bounds
+    front_z_min = float(vertices[:, 2].min())
+    lens_bottom_y = circle["center_y_mm"] - circle["radius_mm"]
+    y_limit = lens_bottom_y - params.led_slot_detection_y_margin_below_lens_mm
+    y_floor = float(bounds[0, 1] + 0.18 * (bounds[1, 1] - bounds[0, 1]))
+    z_mask = (np.abs(vertices[:, 2] - params.front_z_mm) < 1e-4) | (np.abs(vertices[:, 2] - front_z_min) < 1e-4)
+    slot_vertices = vertices[
+        z_mask
+        & (np.abs(vertices[:, 0] - circle["center_x_mm"]) <= params.led_slot_detection_x_window_mm)
+        & (vertices[:, 1] < y_limit)
+        & (vertices[:, 1] > y_floor)
+    ]
+    if len(slot_vertices) < 12:
+        raise RuntimeError(f"Unable to detect AVKANS front LED slot; matched {len(slot_vertices)} vertices")
+
+    x_min = float(slot_vertices[:, 0].min())
+    x_max = float(slot_vertices[:, 0].max())
+    y_min = float(slot_vertices[:, 1].min())
+    y_max = float(slot_vertices[:, 1].max())
+    width = x_max - x_min
+    height = y_max - y_min
+    if height <= width:
+        raise RuntimeError(f"Detected LED slot is not vertically oriented: width={width:.3f}, height={height:.3f}")
+
+    extended_y_min = y_min - params.led_slot_extend_each_end_mm
+    extended_y_max = y_max + params.led_slot_extend_each_end_mm
+    return {
+        "enabled": True,
+        "matched_vertex_count": int(len(slot_vertices)),
+        "center_x_mm": float(0.5 * (x_min + x_max)),
+        "center_y_mm": float(0.5 * (y_min + y_max)),
+        "width_mm": float(width),
+        "height_mm": float(height),
+        "x_min_mm": x_min,
+        "x_max_mm": x_max,
+        "y_min_mm": y_min,
+        "y_max_mm": y_max,
+        "extended_center_y_mm": float(0.5 * (extended_y_min + extended_y_max)),
+        "extended_height_mm": float(height + 2.0 * params.led_slot_extend_each_end_mm),
+        "extended_y_min_mm": float(extended_y_min),
+        "extended_y_max_mm": float(extended_y_max),
+        "extend_each_end_mm": float(params.led_slot_extend_each_end_mm),
+        "z_min_mm": float(front_z_min - params.led_slot_z_cut_margin_mm),
+        "z_max_mm": float(params.front_z_mm + params.led_slot_z_cut_margin_mm),
+    }
+
+
+def build_vertical_slot_cutter(slot: dict, segments: int = 16) -> trimesh.Trimesh:
+    """Build a watertight vertical rounded-slot prism for front-face subtraction."""
+    width = slot["width_mm"]
+    height = slot["extended_height_mm"]
+    radius = 0.5 * width
+    if height <= width:
+        raise RuntimeError(f"LED slot cutter height must exceed width: width={width:.3f}, height={height:.3f}")
+
+    cx = slot["center_x_mm"]
+    y_bottom_center = slot["extended_y_min_mm"] + radius
+    y_top_center = slot["extended_y_max_mm"] - radius
+    points: list[tuple[float, float]] = []
+    for i in range(segments + 1):
+        angle = math.pi * i / segments
+        points.append((cx + radius * math.cos(angle), y_top_center + radius * math.sin(angle)))
+    for i in range(segments + 1):
+        angle = math.pi + math.pi * i / segments
+        points.append((cx + radius * math.cos(angle), y_bottom_center + radius * math.sin(angle)))
+
+    z_min = slot["z_min_mm"]
+    z_max = slot["z_max_mm"]
+    vertices = [(x, y, z_min) for x, y in points] + [(x, y, z_max) for x, y in points]
+    n = len(points)
+    faces: list[tuple[int, int, int]] = []
+    for i in range(1, n - 1):
+        faces.append((0, i + 1, i))
+        faces.append((n, n + i, n + i + 1))
+    for i in range(n):
+        j = (i + 1) % n
+        faces.append((i, j, n + j))
+        faces.append((i, n + j, n + i))
+
+    cutter = trimesh.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces), process=True)
+    cutter.fix_normals()
+    return clean_mesh(cutter)
+
+
+def extend_front_led_slot(
+    mesh: trimesh.Trimesh,
+    source: trimesh.Trimesh,
+    circle: dict,
+    params: HoodParams,
+) -> tuple[trimesh.Trimesh, dict]:
+    slot = detect_front_led_slot(source, circle, params)
+    cutter = build_vertical_slot_cutter(slot)
+    cut = trimesh.boolean.difference([mesh, cutter], engine="manifold")
+    if cut is None:
+        raise RuntimeError("LED slot extension Boolean difference returned None")
+    cut = clean_mesh(cut)
+    quality = edge_quality(cut)
+    component_count = len(cut.split(only_watertight=False))
+    succeeded = bool(
+        cut.is_watertight
+        and component_count == 1
+        and quality["boundary_edges"] == 0
+        and quality["nonmanifold_edges"] == 0
+    )
+    slot.update(
+        {
+            "succeeded": succeeded,
+            "cutter": mesh_stats(cutter),
+            "final_component_count": int(component_count),
+            "final_edge_quality": quality,
+        }
+    )
+    if not succeeded:
+        raise RuntimeError(f"LED slot extension did not produce one clean watertight component: {slot}")
+    return cut, slot
+
+
 def make_preview(base: trimesh.Trimesh, hood: trimesh.Trimesh, combined: trimesh.Trimesh, out_png: Path) -> None:
     out_png.parent.mkdir(parents=True, exist_ok=True)
     views = [
@@ -496,6 +620,7 @@ def main() -> None:
     parser.add_argument("--wall", type=float, default=3.0)
     parser.add_argument("--root-overlap", type=float, default=0.10)
     parser.add_argument("--edge-round", type=float, default=1.2)
+    parser.add_argument("--led-slot-extend-each-end", type=float, default=5.0)
     args = parser.parse_args()
 
     params = HoodParams(
@@ -503,6 +628,7 @@ def main() -> None:
         wall_mm=args.wall,
         root_overlap_mm=args.root_overlap,
         edge_round_mm=args.edge_round,
+        led_slot_extend_each_end_mm=args.led_slot_extend_each_end,
     )
 
     source_mesh = trimesh.load(args.source, force="mesh")
@@ -512,6 +638,7 @@ def main() -> None:
     hood_mesh = trimesh.load(args.hood_only, force="mesh")
 
     combined, union_report = fuse_repaired_shell_and_hood(repaired_base, hood_mesh)
+    combined, led_slot_report = extend_front_led_slot(combined, source_mesh, circle, params)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     combined.export(args.out)
 
@@ -528,6 +655,7 @@ def main() -> None:
         "combined_mesh": mesh_stats(combined),
         "combined_edge_quality": edge_quality(combined),
         "boolean_union": union_report,
+        "front_led_slot_extension": led_slot_report,
     }
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
