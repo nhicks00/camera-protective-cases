@@ -41,7 +41,8 @@ class HoodParams:
     edge_round_mm: float = 1.2
     arc_segments: int = 96
     corner_segments: int = 8
-    led_slot_extend_each_end_mm: float = 5.0
+    led_slot_extend_up_mm: float = 7.0
+    led_slot_extend_down_mm: float = 10.0
     led_slot_detection_x_window_mm: float = 6.0
     led_slot_detection_y_margin_below_lens_mm: float = 5.0
     led_slot_z_cut_margin_mm: float = 0.5
@@ -437,8 +438,8 @@ def detect_front_led_slot(source: trimesh.Trimesh, circle: dict, params: HoodPar
     if height <= width:
         raise RuntimeError(f"Detected LED slot is not vertically oriented: width={width:.3f}, height={height:.3f}")
 
-    extended_y_min = y_min - params.led_slot_extend_each_end_mm
-    extended_y_max = y_max + params.led_slot_extend_each_end_mm
+    extended_y_min = y_min - params.led_slot_extend_down_mm
+    extended_y_max = y_max + params.led_slot_extend_up_mm
     return {
         "enabled": True,
         "matched_vertex_count": int(len(slot_vertices)),
@@ -451,10 +452,11 @@ def detect_front_led_slot(source: trimesh.Trimesh, circle: dict, params: HoodPar
         "y_min_mm": y_min,
         "y_max_mm": y_max,
         "extended_center_y_mm": float(0.5 * (extended_y_min + extended_y_max)),
-        "extended_height_mm": float(height + 2.0 * params.led_slot_extend_each_end_mm),
+        "extended_height_mm": float(height + params.led_slot_extend_down_mm + params.led_slot_extend_up_mm),
         "extended_y_min_mm": float(extended_y_min),
         "extended_y_max_mm": float(extended_y_max),
-        "extend_each_end_mm": float(params.led_slot_extend_each_end_mm),
+        "extend_up_mm": float(params.led_slot_extend_up_mm),
+        "extend_down_mm": float(params.led_slot_extend_down_mm),
         "z_min_mm": float(front_z_min - params.led_slot_z_cut_margin_mm),
         "z_max_mm": float(params.front_z_mm + params.led_slot_z_cut_margin_mm),
     }
@@ -620,7 +622,8 @@ def main() -> None:
     parser.add_argument("--wall", type=float, default=3.0)
     parser.add_argument("--root-overlap", type=float, default=0.10)
     parser.add_argument("--edge-round", type=float, default=1.2)
-    parser.add_argument("--led-slot-extend-each-end", type=float, default=5.0)
+    parser.add_argument("--led-slot-extend-up", type=float, default=7.0)
+    parser.add_argument("--led-slot-extend-down", type=float, default=10.0)
     args = parser.parse_args()
 
     params = HoodParams(
@@ -628,7 +631,8 @@ def main() -> None:
         wall_mm=args.wall,
         root_overlap_mm=args.root_overlap,
         edge_round_mm=args.edge_round,
-        led_slot_extend_each_end_mm=args.led_slot_extend_each_end,
+        led_slot_extend_up_mm=args.led_slot_extend_up,
+        led_slot_extend_down_mm=args.led_slot_extend_down,
     )
 
     source_mesh = trimesh.load(args.source, force="mesh")
