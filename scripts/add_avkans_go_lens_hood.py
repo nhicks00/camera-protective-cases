@@ -42,7 +42,7 @@ class HoodParams:
     arc_segments: int = 96
     corner_segments: int = 8
     led_slot_extend_up_mm: float = 7.0
-    led_slot_extend_down_mm: float = 10.0
+    led_slot_extend_down_mm: float = 18.0
     led_slot_detection_x_window_mm: float = 6.0
     led_slot_detection_y_margin_below_lens_mm: float = 5.0
     led_slot_z_cut_margin_mm: float = 0.5
@@ -623,7 +623,7 @@ def main() -> None:
     parser.add_argument("--root-overlap", type=float, default=0.10)
     parser.add_argument("--edge-round", type=float, default=1.2)
     parser.add_argument("--led-slot-extend-up", type=float, default=7.0)
-    parser.add_argument("--led-slot-extend-down", type=float, default=10.0)
+    parser.add_argument("--led-slot-extend-down", type=float, default=18.0)
     args = parser.parse_args()
 
     params = HoodParams(

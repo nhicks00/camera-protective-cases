@@ -10,7 +10,7 @@
     "arc_segments": 96,
     "corner_segments": 8,
     "led_slot_extend_up_mm": 7.0,
-    "led_slot_extend_down_mm": 10.0,
+    "led_slot_extend_down_mm": 18.0,
     "led_slot_detection_x_window_mm": 6.0,
     "led_slot_detection_y_margin_below_lens_mm": 5.0,
     "led_slot_z_cut_margin_mm": 0.5,
@@ -192,12 +192,12 @@
     "x_max_mm": 1.0525469779968262,
     "y_min_mm": -29.11397361755371,
     "y_max_mm": -15.983972549438477,
-    "extended_center_y_mm": -24.048973083496094,
-    "extended_height_mm": 30.130001068115234,
-    "extended_y_min_mm": -39.11397361755371,
+    "extended_center_y_mm": -28.048973083496094,
+    "extended_height_mm": 38.130001068115234,
+    "extended_y_min_mm": -47.11397361755371,
     "extended_y_max_mm": -8.983972549438477,
     "extend_up_mm": 7.0,
-    "extend_down_mm": 10.0,
+    "extend_down_mm": 18.0,
     "z_min_mm": -4.8632001876831055,
     "z_max_mm": 0.5,
     "succeeded": true,
@@ -206,7 +206,7 @@
       "faces": 132,
       "bounds_min_mm": [
         -1.4724531173706055,
-        -39.11397361755371,
+        -47.11397361755371,
         -4.8632001876831055
       ],
       "bounds_max_mm": [
@@ -216,7 +216,7 @@
       ],
       "extents_mm": [
         2.5250000953674316,
-        30.130001068115234,
+        38.130001068115234,
         5.3632001876831055
       ],
       "is_watertight": true,
