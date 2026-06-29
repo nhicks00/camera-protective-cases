@@ -1,14 +1,8 @@
 {
   "source_file": "/Users/nathanhicks/Downloads/Avkans%20Go4k%20shade%20cover-Cults3d.stl",
-  "output_stl": "models/avkans_go_case/avkans_go4k_cults_shade_with_lens_hood.stl",
+  "output_stl": "models/avkans_go_case/avkans_go4k_cults_shade_extended_led_slot.stl",
   "params": {
     "front_z_mm": 0.0,
-    "hood_depth_mm": 17.78,
-    "wall_mm": 3.0,
-    "root_overlap_mm": 0.1,
-    "edge_round_mm": 1.2,
-    "arc_segments": 96,
-    "corner_segments": 8,
     "led_slot_extend_up_mm": 7.0,
     "led_slot_extend_down_mm": 18.0,
     "led_slot_detection_x_window_mm": 6.0,
@@ -17,6 +11,11 @@
     "ransac_seed": 4,
     "ransac_iterations": 5000,
     "circle_inlier_tolerance_mm": 0.6
+  },
+  "added_lens_hood": {
+    "enabled": false,
+    "removed": true,
+    "reason": "User requested complete removal of the added AVKANS lens hood/shade geometry."
   },
   "source_mesh": {
     "vertices": 2358,
@@ -107,50 +106,15 @@
     "front_z_mm": 0.0,
     "front_plane_vertex_count": 194,
     "fit_candidate_count": 128,
-    "inlier_count": 122,
-    "upper_lip_vertex_count": 39,
-    "upper_lip_outer_radius_mm": 28.69037379586088,
-    "upper_lip_z_min_mm": -4.3632001876831055,
-    "upper_lip_radius_match_applied": true
-  },
-  "hood": {
-    "inner_radius_mm": 25.31483219198052,
-    "outer_radius_mm": 28.69037379586088,
-    "centerline_radius_mm": 27.0026029939207,
-    "requested_wall_mm": 3.0,
-    "effective_wall_mm": 3.3755416038803574,
-    "depth_mm": 17.78,
-    "sweep_length_mm": 13.516799812316895,
-    "root_overlap_mm": 0.1,
-    "root_anchor": "source upper front lip",
-    "root_anchor_z_mm": -4.3632001876831055,
-    "root_profile": "direct source-lip extension",
-    "root_z_mm": -4.263200187683106,
-    "front_z_mm": 0.0,
-    "z_min_mm": -17.78,
-    "z_max_mm": -4.263200187683106,
-    "source_upper_lip_outer_radius_mm": 28.69037379586088,
-    "source_upper_lip_z_min_mm": -4.3632001876831055,
-    "arc": "upper half circle",
-    "edge_round_mm": 1.2,
-    "terminal_cap_rounding": {
-      "enabled": false,
-      "style": "removed",
-      "is_watertight": true
-    },
-    "arc_segments": 96,
-    "corner_segments": 8,
-    "is_watertight": true,
-    "component_count": 1,
-    "hood_only_stl": "models/avkans_go_case/avkans_go4k_added_lens_hood_only.stl"
+    "inlier_count": 122
   },
   "combined_mesh": {
-    "vertices": 4326,
-    "faces": 8660,
+    "vertices": 2370,
+    "faces": 4748,
     "bounds_min_mm": [
-      -28.893726348876953,
+      -28.886520385742188,
       -58.631595611572266,
-      -17.780000686645508
+      -4.3632001876831055
     ],
     "bounds_max_mm": [
       28.488039016723633,
@@ -158,9 +122,9 @@
       111.0999984741211
     ],
     "extents_mm": [
-      57.381765365600586,
+      57.37455940246582,
       114.66144180297852,
-      128.8799991607666
+      115.4631986618042
     ],
     "is_watertight": true,
     "component_count": 1
@@ -168,18 +132,7 @@
   "combined_edge_quality": {
     "boundary_edges": 0,
     "nonmanifold_edges": 0,
-    "unique_edges": 12990
-  },
-  "boolean_union": {
-    "attempted": true,
-    "engine": "manifold",
-    "fallback_used": false,
-    "succeeded": true,
-    "edge_quality": {
-      "boundary_edges": 0,
-      "nonmanifold_edges": 0,
-      "unique_edges": 12954
-    }
+    "unique_edges": 7122
   },
   "front_led_slot_extension": {
     "enabled": true,
@@ -226,7 +179,7 @@
     "final_edge_quality": {
       "boundary_edges": 0,
       "nonmanifold_edges": 0,
-      "unique_edges": 12990
+      "unique_edges": 7122
     }
   }
 }

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Add a rounded half-circle lens hood to a purchased AVKANS Go STL case.
+"""Generate the purchased AVKANS Go STL case derivative.
 
 This script intentionally keeps the purchased STL as mesh input and emits a
-mesh STL derivative. The added hood is generated as a watertight rounded sweep
-mesh. The purchased STL is repaired into one watertight main shell before the
-hood is fused with a manifold Boolean union for the final printable STL.
+mesh STL derivative. The purchased STL is repaired into one watertight main
+shell, then the front LED slot is extended for better visibility. It does not
+add any extra lens hood or shade geometry.
 """
 
 from __future__ import annotations
@@ -29,18 +29,12 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 
 DEFAULT_SOURCE = Path("/Users/nathanhicks/Downloads/Avkans%20Go4k%20shade%20cover-Cults3d.stl")
-DEFAULT_OUT = Path("models/avkans_go_case/avkans_go4k_cults_shade_with_lens_hood.stl")
+DEFAULT_OUT = Path("models/avkans_go_case/avkans_go4k_cults_shade_extended_led_slot.stl")
 
 
 @dataclass
-class HoodParams:
+class AvkansCultsParams:
     front_z_mm: float = 0.0
-    hood_depth_mm: float = 17.78
-    wall_mm: float = 3.0
-    root_overlap_mm: float = 0.10
-    edge_round_mm: float = 1.2
-    arc_segments: int = 96
-    corner_segments: int = 8
     led_slot_extend_up_mm: float = 7.0
     led_slot_extend_down_mm: float = 18.0
     led_slot_detection_x_window_mm: float = 6.0
@@ -67,37 +61,7 @@ def _circle_from_3(p1: np.ndarray, p2: np.ndarray, p3: np.ndarray) -> tuple[floa
     return cx, cy, r
 
 
-def _source_front_lip(circle: tuple[float, float, float], vertices: np.ndarray, params: HoodParams) -> dict:
-    """Measure the STL's existing upper front lip for a flush hood root."""
-    cx, cy, inner_r = circle
-    radial = np.hypot(vertices[:, 0] - cx, vertices[:, 1] - cy)
-    source_front_z_min = float(vertices[:, 2].min())
-    lip_mask = (
-        (vertices[:, 1] >= cy)
-        & (vertices[:, 2] >= source_front_z_min - 0.05)
-        & (vertices[:, 2] <= params.front_z_mm + 0.10)
-        & (radial >= inner_r + 0.35)
-        & (radial <= inner_r + params.wall_mm + 1.0)
-    )
-    lip_vertices = vertices[lip_mask]
-    lip_radial = radial[lip_mask]
-    if len(lip_vertices) < 8:
-        return {
-            "upper_lip_vertex_count": int(len(lip_vertices)),
-            "upper_lip_outer_radius_mm": float(inner_r + params.wall_mm),
-            "upper_lip_z_min_mm": float(params.front_z_mm),
-            "upper_lip_radius_match_applied": False,
-        }
-
-    return {
-        "upper_lip_vertex_count": int(len(lip_vertices)),
-        "upper_lip_outer_radius_mm": float(np.percentile(lip_radial, 98.0)),
-        "upper_lip_z_min_mm": float(lip_vertices[:, 2].min()),
-        "upper_lip_radius_match_applied": True,
-    }
-
-
-def fit_front_lens_circle(mesh: trimesh.Trimesh, params: HoodParams) -> dict:
+def fit_front_lens_circle(mesh: trimesh.Trimesh, params: AvkansCultsParams) -> dict:
     """Fit the large circular lens opening on the front Z plane."""
     vertices = np.asarray(mesh.vertices)
     front_pts = vertices[np.abs(vertices[:, 2] - params.front_z_mm) < 1e-4][:, :2]
@@ -147,8 +111,6 @@ def fit_front_lens_circle(mesh: trimesh.Trimesh, params: HoodParams) -> dict:
         refined = np.linalg.lstsq(a, b, rcond=None)[0]
         cx, cy, c = [float(v) for v in refined]
         r = math.sqrt(c + cx * cx + cy * cy)
-    lip = _source_front_lip((cx, cy, r), vertices, params)
-
     return {
         "center_x_mm": float(cx),
         "center_y_mm": float(cy),
@@ -158,7 +120,6 @@ def fit_front_lens_circle(mesh: trimesh.Trimesh, params: HoodParams) -> dict:
         "front_plane_vertex_count": int(len(front_pts)),
         "fit_candidate_count": int(len(candidates)),
         "inlier_count": int(len(inliers)),
-        **lip,
     }
 
 
@@ -196,7 +157,7 @@ def boundary_edges(mesh: trimesh.Trimesh) -> list[tuple[int, int]]:
     return [edge for edge, count in counts.items() if count == 1]
 
 
-def repair_source_shell(source: trimesh.Trimesh, params: HoodParams) -> tuple[trimesh.Trimesh, dict]:
+def repair_source_shell(source: trimesh.Trimesh, params: AvkansCultsParams) -> tuple[trimesh.Trimesh, dict]:
     """Drop loose STL fragments and repair the main front-plane shell loops."""
     source_components = source.split(only_watertight=False)
     main = max(source_components, key=lambda component: len(component.faces))
@@ -250,168 +211,7 @@ def repair_source_shell(source: trimesh.Trimesh, params: HoodParams) -> tuple[tr
         "after": after,
     }
 
-
-def _lip_extension_cross_section(
-    width: float,
-    z_min: float,
-    root_z: float,
-    radius: float,
-    segments: int,
-) -> np.ndarray:
-    """Return a hood loop that directly extends the existing source lip."""
-    half_w = 0.5 * width
-    half_h = 0.5 * (root_z - z_min)
-    radius = min(max(radius, 0.0), half_w * 0.95, half_h * 0.90)
-    segments = max(int(segments), 3)
-
-    if radius <= 0.0:
-        return np.array(
-            [
-                [half_w, root_z],
-                [-half_w, root_z],
-                [-half_w, z_min],
-                [half_w, z_min],
-            ],
-            dtype=float,
-        )
-
-    points: list[tuple[float, float]] = []
-    points.append((half_w, root_z))
-    points.append((-half_w, root_z))
-    points.append((-half_w, z_min + radius))
-
-    for i in range(1, segments + 1):
-        angle = math.pi + 0.5 * math.pi * i / segments
-        points.append((-half_w + radius + radius * math.cos(angle), z_min + radius + radius * math.sin(angle)))
-
-    points.append((half_w - radius, z_min))
-    for i in range(1, segments + 1):
-        angle = 1.5 * math.pi + 0.5 * math.pi * i / segments
-        points.append((half_w - radius + radius * math.cos(angle), z_min + radius + radius * math.sin(angle)))
-
-    return np.asarray(points, dtype=float)
-
-
-def _swept_arc_mesh(
-    cx: float,
-    cy: float,
-    center_radius: float,
-    cross_section: np.ndarray,
-    arc_segments: int,
-    theta_min: float = 0.0,
-    theta_max: float = math.pi,
-) -> trimesh.Trimesh:
-    """Sweep a closed radial/Z profile around the upper lens-opening arc."""
-    arc_segments = max(int(arc_segments), 16)
-    cross_count = len(cross_section)
-    z_center = float(cross_section[:, 1].mean())
-    radial_center = float(cross_section[:, 0].mean())
-
-    vertices: list[tuple[float, float, float]] = []
-    faces: list[tuple[int, int, int]] = []
-    for arc_i in range(arc_segments + 1):
-        theta = theta_min + (theta_max - theta_min) * arc_i / arc_segments
-        cos_t = math.cos(theta)
-        sin_t = math.sin(theta)
-        for radial_offset, z in cross_section:
-            radius = center_radius + radial_offset
-            vertices.append((cx + radius * cos_t, cy + radius * sin_t, z))
-
-    for arc_i in range(arc_segments):
-        for cross_i in range(cross_count):
-            a = arc_i * cross_count + cross_i
-            b = arc_i * cross_count + (cross_i + 1) % cross_count
-            c = (arc_i + 1) * cross_count + (cross_i + 1) % cross_count
-            d = (arc_i + 1) * cross_count + cross_i
-            faces.append((a, b, c))
-            faces.append((a, c, d))
-
-    for arc_i, flip in ((0, True), (arc_segments, False)):
-        theta = theta_min + (theta_max - theta_min) * arc_i / arc_segments
-        center_index = len(vertices)
-        vertices.append(
-            (
-                cx + (center_radius + radial_center) * math.cos(theta),
-                cy + (center_radius + radial_center) * math.sin(theta),
-                z_center,
-            )
-        )
-        for cross_i in range(cross_count):
-            a = arc_i * cross_count + cross_i
-            b = arc_i * cross_count + (cross_i + 1) % cross_count
-            faces.append((center_index, b, a) if flip else (center_index, a, b))
-
-    swept = trimesh.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces), process=True)
-    swept.fix_normals()
-    return clean_mesh(swept)
-
-
-def build_rounded_half_hood(circle: dict, params: HoodParams, hood_stl: Path) -> dict:
-    """Build a watertight rounded semi-circular hood mesh and export it to STL."""
-    cx = circle["center_x_mm"]
-    cy = circle["center_y_mm"]
-    inner_r = circle["radius_mm"]
-    measured_lip_outer_r = circle.get("upper_lip_outer_radius_mm", inner_r + params.wall_mm)
-    outer_r = max(inner_r + params.wall_mm, measured_lip_outer_r)
-    effective_wall = outer_r - inner_r
-    center_r = inner_r + 0.5 * effective_wall
-    start_z = params.front_z_mm - params.hood_depth_mm
-    measured_lip_z = circle.get("upper_lip_z_min_mm", params.front_z_mm)
-    if circle.get("upper_lip_radius_match_applied") and measured_lip_z < params.front_z_mm:
-        root_anchor = "source upper front lip"
-        root_anchor_z = measured_lip_z
-    else:
-        root_anchor = "front face"
-        root_anchor_z = params.front_z_mm
-    root_z = root_anchor_z + params.root_overlap_mm
-    cross_section = _lip_extension_cross_section(
-        effective_wall,
-        start_z,
-        root_z,
-        params.edge_round_mm,
-        params.corner_segments,
-    )
-    arc_segments = max(int(params.arc_segments), 16)
-    hood_mesh = _swept_arc_mesh(cx, cy, center_r, cross_section, arc_segments)
-    terminal_round_report = {
-        "enabled": False,
-        "style": "removed",
-        "is_watertight": bool(hood_mesh.is_watertight),
-    }
-
-    hood_stl.parent.mkdir(parents=True, exist_ok=True)
-    hood_mesh.export(hood_stl)
-
-    return {
-        "inner_radius_mm": float(inner_r),
-        "outer_radius_mm": float(outer_r),
-        "centerline_radius_mm": float(center_r),
-        "requested_wall_mm": float(params.wall_mm),
-        "effective_wall_mm": float(effective_wall),
-        "depth_mm": float(params.hood_depth_mm),
-        "sweep_length_mm": float(root_z - start_z),
-        "root_overlap_mm": float(params.root_overlap_mm),
-        "root_anchor": root_anchor,
-        "root_anchor_z_mm": float(root_anchor_z),
-        "root_profile": "direct source-lip extension",
-        "root_z_mm": float(root_z),
-        "front_z_mm": float(params.front_z_mm),
-        "z_min_mm": float(start_z),
-        "z_max_mm": float(root_z),
-        "source_upper_lip_outer_radius_mm": float(measured_lip_outer_r),
-        "source_upper_lip_z_min_mm": float(measured_lip_z),
-        "arc": "upper half circle",
-        "edge_round_mm": float(params.edge_round_mm),
-        "terminal_cap_rounding": terminal_round_report,
-        "arc_segments": int(arc_segments),
-        "corner_segments": int(params.corner_segments),
-        "is_watertight": bool(hood_mesh.is_watertight),
-        "component_count": int(len(hood_mesh.split(only_watertight=False))),
-        "hood_only_stl": str(hood_stl),
-    }
-
-
-def detect_front_led_slot(source: trimesh.Trimesh, circle: dict, params: HoodParams) -> dict:
+def detect_front_led_slot(source: trimesh.Trimesh, circle: dict, params: AvkansCultsParams) -> dict:
     """Detect the centered lower front-face oval slot from source STL vertices."""
     vertices = np.asarray(source.vertices)
     bounds = source.bounds
@@ -503,7 +303,7 @@ def extend_front_led_slot(
     mesh: trimesh.Trimesh,
     source: trimesh.Trimesh,
     circle: dict,
-    params: HoodParams,
+    params: AvkansCultsParams,
 ) -> tuple[trimesh.Trimesh, dict]:
     slot = detect_front_led_slot(source, circle, params)
     cutter = build_vertical_slot_cutter(slot)
@@ -532,7 +332,7 @@ def extend_front_led_slot(
     return cut, slot
 
 
-def make_preview(base: trimesh.Trimesh, hood: trimesh.Trimesh, combined: trimesh.Trimesh, out_png: Path) -> None:
+def make_preview(base: trimesh.Trimesh, combined: trimesh.Trimesh, out_png: Path) -> None:
     out_png.parent.mkdir(parents=True, exist_ok=True)
     views = [
         ("Front X/Y", (0, 1), "X width (mm)", "Y height (mm)"),
@@ -543,12 +343,12 @@ def make_preview(base: trimesh.Trimesh, hood: trimesh.Trimesh, combined: trimesh
     fig, axes = plt.subplots(1, 3, figsize=(13.5, 4.8), dpi=180)
     for ax, (title, dims, xlabel, ylabel) in zip(axes, views):
         base_polys = [base.vertices[list(face)][:, dims] for face in base.faces]
-        hood_polys = [hood.vertices[list(face)][:, dims] for face in hood.faces]
+        combined_polys = [combined.vertices[list(face)][:, dims] for face in combined.faces]
         ax.add_collection(
-            PolyCollection(base_polys, facecolors="#c9c9c9", edgecolors="#707070", linewidths=0.02, alpha=0.55)
+            PolyCollection(base_polys, facecolors="#c9c9c9", edgecolors="#707070", linewidths=0.02, alpha=0.45)
         )
         ax.add_collection(
-            PolyCollection(hood_polys, facecolors="#9bb7d4", edgecolors="#29516f", linewidths=0.035, alpha=0.90)
+            PolyCollection(combined_polys, facecolors="#9bb7d4", edgecolors="#29516f", linewidths=0.025, alpha=0.45)
         )
         xy = combined.vertices[:, dims]
         pad = 6.0
@@ -560,7 +360,7 @@ def make_preview(base: trimesh.Trimesh, hood: trimesh.Trimesh, combined: trimesh
         ax.set_ylabel(ylabel, fontsize=8)
         ax.grid(True, linewidth=0.2, alpha=0.35)
         ax.tick_params(labelsize=7)
-    fig.suptitle("AVKANS Go4k shade cover with rounded half-circle lens hood")
+    fig.suptitle("AVKANS Go4k shade cover with extended front LED slot")
     fig.tight_layout()
     fig.savefig(out_png, bbox_inches="tight")
     plt.close(fig)
@@ -580,57 +380,17 @@ def mesh_stats(mesh: trimesh.Trimesh) -> dict:
     }
 
 
-def fuse_repaired_shell_and_hood(shell: trimesh.Trimesh, hood: trimesh.Trimesh) -> tuple[trimesh.Trimesh, dict]:
-    """Boolean-union two watertight meshes with manifold, falling back loudly."""
-    report = {
-        "attempted": True,
-        "engine": "manifold",
-        "fallback_used": False,
-    }
-    try:
-        fused = trimesh.boolean.union([shell, hood], engine="manifold")
-        if fused is None:
-            raise RuntimeError("manifold returned None")
-        fused = clean_mesh(fused)
-        report["succeeded"] = bool(fused.is_watertight and len(fused.split(only_watertight=False)) == 1)
-        report["edge_quality"] = edge_quality(fused)
-        if not report["succeeded"]:
-            raise RuntimeError("Boolean result was not one watertight component")
-        return fused, report
-    except Exception as exc:
-        fallback = trimesh.util.concatenate([shell, hood])
-        fallback = clean_mesh(fallback)
-        report.update(
-            {
-                "succeeded": False,
-                "fallback_used": True,
-                "failure": f"{type(exc).__name__}: {exc}",
-                "edge_quality": edge_quality(fallback),
-            }
-        )
-        return fallback, report
-
-
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Add rounded half-circle lens hood to AVKANS Go4k STL")
+    parser = argparse.ArgumentParser(description="Generate AVKANS Go4k STL derivative without added lens hood")
     parser.add_argument("--source", type=Path, default=DEFAULT_SOURCE)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
-    parser.add_argument("--hood-only", type=Path, default=Path("models/avkans_go_case/avkans_go4k_added_lens_hood_only.stl"))
-    parser.add_argument("--report", type=Path, default=Path("models/avkans_go_case/reports/avkans_go4k_cults_hood_report.json"))
-    parser.add_argument("--preview", type=Path, default=Path("models/avkans_go_case/reports/avkans_go4k_cults_hood_preview.png"))
-    parser.add_argument("--hood-depth", type=float, default=17.78)
-    parser.add_argument("--wall", type=float, default=3.0)
-    parser.add_argument("--root-overlap", type=float, default=0.10)
-    parser.add_argument("--edge-round", type=float, default=1.2)
+    parser.add_argument("--report", type=Path, default=Path("models/avkans_go_case/reports/avkans_go4k_cults_case_report.json"))
+    parser.add_argument("--preview", type=Path, default=Path("models/avkans_go_case/reports/avkans_go4k_cults_case_preview.png"))
     parser.add_argument("--led-slot-extend-up", type=float, default=7.0)
     parser.add_argument("--led-slot-extend-down", type=float, default=18.0)
     args = parser.parse_args()
 
-    params = HoodParams(
-        hood_depth_mm=args.hood_depth,
-        wall_mm=args.wall,
-        root_overlap_mm=args.root_overlap,
-        edge_round_mm=args.edge_round,
+    params = AvkansCultsParams(
         led_slot_extend_up_mm=args.led_slot_extend_up,
         led_slot_extend_down_mm=args.led_slot_extend_down,
     )
@@ -638,34 +398,32 @@ def main() -> None:
     source_mesh = trimesh.load(args.source, force="mesh")
     circle = fit_front_lens_circle(source_mesh, params)
     repaired_base, repair_report = repair_source_shell(source_mesh, params)
-    hood_report = build_rounded_half_hood(circle, params, args.hood_only)
-    hood_mesh = trimesh.load(args.hood_only, force="mesh")
-
-    combined, union_report = fuse_repaired_shell_and_hood(repaired_base, hood_mesh)
-    combined, led_slot_report = extend_front_led_slot(combined, source_mesh, circle, params)
+    combined, led_slot_report = extend_front_led_slot(repaired_base, source_mesh, circle, params)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     combined.export(args.out)
 
-    make_preview(repaired_base, hood_mesh, combined, args.preview)
+    make_preview(repaired_base, combined, args.preview)
 
     report = {
         "source_file": str(args.source),
         "output_stl": str(args.out),
         "params": asdict(params),
+        "added_lens_hood": {
+            "enabled": False,
+            "removed": True,
+            "reason": "User requested complete removal of the added AVKANS lens hood/shade geometry.",
+        },
         "source_mesh": mesh_stats(source_mesh),
         "source_repair": repair_report,
         "lens_opening_fit": circle,
-        "hood": hood_report,
         "combined_mesh": mesh_stats(combined),
         "combined_edge_quality": edge_quality(combined),
-        "boolean_union": union_report,
         "front_led_slot_extension": led_slot_report,
     }
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
 
     print(f"Wrote {args.out}")
-    print(f"Wrote {args.hood_only}")
     print(f"Wrote {args.report}")
     print(f"Wrote {args.preview}")
 
