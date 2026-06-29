@@ -59,7 +59,7 @@ Mevo Core:
 - ASA outer corner fillet: `24.0 mm`, inner: `22.0 mm`
 - Front sun hood depth: `3.0 mm`
 - Front lens cutout: `76.2 mm` diameter (3.0"), centered on front face
-- Lens hood: full circular tube, `101.6 mm` depth (4.0"), `2.5 mm` wall, `2.5 mm` clearance, with rounded side access notches (`44.45 mm` deep, `50.8 mm` tall, `3.0 mm` corner radius) cut from outside the flared root to avoid access-window slivers; notch cut edges are additionally rounded `0.75 mm` at the terminal perimeter and `0.3 mm` at the root-side small edges
+- Lens hood: full circular tube, `88.9 mm` depth (3.5"), `2.5 mm` wall, `2.5 mm` clearance, with rounded side access notches (`44.45 mm` deep, `50.8 mm` tall, `3.0 mm` corner radius) cut from outside the flared root to avoid access-window slivers; notch cut edges are additionally rounded `0.75 mm` at the terminal perimeter and `0.3 mm` at the root-side small edges
 - Bottom tripod cutout: `63.5 x 50.8 mm` rectangular, center `34.925 mm` from front
 - Cold shoe mount: ISO 518 on top rear
 - Back cap: ASA bumper ring with one large open-center rounded rectangle:
@@ -275,7 +275,7 @@ Current preferred workflow:
   - Direct ASA camera fit with `0.6 mm` per-side clearance; no TPU assumptions in shell sizing
   - Front-integrated body with centered lens cutout (76.2 mm / 3.0")
   - Main ASA body front face-to-side-wall perimeter uses a targeted `3.0 mm` fillet.
-  - Full circular tube lens hood (101.6 mm depth / 4.0”, 2.5 mm wall), NOT visor:
+  - Full circular tube lens hood (88.9 mm depth / 3.5”, 2.5 mm wall), NOT visor:
     - hood root has a `1.2 mm` positive-Z overlap collar embedded into the ASA front wall so it fuses seamlessly into the front face instead of relying on a coplanar join.
     - hood root collar also overlaps `0.25 mm` into the negative-Z flared base cone so slicers do not see an open-edge seam at the collar/flare transition.
     - hood base flare is clamped with a `3.0 mm` front-edge inset so the flared root does not hang past the rounded front face perimeter.

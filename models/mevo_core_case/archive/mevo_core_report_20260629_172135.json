@@ -15,7 +15,7 @@
     "lens_center_x_mm": 0.0,
     "lens_center_y_mm": 0.0,
     "include_lens_hood": true,
-    "lens_hood_depth_mm": 88.9,
+    "lens_hood_depth_mm": 101.6,
     "lens_hood_wall_mm": 2.5,
     "lens_hood_clearance_mm": 2.5,
     "lens_hood_base_flare_mm": 6.0,
@@ -141,7 +141,7 @@
       "lens_hood": {
         "enabled": true,
         "type": "full_tube",
-        "depth_mm": 88.9,
+        "depth_mm": 101.6,
         "wall_mm": 2.5,
         "clearance_mm": 2.5,
         "connection": "embedded root overlap collar fused into ASA front wall",

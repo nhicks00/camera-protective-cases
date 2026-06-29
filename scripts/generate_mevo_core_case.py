@@ -8,7 +8,7 @@ Primary outputs:
 
 Design notes:
 - Square cross-section (90 x 90 mm) with rounded corners
-- Full circular tube lens hood (2.75" diameter, 2.5" depth)
+- Full circular tube lens hood (2.75" diameter, 3.5" depth)
 - Back cap as bumper ring with one large open center
 - Single bottom tripod mount (1/4"-20 UNC), same rect as Mevo Start
 - Large side/top panel cutouts instead of individual vent slots
@@ -75,7 +75,7 @@ class MevoCoreParams:
 
     # Lens hood (full circular tube encompassing lens)
     include_lens_hood: bool = True
-    lens_hood_depth_mm: float = 101.6   # 4.0 inches (2.5" + 1.5")
+    lens_hood_depth_mm: float = 88.9    # 3.5 inches
     lens_hood_wall_mm: float = 2.5
     lens_hood_clearance_mm: float = 2.5  # hood bore wider than front face hole for ledge/strength
     lens_hood_base_flare_mm: float = 6.0   # extra outer radius at root for strength
