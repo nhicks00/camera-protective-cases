@@ -183,7 +183,7 @@ class MevoCoreParams:
     sun_shade_rib_corner_r_mm: float = 1.0
     sun_shade_support_vent_clearance_mm: float = 1.0
     sun_shade_front_overhang_mm: float = 0.0
-    sun_shade_rear_overhang_mm: float = 6.35
+    sun_shade_rear_overhang_mm: float = 0.0
     sun_shade_end_edge_fillet_mm: float = 1.0
     sun_shade_drip_lip_out_mm: float = 1.5
     sun_shade_drip_lip_drop_mm: float = 1.5
