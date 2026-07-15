@@ -3,8 +3,9 @@
 
 This script intentionally keeps the purchased STL as mesh input and emits a
 mesh STL derivative. The purchased STL is repaired into one watertight main
-shell, then the front LED slot is extended for better visibility. It does not
-add any extra lens hood or shade geometry.
+shell, the front LED slot is extended for better visibility, and passive
+hot-shoe-style receivers are fused to both flat side walls. It does not add
+any extra lens hood or shade geometry.
 """
 
 from __future__ import annotations
@@ -13,8 +14,10 @@ import argparse
 import json
 import math
 import random
+import shutil
 from collections import Counter
 from dataclasses import asdict, dataclass
+from datetime import datetime
 from pathlib import Path
 
 import matplotlib
@@ -43,6 +46,36 @@ class AvkansCultsParams:
     ransac_seed: int = 4
     ransac_iterations: int = 5000
     circle_inlier_tolerance_mm: float = 0.60
+    # Side receivers duplicate the measured channel profile of the existing
+    # top receiver. They are passive cold shoes (no electrical contacts).
+    side_shoe_center_y_mm: float = -15.0
+    side_shoe_z_start_mm: float = 88.325
+    side_shoe_length_mm: float = 22.775
+    side_shoe_boss_width_mm: float = 25.250
+    side_shoe_slot_width_mm: float = 19.796
+    side_shoe_opening_width_mm: float = 15.049
+    side_shoe_slot_depth_mm: float = 2.525
+    side_shoe_rail_thickness_mm: float = 2.273
+    side_shoe_root_overlap_mm: float = 0.35
+    side_shoe_join_overlap_mm: float = 0.08
+
+
+def _archive_existing(paths: list[Path], out_dir: Path) -> list[tuple[str, str]]:
+    archive_dir = out_dir / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    moved: list[tuple[str, str]] = []
+    for path in paths:
+        if not path.exists():
+            continue
+        target = archive_dir / f"{path.stem}_{stamp}{path.suffix}"
+        suffix = 1
+        while target.exists():
+            target = archive_dir / f"{path.stem}_{stamp}_{suffix}{path.suffix}"
+            suffix += 1
+        shutil.move(str(path), str(target))
+        moved.append((str(path), str(target)))
+    return moved
 
 
 def _circle_from_3(p1: np.ndarray, p2: np.ndarray, p3: np.ndarray) -> tuple[float, float, float] | None:
@@ -332,6 +365,165 @@ def extend_front_led_slot(
     return cut, slot
 
 
+def _box_from_bounds(minimum: tuple[float, float, float], maximum: tuple[float, float, float]) -> trimesh.Trimesh:
+    minimum_array = np.asarray(minimum, dtype=float)
+    maximum_array = np.asarray(maximum, dtype=float)
+    extents = maximum_array - minimum_array
+    if np.any(extents <= 0.0):
+        raise RuntimeError(f"Invalid side-shoe box bounds: minimum={minimum}, maximum={maximum}")
+    transform = np.eye(4)
+    transform[:3, 3] = 0.5 * (minimum_array + maximum_array)
+    return trimesh.creation.box(extents=extents, transform=transform)
+
+
+def _section_x_crossings(mesh: trimesh.Trimesh, y: float, z: float) -> list[float]:
+    section = mesh.section(plane_origin=(0.0, 0.0, z), plane_normal=(0.0, 0.0, 1.0))
+    if section is None:
+        raise RuntimeError(f"Unable to section AVKANS shell at Z={z:.3f} mm")
+
+    horizontal = LineString([(-1000.0, y), (1000.0, y)])
+    crossings: list[float] = []
+
+    def collect_points(geometry) -> None:
+        if geometry.is_empty:
+            return
+        if geometry.geom_type == "Point":
+            crossings.append(float(geometry.x))
+            return
+        if hasattr(geometry, "geoms"):
+            for child in geometry.geoms:
+                collect_points(child)
+
+    for path in section.discrete:
+        collect_points(LineString(path[:, :2]).intersection(horizontal))
+
+    return sorted(set(round(value, 6) for value in crossings))
+
+
+def add_side_hot_shoes(
+    mesh: trimesh.Trimesh,
+    params: AvkansCultsParams,
+) -> tuple[trimesh.Trimesh, dict]:
+    """Fuse one rear-loading passive shoe receiver to each flat side wall."""
+    boss_width = params.side_shoe_boss_width_mm
+    slot_width = params.side_shoe_slot_width_mm
+    opening_width = params.side_shoe_opening_width_mm
+    slot_depth = params.side_shoe_slot_depth_mm
+    rail_thickness = params.side_shoe_rail_thickness_mm
+    root_overlap = params.side_shoe_root_overlap_mm
+    join_overlap = params.side_shoe_join_overlap_mm
+    if not (boss_width > slot_width > opening_width > 0.0):
+        raise RuntimeError(
+            "Side-shoe widths must satisfy boss_width > slot_width > opening_width > 0"
+        )
+    if min(slot_depth, rail_thickness, root_overlap) <= 0.0:
+        raise RuntimeError("Side-shoe depth, rail thickness, and root overlap must be positive")
+
+    z_start = params.side_shoe_z_start_mm
+    z_end = min(z_start + params.side_shoe_length_mm, float(mesh.bounds[1, 2]))
+    if z_end - z_start < 10.0:
+        raise RuntimeError(f"Side-shoe rail length is too short: {z_end - z_start:.3f} mm")
+
+    z_probe = 0.5 * (z_start + z_end)
+    crossings = _section_x_crossings(mesh, params.side_shoe_center_y_mm, z_probe)
+    if len(crossings) < 4:
+        raise RuntimeError(
+            f"Expected outer and inner side-wall crossings at Y={params.side_shoe_center_y_mm:.3f}, "
+            f"Z={z_probe:.3f}; found {crossings}"
+        )
+    left_wall_x = float(min(crossings))
+    right_wall_x = float(max(crossings))
+
+    boss_height = slot_depth + rail_thickness
+    half_boss = 0.5 * boss_width
+    half_slot = 0.5 * slot_width
+    half_opening = 0.5 * opening_width
+    center_y = params.side_shoe_center_y_mm
+    shoe_parts: list[trimesh.Trimesh] = []
+
+    for wall_x, outward_sign in ((left_wall_x, -1.0), (right_wall_x, 1.0)):
+        if outward_sign > 0.0:
+            wall_x_bounds = (wall_x - root_overlap, wall_x + boss_height)
+            rail_x_bounds = (wall_x + slot_depth - join_overlap, wall_x + boss_height)
+        else:
+            wall_x_bounds = (wall_x - boss_height, wall_x + root_overlap)
+            rail_x_bounds = (wall_x - boss_height, wall_x - slot_depth + join_overlap)
+
+        for tangential_sign in (-1.0, 1.0):
+            if tangential_sign > 0.0:
+                wall_y_bounds = (center_y + half_slot, center_y + half_boss)
+                rail_y_bounds = (
+                    center_y + half_opening,
+                    center_y + half_slot + join_overlap,
+                )
+            else:
+                wall_y_bounds = (center_y - half_boss, center_y - half_slot)
+                rail_y_bounds = (
+                    center_y - half_slot - join_overlap,
+                    center_y - half_opening,
+                )
+
+            shoe_parts.append(
+                _box_from_bounds(
+                    (wall_x_bounds[0], wall_y_bounds[0], z_start),
+                    (wall_x_bounds[1], wall_y_bounds[1], z_end),
+                )
+            )
+            shoe_parts.append(
+                _box_from_bounds(
+                    (rail_x_bounds[0], rail_y_bounds[0], z_start),
+                    (rail_x_bounds[1], rail_y_bounds[1], z_end),
+                )
+            )
+
+    combined = trimesh.boolean.union([mesh, *shoe_parts], engine="manifold")
+    if combined is None:
+        raise RuntimeError("Side hot-shoe Boolean union returned None")
+    combined = clean_mesh(combined)
+    quality = edge_quality(combined)
+    component_count = len(combined.split(only_watertight=False))
+    succeeded = bool(
+        combined.is_watertight
+        and component_count == 1
+        and quality["boundary_edges"] == 0
+        and quality["nonmanifold_edges"] == 0
+    )
+    if not succeeded:
+        raise RuntimeError(
+            "Side hot-shoe union did not produce one clean watertight component: "
+            f"components={component_count}, edge_quality={quality}"
+        )
+
+    return combined, {
+        "enabled": True,
+        "type": "passive_hot_shoe_style_cold_shoe_receiver",
+        "count": 2,
+        "locations": ["left_X-", "right_X+"],
+        "profile_source": "measured from existing purchased top receiver",
+        "slide_in_from": "rear_positive_Z",
+        "center_y_mm": float(center_y),
+        "y_span_mm": [float(center_y - half_boss), float(center_y + half_boss)],
+        "z_start_mm": float(z_start),
+        "z_end_mm": float(z_end),
+        "length_mm": float(z_end - z_start),
+        "detected_side_wall_x_mm": {
+            "left": left_wall_x,
+            "right": right_wall_x,
+            "section_crossings": [float(value) for value in crossings],
+        },
+        "boss_width_mm": float(boss_width),
+        "slot_width_mm": float(slot_width),
+        "rail_opening_width_mm": float(opening_width),
+        "slot_depth_mm": float(slot_depth),
+        "rail_thickness_mm": float(rail_thickness),
+        "projection_from_wall_mm": float(boss_height),
+        "root_overlap_mm": float(root_overlap),
+        "join_overlap_mm": float(join_overlap),
+        "final_component_count": int(component_count),
+        "final_edge_quality": quality,
+    }
+
+
 def make_preview(base: trimesh.Trimesh, combined: trimesh.Trimesh, out_png: Path) -> None:
     out_png.parent.mkdir(parents=True, exist_ok=True)
     views = [
@@ -360,7 +552,7 @@ def make_preview(base: trimesh.Trimesh, combined: trimesh.Trimesh, out_png: Path
         ax.set_ylabel(ylabel, fontsize=8)
         ax.grid(True, linewidth=0.2, alpha=0.35)
         ax.tick_params(labelsize=7)
-    fig.suptitle("AVKANS Go4k shade cover with extended front LED slot")
+    fig.suptitle("AVKANS Go4k shade cover with extended LED slot and side shoe mounts")
     fig.tight_layout()
     fig.savefig(out_png, bbox_inches="tight")
     plt.close(fig)
@@ -381,7 +573,9 @@ def mesh_stats(mesh: trimesh.Trimesh) -> dict:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate AVKANS Go4k STL derivative without added lens hood")
+    parser = argparse.ArgumentParser(
+        description="Generate AVKANS Go4k STL derivative with side shoe mounts and no added lens hood"
+    )
     parser.add_argument("--source", type=Path, default=DEFAULT_SOURCE)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--report", type=Path, default=Path("models/avkans_go_case/reports/avkans_go4k_cults_case_report.json"))
@@ -399,6 +593,8 @@ def main() -> None:
     circle = fit_front_lens_circle(source_mesh, params)
     repaired_base, repair_report = repair_source_shell(source_mesh, params)
     combined, led_slot_report = extend_front_led_slot(repaired_base, source_mesh, circle, params)
+    combined, side_hot_shoe_report = add_side_hot_shoes(combined, params)
+    archived = _archive_existing([args.out, args.report, args.preview], args.out.parent)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     combined.export(args.out)
 
@@ -419,6 +615,11 @@ def main() -> None:
         "combined_mesh": mesh_stats(combined),
         "combined_edge_quality": edge_quality(combined),
         "front_led_slot_extension": led_slot_report,
+        "side_hot_shoes": side_hot_shoe_report,
+        "archived_previous_outputs": [
+            {"source": source, "archived_to": archived_to}
+            for source, archived_to in archived
+        ],
     }
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")

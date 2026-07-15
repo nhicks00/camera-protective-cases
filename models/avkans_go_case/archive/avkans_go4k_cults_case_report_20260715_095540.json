@@ -10,17 +10,7 @@
     "led_slot_z_cut_margin_mm": 0.5,
     "ransac_seed": 4,
     "ransac_iterations": 5000,
-    "circle_inlier_tolerance_mm": 0.6,
-    "side_shoe_center_y_mm": -15.0,
-    "side_shoe_z_start_mm": 88.325,
-    "side_shoe_length_mm": 22.775,
-    "side_shoe_boss_width_mm": 25.25,
-    "side_shoe_slot_width_mm": 19.796,
-    "side_shoe_opening_width_mm": 15.049,
-    "side_shoe_slot_depth_mm": 2.525,
-    "side_shoe_rail_thickness_mm": 2.273,
-    "side_shoe_root_overlap_mm": 0.35,
-    "side_shoe_join_overlap_mm": 0.08
+    "circle_inlier_tolerance_mm": 0.6
   },
   "added_lens_hood": {
     "enabled": false,
@@ -119,20 +109,20 @@
     "inlier_count": 122
   },
   "combined_mesh": {
-    "vertices": 2438,
-    "faces": 4884,
+    "vertices": 2370,
+    "faces": 4748,
     "bounds_min_mm": [
-      -28.96153450012207,
+      -28.886520385742188,
       -58.631595611572266,
       -4.3632001876831055
     ],
     "bounds_max_mm": [
-      28.555173873901367,
+      28.488039016723633,
       56.02984619140625,
       111.0999984741211
     ],
     "extents_mm": [
-      57.51670837402344,
+      57.37455940246582,
       114.66144180297852,
       115.4631986618042
     ],
@@ -142,7 +132,7 @@
   "combined_edge_quality": {
     "boundary_edges": 0,
     "nonmanifold_edges": 0,
-    "unique_edges": 7326
+    "unique_edges": 7122
   },
   "front_led_slot_extension": {
     "enabled": true,
@@ -191,62 +181,5 @@
       "nonmanifold_edges": 0,
       "unique_edges": 7122
     }
-  },
-  "side_hot_shoes": {
-    "enabled": true,
-    "type": "passive_hot_shoe_style_cold_shoe_receiver",
-    "count": 2,
-    "locations": [
-      "left_X-",
-      "right_X+"
-    ],
-    "profile_source": "measured from existing purchased top receiver",
-    "slide_in_from": "rear_positive_Z",
-    "center_y_mm": -15.0,
-    "y_span_mm": [
-      -27.625,
-      -2.375
-    ],
-    "z_start_mm": 88.325,
-    "z_end_mm": 111.0999984741211,
-    "length_mm": 22.77499847412109,
-    "detected_side_wall_x_mm": {
-      "left": -24.163534,
-      "right": 23.757174,
-      "section_crossings": [
-        -24.163534,
-        -21.133535,
-        20.727175,
-        23.757174
-      ]
-    },
-    "boss_width_mm": 25.25,
-    "slot_width_mm": 19.796,
-    "rail_opening_width_mm": 15.049,
-    "slot_depth_mm": 2.525,
-    "rail_thickness_mm": 2.273,
-    "projection_from_wall_mm": 4.798,
-    "root_overlap_mm": 0.35,
-    "join_overlap_mm": 0.08,
-    "final_component_count": 1,
-    "final_edge_quality": {
-      "boundary_edges": 0,
-      "nonmanifold_edges": 0,
-      "unique_edges": 7326
-    }
-  },
-  "archived_previous_outputs": [
-    {
-      "source": "models/avkans_go_case/avkans_go4k_cults_shade_extended_led_slot.stl",
-      "archived_to": "models/avkans_go_case/archive/avkans_go4k_cults_shade_extended_led_slot_20260715_095540.stl"
-    },
-    {
-      "source": "models/avkans_go_case/reports/avkans_go4k_cults_case_report.json",
-      "archived_to": "models/avkans_go_case/archive/avkans_go4k_cults_case_report_20260715_095540.json"
-    },
-    {
-      "source": "models/avkans_go_case/reports/avkans_go4k_cults_case_preview.png",
-      "archived_to": "models/avkans_go_case/archive/avkans_go4k_cults_case_preview_20260715_095540.png"
-    }
-  ]
+  }
 }

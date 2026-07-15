@@ -328,6 +328,15 @@ Current preferred workflow:
 - Active review-spec values in `models/zowietek_case/reports/zowietek_pov_dual_material_report.json`
 
 ### AVKANS Go
+- Active purchased/pre-built case derivative:
+  - `models/avkans_go_case/avkans_go4k_cults_shade_extended_led_slot.stl`
+  - Generator: `scripts/generate_avkans_go_cults_case.py`
+  - Retains the purchased shell and its original top passive shoe receiver.
+  - Adds 2 matching rear-loading passive shoe receivers, one on each flat side wall below the curved upper shell:
+    - centers at `Y=-15.0 mm`, spanning `Y=-27.625..-2.375 mm`,
+    - rail depth range `Z=88.325..111.1 mm`, aligned with the existing top receiver,
+    - measured top-receiver profile: `25.25 mm` boss width, `19.796 mm` channel, `15.049 mm` rail opening, `2.525 mm` slot depth, and `2.273 mm` rail thickness,
+    - rails overlap the side walls by `0.35 mm` and are Boolean-fused into one watertight printable mesh.
 - ASA-only first-pass shell:
   - `models/avkans_go_case/avkans_go_asa_shell.step`
   - Generator: `scripts/generate_avkans_go_case.py`
@@ -358,6 +367,7 @@ User shorthand often means:
 - “Zowietek case” = 3 files in `models/zowietek_case/`
 - “Zowietek bumper ring” = `zowietek_pov_back_cap.step` (ASA back cap with open center)
 - “AVKANS Go case” = `models/avkans_go_case/avkans_go_asa_shell.step`
+- “AVKANS Go pre-built/Cults case” = `models/avkans_go_case/avkans_go4k_cults_shade_extended_led_slot.stl`
 
 ## Key References
 - MAKI references:
