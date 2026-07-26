@@ -133,7 +133,7 @@ class MevoCoreParams:
     back_cap_edge_fillet_mm: float = 0.6
 
     # Back cap: large open-center bumper ring for rear access
-    back_cap_center_opening_inset_mm: float = 8.0
+    back_cap_center_opening_inset_mm: float = 4.0
     back_cap_center_opening_corner_r_mm: float = 8.0
 
     # Retention: bump pockets — disabled

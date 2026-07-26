@@ -62,7 +62,7 @@
     "back_cap_lip_depth_mm": 5.0,
     "back_cap_lip_undersize_total_mm": 0.28,
     "back_cap_edge_fillet_mm": 0.6,
-    "back_cap_center_opening_inset_mm": 4.0,
+    "back_cap_center_opening_inset_mm": 8.0,
     "back_cap_center_opening_corner_r_mm": 8.0,
     "include_friction_ridge": false,
     "friction_ridge_height_mm": 0.8,
@@ -313,10 +313,10 @@
       "center_opening": {
         "enabled": true,
         "type": "single_large_rounded_rectangle",
-        "w_mm": 82.0,
-        "h_mm": 82.0,
+        "w_mm": 74.0,
+        "h_mm": 74.0,
         "corner_r_mm": 8.0,
-        "inset_from_device_edge_mm": 4.0
+        "inset_from_device_edge_mm": 8.0
       }
     },
     "named_bodies": [

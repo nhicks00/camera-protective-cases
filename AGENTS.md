@@ -63,7 +63,7 @@ Mevo Core:
 - Bottom tripod cutout: `63.5 x 50.8 mm` rectangular, center `34.925 mm` from front
 - Cold shoe mount: ISO 518 on top rear
 - Back cap: ASA bumper ring with one large open-center rounded rectangle:
-  - Center opening: `74.0 x 74.0 mm`, `8.0 mm` inset from device edge per side
+  - Center opening: `82.0 x 82.0 mm`, `4.0 mm` inset from device edge per side
   - Center opening corner radius: `8.0 mm`
 - Back cap plug lip: `5.0 mm` depth, `0.28 mm` total undersize
 - Retention: 3 snap-latch walls plus Y+ retention bump
@@ -293,7 +293,7 @@ Current preferred workflow:
     - large side/top thermal notches use `2.0 mm` corner radii,
     - sun-shade support ribs use `1.0 mm` rounded-rectangle cross-section corners.
   - Snap-latch release/clearance holes in the shell stay rectangular (`0.0 mm` corner radius) so the back-cap latch bumps have full corner clearance.
-  - Back cap = ASA bumper ring with one large open-center rounded-rectangle cutout (`74.0 × 74.0 mm`, `8.0 mm` corner radius)
+  - Back cap = ASA bumper ring with one large open-center rounded-rectangle cutout (`82.0 × 82.0 mm`, `8.0 mm` corner radius)
   - 3 snap-latch walls plus Y+ retention bump
   - Thermal cutouts are large rectangular panel notches, not individual slit vents:
     - one per side face across the former 6-row side vent bank,
