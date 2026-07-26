@@ -135,6 +135,9 @@ class MevoCoreParams:
     # Back cap: large open-center bumper ring for rear access
     back_cap_center_opening_inset_mm: float = 4.0
     back_cap_center_opening_corner_r_mm: float = 8.0
+    back_cap_power_button_notch_width_mm: float = 28.0
+    back_cap_power_button_notch_depth_mm: float = 6.0
+    back_cap_power_button_notch_corner_r_mm: float = 3.0
 
     # Retention: bump pockets — disabled
     include_friction_ridge: bool = False
@@ -485,7 +488,6 @@ def build_asa_shell(p: MevoCoreParams):
             wall_cut = p.asa_wall_mm + 2.0
 
             half_ow = 0.5 * asa_outer_w
-            half_oh = 0.5 * asa_outer_h
 
             # X+ wall. Keep these release/clearance holes rectangular so
             # the back-cap latch bumps have full corner clearance.
@@ -501,13 +503,7 @@ def build_asa_shell(p: MevoCoreParams):
                     Rectangle(hole_w, hole_h)
             extrude(amount=wall_cut, mode=Mode.SUBTRACT)
 
-            # Y- wall
-            with BuildSketch(Plane.XZ.offset(-(half_oh + 0.2))):
-                with Locations((0.0, hole_z)):
-                    Rectangle(hole_w, hole_h)
-            extrude(amount=wall_cut, mode=Mode.SUBTRACT)
-
-            latch_walls = ["X+", "X-", "Y-"]
+            latch_walls = ["X+", "X-"]
             snap_latch_info = {
                 "enabled": True,
                 "count": len(latch_walls),
@@ -1342,6 +1338,19 @@ def build_back_cap(p: MevoCoreParams):
         max(p.back_cap_center_opening_corner_r_mm, 0.0),
         0.5 * min(center_opening_w, center_opening_h) - 0.5,
     )
+    power_notch_width = p.back_cap_power_button_notch_width_mm
+    power_notch_depth = p.back_cap_power_button_notch_depth_mm
+    power_notch_overlap = 2.0
+    power_notch_height = power_notch_depth + power_notch_overlap
+    power_notch_center_y = -0.5 * center_opening_h - 0.5 * (power_notch_depth - power_notch_overlap)
+    power_notch_corner_r = min(
+        p.back_cap_power_button_notch_corner_r_mm,
+        0.5 * power_notch_height - 0.25,
+    )
+    power_notch_outer_bridge = round(
+        0.5 * (asa_outer_h - center_opening_h) - power_notch_depth,
+        3,
+    )
 
     cut_depth = p.back_cap_thickness_mm + p.back_cap_lip_depth_mm + 1.0
 
@@ -1363,6 +1372,14 @@ def build_back_cap(p: MevoCoreParams):
             Rectangle(center_opening_w, center_opening_h)
             if center_opening_r > 0.0:
                 fillet(vertices(), center_opening_r)
+        extrude(amount=cut_depth, mode=Mode.SUBTRACT)
+
+        # Rounded finger access at the physical top (Y-) edge. The overlap
+        # into the center opening guarantees one continuous through-cut.
+        with BuildSketch(Plane.XY.offset(-0.2)):
+            with Locations((0.0, power_notch_center_y)):
+                Rectangle(power_notch_width, power_notch_height)
+                fillet(vertices(), power_notch_corner_r)
         extrude(amount=cut_depth, mode=Mode.SUBTRACT)
 
     cap = _largest_solid(cap_bp.part)
@@ -1393,7 +1410,7 @@ def build_back_cap(p: MevoCoreParams):
         except Exception:
             pass
 
-    # Flush wall bumps on 3 plug walls (X+, X-, Y-) that click into
+    # Flush wall bumps on the two side plug walls (X+, X-) that click into
     # the shell through-holes. No channel cuts or isolated beams —
     # the bump is part of the plug wall surface.
     snap_latch_cap_info = None
@@ -1403,37 +1420,24 @@ def build_back_cap(p: MevoCoreParams):
         beam_w = p.snap_latch_beam_width_mm
 
         half_lw = 0.5 * lip_tip_w
-        half_lh = 0.5 * lip_tip_h
         plug_tip_z = p.back_cap_thickness_mm + p.back_cap_lip_depth_mm
 
         # Position bump near plug tip to align with shell through-holes
         bump_z_top = plug_tip_z
         bump_z_center = bump_z_top - 0.5 * hook_ramp
 
-        # Bump walls: X+, X-, Y- (Y+ gets retention bump only)
-        latch_defs = [("X", 1.0), ("X", -1.0), ("Y", -1.0)]
-
-        for axis, sign in latch_defs:
-            half_wall = half_lw if axis == "X" else half_lh
-
-            if axis == "X":
-                bump_cx = sign * (half_wall + 0.5 * hook_h)
-                with BuildPart() as _bump:
-                    with Locations((bump_cx, 0.0, bump_z_center)):
-                        Box(hook_h, beam_w, hook_ramp)
-                cap = cap + _bump.part
-            else:
-                bump_cy = sign * (half_wall + 0.5 * hook_h)
-                with BuildPart() as _bump:
-                    with Locations((0.0, bump_cy, bump_z_center)):
-                        Box(beam_w, hook_h, hook_ramp)
-                cap = cap + _bump.part
+        for sign in (-1.0, 1.0):
+            bump_cx = sign * (half_lw + 0.5 * hook_h)
+            with BuildPart() as _bump:
+                with Locations((bump_cx, 0.0, bump_z_center)):
+                    Box(hook_h, beam_w, hook_ramp)
+            cap = cap + _bump.part
 
         snap_latch_cap_info = {
             "enabled": True,
             "type": "flush_wall_bump",
-            "count": 3,
-            "walls": ["X+", "X-", "Y-"],
+            "count": 2,
+            "walls": ["X+", "X-"],
             "bump_protrusion_mm": float(hook_h),
             "bump_width_mm": float(beam_w),
             "bump_z_extent_mm": float(hook_ramp),
@@ -1481,6 +1485,16 @@ def build_back_cap(p: MevoCoreParams):
                 "h_mm": float(center_opening_h),
                 "corner_r_mm": float(center_opening_r),
                 "inset_from_device_edge_mm": float(p.back_cap_center_opening_inset_mm),
+            },
+            "power_button_finger_notch": {
+                "enabled": True,
+                "wall": "Y- (physical top)",
+                "width_mm": float(power_notch_width),
+                "depth_into_rim_mm": float(power_notch_depth),
+                "corner_r_mm": float(power_notch_corner_r),
+                "overlap_into_center_opening_mm": float(power_notch_overlap),
+                "remaining_outer_bridge_mm": float(power_notch_outer_bridge),
+                "through_plate_and_plug": True,
             },
         },
         "named_bodies": ["ASA_Back_Cap"],

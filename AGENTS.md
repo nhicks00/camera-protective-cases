@@ -65,8 +65,9 @@ Mevo Core:
 - Back cap: ASA bumper ring with one large open-center rounded rectangle:
   - Center opening: `82.0 x 82.0 mm`, `4.0 mm` inset from device edge per side
   - Center opening corner radius: `8.0 mm`
+  - Physical top (`Y-`) has a centered `28.0 x 6.0 mm` rounded finger notch for power-button access; `3.0 mm` corner radius and `3.4 mm` outer bridge
 - Back cap plug lip: `5.0 mm` depth, `0.28 mm` total undersize
-- Retention: 3 snap-latch walls plus Y+ retention bump
+- Retention: 2 side snap-latch walls (`X+`, `X-`) plus Y+ retention bump
 - Thermal cutouts: large rectangular panel notches replacing individual slots:
   - one notch per side face spanning the former 6-row side vent bank,
   - one top notch spanning the former 4-row top vent bank, enlarged and Z-aligned to match the side notches,
@@ -294,7 +295,8 @@ Current preferred workflow:
     - sun-shade support ribs use `1.0 mm` rounded-rectangle cross-section corners.
   - Snap-latch release/clearance holes in the shell stay rectangular (`0.0 mm` corner radius) so the back-cap latch bumps have full corner clearance.
   - Back cap = ASA bumper ring with one large open-center rounded-rectangle cutout (`82.0 × 82.0 mm`, `8.0 mm` corner radius)
-  - 3 snap-latch walls plus Y+ retention bump
+  - A centered `28.0 mm` wide × `6.0 mm` deep rounded finger notch cuts through the top (`Y-`) face ring and plug lip for direct power-button access while leaving a `3.4 mm` outer bridge.
+  - 2 side snap-latch walls (`X+`, `X-`) plus Y+ retention bump; the former Y- latch is removed so it cannot obstruct the power-button notch.
   - Thermal cutouts are large rectangular panel notches, not individual slit vents:
     - one per side face across the former 6-row side vent bank,
     - one top-face notch across the former 4-row top vent bank, enlarged and Z-aligned to match the side notches,

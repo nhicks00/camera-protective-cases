@@ -64,9 +64,6 @@
     "back_cap_edge_fillet_mm": 0.6,
     "back_cap_center_opening_inset_mm": 4.0,
     "back_cap_center_opening_corner_r_mm": 8.0,
-    "back_cap_power_button_notch_width_mm": 28.0,
-    "back_cap_power_button_notch_depth_mm": 6.0,
-    "back_cap_power_button_notch_corner_r_mm": 3.0,
     "include_friction_ridge": false,
     "friction_ridge_height_mm": 0.8,
     "friction_ridge_setback_mm": 3.0,
@@ -237,10 +234,11 @@
       },
       "snap_latches": {
         "enabled": true,
-        "count": 2,
+        "count": 3,
         "walls": [
           "X+",
-          "X-"
+          "X-",
+          "Y-"
         ],
         "hole_z_mm": 76.8,
         "hole_width_mm": 10.0,
@@ -302,10 +300,11 @@
       "snap_latches": {
         "enabled": true,
         "type": "flush_wall_bump",
-        "count": 2,
+        "count": 3,
         "walls": [
           "X+",
-          "X-"
+          "X-",
+          "Y-"
         ],
         "bump_protrusion_mm": 1.5,
         "bump_width_mm": 8.0,
@@ -318,16 +317,6 @@
         "h_mm": 82.0,
         "corner_r_mm": 8.0,
         "inset_from_device_edge_mm": 4.0
-      },
-      "power_button_finger_notch": {
-        "enabled": true,
-        "wall": "Y- (physical top)",
-        "width_mm": 28.0,
-        "depth_into_rim_mm": 6.0,
-        "corner_r_mm": 3.0,
-        "overlap_into_center_opening_mm": 2.0,
-        "remaining_outer_bridge_mm": 3.4,
-        "through_plate_and_plug": true
       }
     },
     "named_bodies": [
